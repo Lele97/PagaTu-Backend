@@ -1,0 +1,33 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:mysql://mysql-db:3306/pagatu_auth_db?createDatabaseIfNotExist=true
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    kafka:
+      bootstrap-servers: localhost:9092  # Usa 'kafka:9092' in ambiente Docker
+      producer:
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+        properties:
+          spring.json.type.mapping: event:com.pagatu.auth.event.UserCreatedEvent  # Opzionale: per mappatura tipi JSON
+
+jwt:
+  secret: 7f0a46c28e13424b98459b5cf951565a135fc13f64bccf9db600e8bcc99fa4b8
+  expiration: 120000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
