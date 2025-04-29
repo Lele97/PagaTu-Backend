@@ -2,32 +2,42 @@ server:
   port: 8081
 
 spring:
+  cloud:
+    config:
+      enabled: false
   application:
-    name: auth-service
+    name: auth
   datasource:
-    url: jdbc:mysql://mysql-db:3306/pagatu_auth_db?createDatabaseIfNotExist=true
-    username: root
-    password: root
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:authdb}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: org.h2.Driver
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
-    kafka:
-      bootstrap-servers: localhost:9092  # Usa 'kafka:9092' in ambiente Docker
-      producer:
-        key-serializer: org.apache.kafka.common.serialization.StringSerializer
-        value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-        properties:
-          spring.json.type.mapping: event:com.pagatu.auth.event.UserCreatedEvent  # Opzionale: per mappatura tipi JSON
+        format_sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
 jwt:
-  secret: 7f0a46c28e13424b98459b5cf951565a135fc13f64bccf9db600e8bcc99fa4b8
-  expiration: 120000
+  secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method

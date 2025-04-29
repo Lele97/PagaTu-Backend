@@ -1,9 +1,6 @@
 package com.pagatu.auth.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,15 +16,23 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, nullable = false)
     private String username;
 
+    @Column(nullable = false)
     private String password;
 
+    @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(name = "first_name")
+    private String firstName;
 
-    private Set<String> roles;
+    @Column(name = "last_name")
+    private String lastName;
 
-    private boolean enabled = true;
+    @Column(name = "number_phone")
+    private int phoneNumber;
+
 
 }
