@@ -1,0 +1,89 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      default-filters:
+        - name: CircuitBreaker
+          args:
+            name: defaultCircuitBreaker
+            fallback-uri: forward:/fallback/default
+      routes:
+        - id: auth-service
+          uri: ${auth.service.url:http://localhost:8081}
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: authCircuitBreaker
+                fallback-uri: forward:/fallback/auth
+        - id: caffe-service
+          uri: ${caffe.service.url:http://localhost:8082}
+          predicates:
+            - Path=/api/caffe/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: caffeCircuitBreaker
+                fallback-uri: forward:/fallback/caffe
+        - id: email-service
+          uri: ${email.service.url:http://localhost:8083}
+          predicates:
+            - Path=/api/email/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: emailCircuitBreaker
+                fallback-uri: forward:/fallback/email
+
+  main:
+    web-application-type: reactive
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      authCircuitBreaker:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 3
+      caffeCircuitBreaker:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 3
+      emailCircuitBreaker:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 3
+      defaultCircuitBreaker:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10000
+        permittedNumberOfCallsInHalfOpenState: 3
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,circuitbreakers
+
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8081}
+
+caffe:
+  service:
+    url: ${CAFFE_SERVICE_URL:http://localhost:8082}
+
+email:
+  service:
+    url: ${EMAIL_SERVICE_URL:http://localhost:8083}
+
+jwt:
+  secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}

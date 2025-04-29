@@ -1,39 +1,83 @@
 package com.pagatu.auth.service;
-import com.pagatu.auth.dto.AuthResponse;
 
+import com.pagatu.auth.dto.RegisterRequest;
 import com.pagatu.auth.entity.User;
 import com.pagatu.auth.repository.UserRepository;
-import com.pagatu.auth.security.JwtUtil;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
+import jakarta.validation.Valid;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.pagatu.auth.dto.LoginRequest;
+import com.pagatu.auth.dto.LoginResponse;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.BadCredentialsException;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.Optional;
 
 @Service
 public class AuthService {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private UserRepository userRepository;
+    @Value("${jwt.secret}")
+    private String jwtSecret;
 
-    @Autowired
-    private CustomUserDetailsService userDetailsService;
+    @Value("${jwt.expiration}")
+    private long jwtExpiration;
 
-    public AuthResponse authenticate(String username, String password) {
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-        String token = jwtUtil.generateToken(userDetails);
+    public LoginResponse login(LoginRequest loginRequest) {
+        Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername());
 
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        if (userOpt.isEmpty() || !passwordEncoder.matches(loginRequest.getPassword(), userOpt.get().getPassword())) {
+            throw new BadCredentialsException("Invalid username or password");
+        }
 
-        return new AuthResponse(token, user.getId(), user.getUsername());
+        User user = userOpt.get();
+        String token = generateToken(user);
+
+        return new LoginResponse(token, user.getUsername(), user.getEmail());
+    }
+
+    public User register(@Valid RegisterRequest registerRequest) {
+        if (userRepository.existsByUsername(registerRequest.getUsername())) {
+            throw new RuntimeException("Username already exists");
+        }
+
+        if (userRepository.existsByEmail(registerRequest.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        User user = new User();
+        user.setUsername(registerRequest.getUsername());
+        user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        user.setEmail(registerRequest.getEmail());
+        user.setFirstName(registerRequest.getFirstName());
+        user.setLastName(registerRequest.getLastName());
+
+        return userRepository.save(user);
+    }
+
+    private String generateToken(User user) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+
+        return Jwts.builder()
+                .setSubject(user.getUsername())
+                .claim("email", user.getEmail())
+                .claim("id", user.getId())
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .signWith(key)
+                .compact();
     }
 }

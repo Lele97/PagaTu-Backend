@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>È il tuo turno di pagare il caffè!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #6b4226;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        .footer {
+            background-color: #f5f5f5;
+            padding: 10px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            border-radius: 0 0 5px 5px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>☕ Paga-Tu: È il tuo turno di pagare il caffè! ☕</h1>
+</div>
+<div class="content">
+    <p>Ciao <strong th:text="${prossimoPagatore}">Utente</strong>,</p>
+    <p>
+        Ti comunichiamo che è il tuo turno di pagare il caffè per il gruppo!
+    </p>
+    <p>
+        <strong th:text="${ultimoPagatore}">Utente precedente</strong> ha pagato l'ultimo giro di caffè
+        in data <strong th:text="${dataUltimoPagamento}">01/01/2025</strong>
+        per un importo di <strong th:text="${importo}">5.00€</strong>.
+    </p>
+    <p>
+        Ora tocca a te! Non far aspettare troppo i tuoi colleghi assetati di caffè! 😊
+    </p>
+    <p>
+        Per registrare il tuo pagamento, accedi all'app "Paga-Tu" e clicca su "Registra Pagamento".
+    </p>
+    <p>
+        Grazie!
+    </p>
+</div>
+<div class="footer">
+    <p>Questa è un'email automatica dall'app Paga-Tu. Per favore non rispondere a questa email.</p>
+</div>
+</body>
+</html>
