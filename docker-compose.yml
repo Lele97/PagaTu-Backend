@@ -5,9 +5,9 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - AUTH_SERVICE_URL=http://auth-service:8081
-      - CAFFE_SERVICE_URL=http://caffe-service:8082
-      - EMAIL_SERVICE_URL=http://email-service:8083
+      - AUTH_SERVICE_URL=http://auth:8081
+      - CAFFE_SERVICE_URL=http://coffee:8082
+      - EMAIL_SERVICE_URL=http://mail:8083
     depends_on:
       - auth
       - coffee

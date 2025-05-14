@@ -2,7 +2,14 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-COPY /target/*.jar app.jar
+# Copia il JAR
+COPY target/*.jar app.jar
+
+# Crea esplicitamente una directory per i template (opzionale)
+RUN mkdir -p /app/templates
+
+# Copia esplicitamente i template (se necessario)
+COPY src/main/resources/templates /app/templates
 
 EXPOSE 8083
 

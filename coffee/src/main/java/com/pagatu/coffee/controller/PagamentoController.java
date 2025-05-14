@@ -6,13 +6,15 @@ import com.pagatu.coffee.entity.NuovoPagamentoRequest;
 import com.pagatu.coffee.jwt.jwtUtil;
 import com.pagatu.coffee.service.PagamentoService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/caffe")
+@RequestMapping("/api/coffee")
+@Slf4j
 public class PagamentoController {
     private final PagamentoService pagamentoService;
     private final jwtUtil jwtUtil;
