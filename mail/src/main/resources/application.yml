@@ -1,7 +1,17 @@
 server:
   port: 8083
 
+coffee:
+  service:
+    base-url: http://localhost:8082
+
 spring:
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    encoding: UTF-8
+    cache: false
   application:
     name: mail
   mail:

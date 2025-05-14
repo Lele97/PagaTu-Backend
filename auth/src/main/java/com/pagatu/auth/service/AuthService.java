@@ -1,17 +1,24 @@
 package com.pagatu.auth.service;
 
-import com.pagatu.auth.dto.RegisterRequest;
-import com.pagatu.auth.entity.User;
-import com.pagatu.auth.repository.UserRepository;
-import jakarta.validation.Valid;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 import com.pagatu.auth.dto.LoginRequest;
 import com.pagatu.auth.dto.LoginResponse;
+import com.pagatu.auth.dto.RegisterRequest;
+import com.pagatu.auth.dto.UtenteDto;
+import com.pagatu.auth.entity.EventType;
+import com.pagatu.auth.entity.User;
+import com.pagatu.auth.event.UserEvent;
+import com.pagatu.auth.repository.FirstUserRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -19,11 +26,17 @@ import java.util.Date;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class AuthService {
 
-
-    private final UserRepository userRepository;
+    private final FirstUserRepository fristUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final WebClient.Builder webClientBuilder;
+
+    @Value("${spring.kafka.topics.user-service}")
+    private String USER_TOPIC;
+
+    private final KafkaTemplate<String, UserEvent> kafkaTemplate;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -31,13 +44,16 @@ public class AuthService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
+    public AuthService(FirstUserRepository fristUserRepository,PasswordEncoder passwordEncoder, WebClient.Builder webClientBuilder, KafkaTemplate<String, UserEvent> kafkaTemplate) {
+        this.fristUserRepository = fristUserRepository;
         this.passwordEncoder = passwordEncoder;
+        this.webClientBuilder = webClientBuilder;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     public LoginResponse login(LoginRequest loginRequest) {
-        Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername());
+
+        Optional<User> userOpt = fristUserRepository.findByUsername(loginRequest.getUsername());
 
         if (userOpt.isEmpty() || !passwordEncoder.matches(loginRequest.getPassword(), userOpt.get().getPassword())) {
             throw new BadCredentialsException("Invalid username or password");
@@ -49,14 +65,14 @@ public class AuthService {
         return new LoginResponse(token, user.getUsername(), user.getEmail());
     }
 
-    public User register(@Valid RegisterRequest registerRequest) {
-        if (userRepository.existsByUsername(registerRequest.getUsername())) {
-            throw new RuntimeException("Username already exists");
-        }
+    @Transactional("firstTransactionManager")
+    public User register(RegisterRequest registerRequest) {
 
-        if (userRepository.existsByEmail(registerRequest.getEmail())) {
+        if (fristUserRepository.existsByUsername(registerRequest.getUsername()))
+            throw new RuntimeException("Username already exists");
+
+        if (fristUserRepository.existsByEmail(registerRequest.getEmail()))
             throw new RuntimeException("Email already exists");
-        }
 
         User user = new User();
         user.setUsername(registerRequest.getUsername());
@@ -64,9 +80,48 @@ public class AuthService {
         user.setEmail(registerRequest.getEmail());
         user.setFirstName(registerRequest.getFirstName());
         user.setLastName(registerRequest.getLastName());
+        User savedUser = fristUserRepository.save(user);
 
-        return userRepository.save(user);
+        UserEvent userEvent = UserEvent.builder()
+                .id(savedUser.getId())
+                .username(savedUser.getUsername())
+                .email(savedUser.getEmail())
+                .firstName(savedUser.getFirstName())
+                .lastName(savedUser.getLastName())
+                .password(savedUser.getPassword())
+                .eventType(EventType.CREATE)
+                .build();
+
+        kafkaTemplate.send(USER_TOPIC, String.valueOf(savedUser.getId()), userEvent);
+
+        // Crea DTO per il servizio caffè
+        UtenteDto utenteDto = new UtenteDto();
+        utenteDto.setId(user.getId());
+        utenteDto.setAuthId(savedUser.getId());
+        utenteDto.setUsername(savedUser.getUsername());
+        utenteDto.setEmail(savedUser.getEmail());
+        utenteDto.setName(savedUser.getFirstName());
+        utenteDto.setLastname(savedUser.getLastName());
+        utenteDto.setAttivo(true);
+
+
+        log.info("ID :: {}", utenteDto.getId());
+
+
+        // Invia dati al servizio caffè usando WebFlux
+        webClientBuilder.build()
+                .post()
+                .uri("http://localhost:8082" + "/api/coffee/user")
+                .body(Mono.just(utenteDto), UtenteDto.class)
+                .retrieve()
+                .bodyToMono(UtenteDto.class)
+                .doOnSuccess(response -> log.info("Utente sincronizzato con successo: {}", response))
+                .doOnError(error -> log.error("Errore durante la sincronizzazione con il servizio caffè", error))
+                .subscribe();
+
+        return savedUser;
     }
+
 
     private String generateToken(User user) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));

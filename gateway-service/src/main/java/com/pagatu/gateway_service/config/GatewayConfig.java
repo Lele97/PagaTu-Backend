@@ -1,7 +1,5 @@
 package com.pagatu.gateway_service.config;
 
-
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.route.RouteLocator;
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
@@ -26,17 +24,17 @@ public class GatewayConfig {
                 .route("auth-service", r -> r.path("/api/auth/**")
                         .filters(f -> f.circuitBreaker(config -> config
                                 .setName("authCircuitBreaker")
-                                .setFallbackUri("forward:/fallback/auth")))
+                                .setFallbackUri("http://localhost:8080/fallback/auth")))
                         .uri(authServiceUrl))
-                .route("caffe-service", r -> r.path("/api/caffe/**")
+                .route("caffe-service", r -> r.path("/api/coffee/**")
                         .filters(f -> f.circuitBreaker(config -> config
                                 .setName("caffeCircuitBreaker")
-                                .setFallbackUri("forward:/fallback/caffe")))
+                                .setFallbackUri("http://localhost:8080/fallback/coffee")))
                         .uri(caffeServiceUrl))
                 .route("email-service", r -> r.path("/api/email/**")
                         .filters(f -> f.circuitBreaker(config -> config
                                 .setName("emailCircuitBreaker")
-                                .setFallbackUri("forward:/fallback/email")))
+                                .setFallbackUri("http://localhost:8080/fallback/email")))
                         .uri(emailServiceUrl))
                 .build();
     }

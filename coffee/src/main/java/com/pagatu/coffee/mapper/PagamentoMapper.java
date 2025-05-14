@@ -1,6 +1,5 @@
 package com.pagatu.coffee.mapper;
 
-
 import com.pagatu.coffee.dto.PagamentoDto;
 import com.pagatu.coffee.entity.Pagamento;
 import org.springframework.stereotype.Component;
@@ -15,8 +14,13 @@ public class PagamentoMapper {
 
         PagamentoDto dto = new PagamentoDto();
         dto.setId(pagamento.getId());
-        dto.setUserId(pagamento.getUserId());
-        dto.setUsername(pagamento.getUsername());
+
+        // Ottieni lo userId e lo username dall'oggetto utente associato al pagamento
+        if (pagamento.getUtente() != null) {
+            dto.setUserId(pagamento.getUtente().getId());
+            dto.setUsername(pagamento.getUtente().getUsername());
+        }
+
         dto.setDataPagamento(pagamento.getDataPagamento());
         dto.setImporto(pagamento.getImporto());
         dto.setDescrizione(pagamento.getDescrizione());
@@ -31,8 +35,8 @@ public class PagamentoMapper {
 
         Pagamento pagamento = new Pagamento();
         pagamento.setId(dto.getId());
-        pagamento.setUserId(dto.getUserId());
-        pagamento.setUsername(dto.getUsername());
+        // Non impostiamo direttamente l'utente qui perché abbiamo bisogno di un riferimento all'entità Utente
+        // Questo dovrebbe essere gestito dal servizio che utilizza il mapper
         pagamento.setDataPagamento(dto.getDataPagamento());
         pagamento.setImporto(dto.getImporto());
         pagamento.setDescrizione(dto.getDescrizione());

@@ -1,7 +1,5 @@
 package com.pagatu.mail.listener;
 
-
-
 import com.pagatu.mail.event.ProssimoPagamentoEvent;
 import com.pagatu.mail.service.EmailService;
 import lombok.extern.log4j.Log4j2;
@@ -20,6 +18,6 @@ public class PagamentoEventListener {
     @KafkaListener(topics = "pagamenti-caffe", groupId = "email-service")
     public void consumePagamentoEvent(ProssimoPagamentoEvent event) {
         log.info("Ricevuto evento di pagamento caffè: {}", event);
-        emailService.inviaNotificaProssimoPagatore(event);
+        emailService.inviaNotificaProssimoPagatore(event).subscribe();
     }
 }

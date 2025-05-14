@@ -2,12 +2,11 @@ package com.pagatu.mail.config;
 
 
 import com.pagatu.mail.event.ProssimoPagamentoEvent;
-import org.springframework.context.annotation.Configuration;
-
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
@@ -30,7 +29,7 @@ public class KafkaConsumerConfig {
 
         JsonDeserializer<ProssimoPagamentoEvent> deserializer = new JsonDeserializer<>(ProssimoPagamentoEvent.class);
         deserializer.setRemoveTypeHeaders(false);
-        deserializer.addTrustedPackages("com.pagatu.caffe.event");
+        deserializer.addTrustedPackages("com.pagatu.coffee.event");
         deserializer.setUseTypeMapperForKey(true);
 
         return new DefaultKafkaConsumerFactory<>(

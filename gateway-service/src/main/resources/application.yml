@@ -24,12 +24,12 @@ spring:
         - id: caffe-service
           uri: ${caffe.service.url:http://localhost:8082}
           predicates:
-            - Path=/api/caffe/**
+            - Path=/api/coffee/**
           filters:
             - name: CircuitBreaker
               args:
                 name: caffeCircuitBreaker
-                fallback-uri: forward:/fallback/caffe
+                fallback-uri: forward:/fallback/coffee
         - id: email-service
           uri: ${email.service.url:http://localhost:8083}
           predicates:
@@ -72,6 +72,11 @@ management:
     web:
       exposure:
         include: health,info,metrics,circuitbreakers
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.reactive.function.client: DEBUG
 
 auth:
   service:

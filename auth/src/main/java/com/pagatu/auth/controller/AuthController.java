@@ -3,12 +3,14 @@ package com.pagatu.auth.controller;
 import com.pagatu.auth.dto.LoginRequest;
 import com.pagatu.auth.dto.LoginResponse;
 import com.pagatu.auth.dto.RegisterRequest;
-import com.pagatu.auth.entity.User;
 import com.pagatu.auth.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,8 +28,8 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
-        User user = authService.register(registerRequest);
+    public ResponseEntity<Object> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        authService.register(registerRequest);
         return new ResponseEntity<>("User registered successfully", HttpStatus.CREATED);
     }
 }
