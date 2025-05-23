@@ -1,9 +1,12 @@
 package com.pagatu.auth.config;
 
+import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -12,6 +15,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+@Log4j2
 public class SecurityConfig {
 
     private static final String[] AUTH_WHITELIST = {
@@ -29,13 +33,16 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(c -> c.ignoringRequestMatchers(CSRF_WHITELIST))
-                .headers(headers -> headers
-                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
+        http
+                .csrf(c -> c.ignoringRequestMatchers(CSRF_WHITELIST))
+                .cors(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(AUTH_WHITELIST).permitAll()
-                        .anyRequest().authenticated()
-                ).sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                        .anyRequest().authenticated())
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
         return http.build();
     }
 

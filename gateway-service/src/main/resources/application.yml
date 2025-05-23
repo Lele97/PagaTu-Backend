@@ -6,6 +6,21 @@ spring:
     name: gateway-service
   cloud:
     gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:8888"
+              - "https://3d43-95-229-24-242.ngrok-free.app/api/auth/register"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
       default-filters:
         - name: CircuitBreaker
           args:
