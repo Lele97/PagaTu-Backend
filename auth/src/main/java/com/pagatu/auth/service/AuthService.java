@@ -102,7 +102,6 @@ public class AuthService {
         utenteDto.setEmail(savedUser.getEmail());
         utenteDto.setName(savedUser.getFirstName());
         utenteDto.setLastname(savedUser.getLastName());
-        utenteDto.setAttivo(true);
 
 
         log.info("ID :: {}", utenteDto.getId());
