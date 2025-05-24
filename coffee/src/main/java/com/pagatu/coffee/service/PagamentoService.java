@@ -4,6 +4,7 @@ import com.pagatu.coffee.dto.PagamentoDto;
 import com.pagatu.coffee.dto.ProssimoPagamentoDto;
 import com.pagatu.coffee.entity.NuovoPagamentoRequest;
 import com.pagatu.coffee.entity.Pagamento;
+import com.pagatu.coffee.entity.Status;
 import com.pagatu.coffee.entity.Utente;
 import com.pagatu.coffee.event.ProssimoPagamentoEvent;
 import com.pagatu.coffee.mapper.PagamentoMapper;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -63,8 +63,12 @@ public class PagamentoService {
         pagamento.setDataPagamento(LocalDateTime.now());
         Pagamento savedPagamento = pagamentoRepository.save(pagamento);
 
+        //Mette l'utente in stato PAGATO
+        utente.setStatus(Status.PAGATO);
+        utenteRepository.save(utente);
+
         // Determina chi sarà il prossimo a pagare
-        ProssimoPagamentoDto prossimoPagamento = self.determinaProssimoPagatore(utente);
+        ProssimoPagamentoDto prossimoPagamento = self.determinaProssimoPagatore();
 
         // Pubblica l'evento su Kafka
         ProssimoPagamentoEvent event = new ProssimoPagamentoEvent();
@@ -84,54 +88,23 @@ public class PagamentoService {
         return pagamentoMapper.toDto(savedPagamento);
     }
 
-    public List<PagamentoDto> getUltimiPagamenti() {
-        List<Pagamento> pagamenti = pagamentoRepository.findTop10ByOrderByDataPagamentoDesc();
-        return pagamenti.stream()
-                .map(pagamentoMapper::toDto)
-                .toList();
-    }
+    @Transactional
+    public ProssimoPagamentoDto determinaProssimoPagatore() {
 
-    public ProssimoPagamentoDto getProssimoPagatore() {
+        //Ottieni gli utenti in stato NON_PAGATO
+        List<Utente> utenti_NON_PAGATO = utenteRepository.findAll().stream().filter(utente -> utente.getStatus().equals(Status.NON_PAGATO)).toList();
+        log.info("Utenti in stato NON_PAGATO: {}", utenti_NON_PAGATO);
 
-        // Ottieni tutti gli utenti attivi
-        List<Utente> utentiAttivi = utenteRepository.findByAttivoTrue();
-
-        if (utentiAttivi.isEmpty()) {
-            throw new RuntimeException("Nessun utente attivo trovato");
-        }
-
-        // Trova gli utenti che non hanno mai pagato
-        List<Utente> utentiSenzaPagamenti = trovaUtentiSenzaPagamenti(utentiAttivi);
-
-        // Se tutti hanno pagato, ricomincia il giro
-        if (utentiSenzaPagamenti.isEmpty()) {
-            log.info("Tutti gli utenti hanno già pagato almeno una volta, si ricomincia il giro");
-            // Ottieni l'ultimo pagamento
-            List<Pagamento> ultimiPagamenti = pagamentoRepository.findTop1ByOrderByDataPagamentoDesc();
-
-            if (!ultimiPagamenti.isEmpty()) {
-                Utente ultimoPagatore = ultimiPagamenti.get(0).getUtente();
-
-                // Escludiamo l'ultimo pagatore se possibile
-                List<Utente> altriUtenti = utentiAttivi.stream()
-                        .filter(u -> !u.getId().equals(ultimoPagatore.getId()))
-                        .toList();
-
-                if (!altriUtenti.isEmpty()) {
-
-                    // Scegli un utente casuale tra gli altri
-                    Utente prossimoPagatore = altriUtenti.get(RANDOM.nextInt(altriUtenti.size()));
-                    return creaProssimoPagamentoDto(prossimoPagatore);
-                }
-            }
-
-            // Se non ci sono pagamenti precedenti o c'è un solo utente, scegli un utente casuale
-            Utente prossimoPagatore = utentiAttivi.get(RANDOM.nextInt(utentiAttivi.size()));
+        if (utenti_NON_PAGATO.isEmpty()) {
+            List<Utente> utentiResettati = resetUtentiInStatusNonPagato();
+            //resetta tutti gli utenti in stato NON_PAGATO e determina il prossimo pagatore
+            Utente prossimoPagatore = utentiResettati.get(RANDOM.nextInt(utentiResettati.size()));
+            log.info("Tutti hanno già pagato, ricomincio il giro. Prossimo pagatore: {}", prossimoPagatore.getUsername());
             return creaProssimoPagamentoDto(prossimoPagatore);
         } else {
-
-            // Scegli un utente casuale tra quelli che non hanno ancora pagato
-            Utente prossimoPagatore = utentiSenzaPagamenti.get(RANDOM.nextInt(utentiSenzaPagamenti.size()));
+            //determina il prossimo pagatore
+            Utente prossimoPagatore = utenti_NON_PAGATO.get(RANDOM.nextInt(utenti_NON_PAGATO.size()));
+            log.info("Prossimo pagatore: {}", prossimoPagatore.getUsername());
             return creaProssimoPagamentoDto(prossimoPagatore);
         }
     }
@@ -144,51 +117,15 @@ public class PagamentoService {
         return dto;
     }
 
-    private List<Utente> trovaUtentiSenzaPagamenti(List<Utente> utentiAttivi) {
+    private List<Utente> resetUtentiInStatusNonPagato() {
 
-        // Ottieni tutti gli utenti che hanno effettuato almeno un pagamento
-        List<Utente> utentiConPagamenti = pagamentoRepository.findDistinctUtente();
+        List<Utente> utenti = utenteRepository.findAll();
 
-        // Trova gli utenti che non hanno mai pagato
-        return utentiAttivi.stream()
-                .filter(u -> utentiConPagamenti.stream().noneMatch(p -> p.getId().equals(u.getId())))
-                .toList();
-    }
-
-    @Transactional
-    public ProssimoPagamentoDto determinaProssimoPagatore(Utente ultimoPagatore) {
-
-        // Ottieni tutti gli utenti attivi
-        List<Utente> utentiAttivi = utenteRepository.findByAttivoTrue();
-
-        // Trova gli utenti che non hanno mai pagato (escluso l'ultimo pagatore)
-        List<Utente> utentiSenzaPagamenti = trovaUtentiSenzaPagamenti(utentiAttivi).stream()
-                .filter(u -> !u.getId().equals(ultimoPagatore.getId()))
-                .toList();
-
-        log.info("Utenti senza pagamenti: {}", utentiSenzaPagamenti.stream().map(Utente::getUsername).collect(Collectors.joining(", ")));
-
-        // Se ci sono utenti che non hanno mai pagato, scegliamo tra loro
-        if (!utentiSenzaPagamenti.isEmpty()) {
-            Utente prossimoPagatore = utentiSenzaPagamenti.get(RANDOM.nextInt(utentiSenzaPagamenti.size()));
-            log.info("Selezionato prossimo pagatore che non ha mai pagato: {}", prossimoPagatore.getUsername());
-            return creaProssimoPagamentoDto(prossimoPagatore);
+        for (Utente utente : utenti) {
+            utente.setStatus(Status.NON_PAGATO);
         }
 
-        // Se tutti hanno pagato, ricomincia il giro ma esclude l'ultimo pagatore
-        List<Utente> altriUtenti = utentiAttivi.stream()
-                .filter(u -> !u.getId().equals(ultimoPagatore.getId()))
-                .toList();
-
-        // Se non ci sono altri utenti (solo uno attivo), l'unico pagherà di nuovo
-        if (altriUtenti.isEmpty()) {
-            log.info("Solo un utente attivo, dovrà pagare di nuovo: {}", ultimoPagatore.getUsername());
-            return creaProssimoPagamentoDto(ultimoPagatore);
-        }
-
-        // Scegli un utente casuale tra gli altri
-        Utente prossimoPagatore = altriUtenti.get(RANDOM.nextInt(altriUtenti.size()));
-        log.info("Tutti hanno già pagato, ricomincio il giro. Prossimo pagatore: {}", prossimoPagatore.getUsername());
-        return creaProssimoPagamentoDto(prossimoPagatore);
+        utenteRepository.saveAll(utenti);
+        return utenti;
     }
 }
