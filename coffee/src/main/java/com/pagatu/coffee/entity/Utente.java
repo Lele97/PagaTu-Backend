@@ -26,8 +26,8 @@ public class Utente {
     @Column(name = "auth_id", nullable = false)
     private Long authId;
 
-    @Column
-    private Boolean attivo = true;
+    @Column(name = "status")
+    private Status status;
 
     @Column(name = "name")
     private String name;

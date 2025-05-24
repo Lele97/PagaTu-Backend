@@ -1,6 +1,7 @@
 package com.pagatu.coffee.service;
 
 import com.pagatu.coffee.dto.UtenteDto;
+import com.pagatu.coffee.entity.Status;
 import com.pagatu.coffee.entity.Utente;
 import com.pagatu.coffee.repository.UtenteRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,7 @@ public class UtenteService {
 
         log.info("Creazione/aggiornamento utente: {}", utenteDto);
 
-        // Controlla se l'utente esiste già3
+        // Controlla se l'utente esiste già
         Optional<Utente> existingByAuthId = utenteRepository.findByAuthId(utenteDto.getAuthId());
         if (existingByAuthId.isPresent()) {
             Utente existing = existingByAuthId.get();
@@ -51,7 +52,7 @@ public class UtenteService {
         utente.setEmail(utenteDto.getEmail());
         utente.setName(utenteDto.getName());
         utente.setLastname(utenteDto.getLastname());
-        utente.setAttivo(true);
+        utente.setStatus(Status.NON_PAGATO);
 
         Utente saved = utenteRepository.save(utente);
         log.info("Nuovo utente creato: {}", saved.getUsername());
@@ -69,7 +70,7 @@ public class UtenteService {
         dto.setAuthId(utente.getAuthId());
         dto.setUsername(utente.getUsername());
         dto.setEmail(utente.getEmail());
-        dto.setAttivo(utente.getAttivo());
+        dto.setStatus(utente.getStatus());
         return dto;
     }
 }
