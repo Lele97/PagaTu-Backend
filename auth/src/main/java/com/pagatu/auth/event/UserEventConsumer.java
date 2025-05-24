@@ -19,39 +19,35 @@ public class UserEventConsumer {
     @KafkaListener(topics = "user-service", groupId = "auth-service")
     @Transactional("secondTransactionManager")
     public void consume(UserEvent userEvent) {
-
         try {
             switch (userEvent.getEventType()) {
-                case CREATE -> {
-                    try {
-                        if (secondRepository.existsByUsername(userEvent.getUsername()) ||
-                                secondRepository.existsByEmail(userEvent.getEmail())) {
-                            log.warn("Utente con username '{}' o email '{}' già esistente. CREATE ignorato.",
-                                    userEvent.getUsername(), userEvent.getEmail());
-                            return;
-                        }
-                        User user = new User();
-                        user.setUsername(userEvent.getUsername());
-                        user.setEmail(userEvent.getEmail());
-                        user.setPassword(userEvent.getPassword());
-                        user.setFirstName(userEvent.getFirstName());
-                        user.setLastName(userEvent.getLastName());
-                        secondRepository.save(user);
-                        log.info("Utente creato con successo: {}", user.getUsername());
-
-                    } catch (DataIntegrityViolationException ex) {
-                        log.warn("Violazione vincolo UNIQUE per utente '{}'. Probabilmente già esistente. Ignorato.",
-                                userEvent.getUsername());
-                    } catch (Exception e) {
-                        log.error("Errore inatteso durante CREATE: {}", e.getMessage(), e);
-                        throw e;
-                    }
-                }
+                case CREATE -> handleCreate(userEvent);
                 case UPDATE, DELETE -> {
+                    // Intenzionalmente vuoto: questi eventi non sono gestiti
                 }
             }
+        } catch (DataIntegrityViolationException ex) {
+            log.warn("Violazione vincolo UNIQUE per utente '{}'. Probabilmente già esistente. Ignorato.",
+                    userEvent.getUsername());
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Errore inatteso: {}", e.getMessage(), e);
         }
+    }
+
+    private void handleCreate(UserEvent userEvent) {
+        if (secondRepository.existsByUsername(userEvent.getUsername()) ||
+                secondRepository.existsByEmail(userEvent.getEmail())) {
+            log.warn("Utente con username '{}' o email '{}' già esistente. CREATE ignorato.",
+                    userEvent.getUsername(), userEvent.getEmail());
+            return;
+        }
+        User user = new User();
+        user.setUsername(userEvent.getUsername());
+        user.setEmail(userEvent.getEmail());
+        user.setPassword(userEvent.getPassword());
+        user.setFirstName(userEvent.getFirstName());
+        user.setLastName(userEvent.getLastName());
+        secondRepository.save(user);
+        log.info("Utente creato con successo: {}", user.getUsername());
     }
 }
