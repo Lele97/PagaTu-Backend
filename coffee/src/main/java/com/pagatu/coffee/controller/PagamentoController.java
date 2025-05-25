@@ -32,13 +32,13 @@ public class PagamentoController {
         return ResponseEntity.ok(pagamentoService.registraPagamento(userId, request));
     }
 
-    @GetMapping("/pagamenti/ultimi")
-    public ResponseEntity<List<PagamentoDto>> getUltimiPagamenti() {
-        return ResponseEntity.ok(pagamentoService.getUltimiPagamenti());
-    }
-
-    @GetMapping("/pagamenti/prossimo")
-    public ResponseEntity<ProssimoPagamentoDto> getProssimoPagatore() {
-        return ResponseEntity.ok(pagamentoService.getProssimoPagatore());
-    }
+//    @GetMapping("/pagamenti/ultimi")
+//    public ResponseEntity<List<PagamentoDto>> getUltimiPagamenti() {
+//        return ResponseEntity.ok(pagamentoService.getUltimiPagamenti());
+//    }
+//
+//    @GetMapping("/pagamenti/prossimo")
+//    public ResponseEntity<ProssimoPagamentoDto> getProssimoPagatore() {
+//        return ResponseEntity.ok(pagamentoService.getProssimoPagatore());
+//    }
 }
