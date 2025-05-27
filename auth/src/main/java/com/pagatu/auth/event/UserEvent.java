@@ -1,12 +1,12 @@
 package com.pagatu.auth.event;
 
-
 import com.pagatu.auth.entity.EventType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -20,5 +20,6 @@ public class UserEvent {
     private String firstName;
     private String lastName;
     private String password;
+    private List<String> groups;
     private EventType eventType;
 }

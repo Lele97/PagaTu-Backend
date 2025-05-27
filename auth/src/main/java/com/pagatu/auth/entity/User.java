@@ -1,9 +1,12 @@
 package com.pagatu.auth.entity;
 
+import com.pagatu.auth.config.ListToStringConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -30,4 +33,8 @@ public class User {
 
     @Column(name = "last_name")
     private String lastName;
+
+    @Lob // Questo dice a Hibernate: "Crea un tipo lungo (CLOB) per gruppi"
+    @Convert(converter = ListToStringConverter.class)
+    private List<String> groups;
 }

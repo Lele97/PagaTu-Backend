@@ -1,12 +1,11 @@
 package com.pagatu.coffee.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Entity
 @Table(name = "utenti")
@@ -14,7 +13,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Utente {
+
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true, nullable = false)
@@ -34,4 +35,12 @@ public class Utente {
 
     @Column(name = "lastname")
     private String lastname;
+
+    @ManyToMany
+    @JoinTable(
+            name = "user_groups", // 🌟 tabella di join
+            joinColumns = @JoinColumn(name = "utente_id"), // chiave esterna verso Utente
+            inverseJoinColumns = @JoinColumn(name = "group_id") // chiave esterna verso Group
+    )
+    private List<Group> groups;
 }
