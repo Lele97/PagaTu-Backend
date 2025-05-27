@@ -28,6 +28,6 @@ public class Group {
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
-    @ManyToMany(mappedBy = "groups") // 🌟 usa lo stesso nome della lista in Utente
+    @ManyToMany(mappedBy = "groups", cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH})
     private List<Utente> users;
 }
