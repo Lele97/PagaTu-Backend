@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -36,11 +37,11 @@ public class Utente {
     @Column(name = "lastname")
     private String lastname;
 
-    @ManyToMany
+    @ManyToMany(cascade = CascadeType.PERSIST)
     @JoinTable(
             name = "user_groups", // 🌟 tabella di join
             joinColumns = @JoinColumn(name = "utente_id"), // chiave esterna verso Utente
             inverseJoinColumns = @JoinColumn(name = "group_id") // chiave esterna verso Group
     )
-    private List<Group> groups;
+    private List<Group> groups = new ArrayList<>();
 }

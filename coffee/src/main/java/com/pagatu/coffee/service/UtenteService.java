@@ -147,36 +147,34 @@ public class UtenteService {
      * Trova un gruppo esistente o ne crea uno nuovo
      */
     private Group findOrCreateGroup(String groupName, Long userId) {
-        return groupRepository.getGroupByName(groupName)
-                .orElseGet(() -> {
-                    log.info("Creating new group: {} for user ID: {}", groupName, userId);
 
-                    try {
-                        // Crea una nuova richiesta per il gruppo
-                        NuovoGruppoRequest nuovoGruppoRequest = new NuovoGruppoRequest();
-                        nuovoGruppoRequest.setName(groupName);
+        // Controlla se esiste già
+        Optional<Group> existingGroup = groupRepository.getGroupByName(groupName);
 
-                        // Usa il GroupService per creare il gruppo
-                        groupService.createGroup(nuovoGruppoRequest, userId);
+        if (existingGroup.isPresent()) {
+            return existingGroup.get();
+        }
 
-                        // Ritorna il gruppo appena creato
-                        return groupRepository.getGroupByName(groupName)
-                                .orElseThrow(() -> new RuntimeException("Failed to create group: " + groupName));
-                    } catch (Exception e) {
-                        log.error("Error creating group through GroupService: {}", e.getMessage());
+        log.info("Creating new group: {} for user ID: {}", groupName, userId);
 
-                        // Fallback: crea il gruppo direttamente
-                        // NOTA: Assicurati che la tua entità Group abbia il campo utente_id impostato correttamente
-                        Group newGroup = new Group();
-                        newGroup.setName(groupName);
+        // Crea il gruppo ma NON lo salvi ancora
+        Group newGroup = new Group();
+        newGroup.setName(groupName);
 
-                        // Se la tua entità Group ha un campo per l'utente proprietario, impostalo qui
-                        // Esempio: newGroup.setOwnerId(userId); o newGroup.setOwner(utente);
-                        // Questo dipende dal tuo modello dati specifico
 
-                        return groupRepository.save(newGroup);
-                    }
-                });
+        groupRepository.save(newGroup);
+
+        // Carica l'utente
+        Utente utente = utenteRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+        // Aggiunge il gruppo alla lista dei gruppi dell'utente
+        utente.getGroups().add(newGroup);
+
+        // Salva l'utente. Hibernate capisce che deve creare anche il gruppo e la join
+        utenteRepository.save(utente);
+
+        return newGroup;
     }
 
     @Transactional(readOnly = true)
