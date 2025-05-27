@@ -47,6 +47,7 @@ public class UserEventConsumer {
         user.setPassword(userEvent.getPassword());
         user.setFirstName(userEvent.getFirstName());
         user.setLastName(userEvent.getLastName());
+        user.setGroups(userEvent.getGroups());
         secondRepository.save(user);
         log.info("Utente creato con successo: {}", user.getUsername());
     }

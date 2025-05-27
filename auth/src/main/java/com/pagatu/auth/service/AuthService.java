@@ -12,6 +12,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,14 +31,8 @@ import java.util.Optional;
 @Slf4j
 public class AuthService {
 
-    private final FirstUserRepository fristUserRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final WebClient.Builder webClientBuilder;
-
     @Value("${spring.kafka.topics.user-service}")
     private String USER_TOPIC;
-
-    private final KafkaTemplate<String, UserEvent> kafkaTemplate;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -44,7 +40,12 @@ public class AuthService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    public AuthService(FirstUserRepository fristUserRepository,PasswordEncoder passwordEncoder, WebClient.Builder webClientBuilder, KafkaTemplate<String, UserEvent> kafkaTemplate) {
+    private final FirstUserRepository fristUserRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final WebClient.Builder webClientBuilder;
+    private final KafkaTemplate<String, UserEvent> kafkaTemplate;
+
+    public AuthService(FirstUserRepository fristUserRepository, PasswordEncoder passwordEncoder, WebClient.Builder webClientBuilder, KafkaTemplate<String, UserEvent> kafkaTemplate) {
         this.fristUserRepository = fristUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.webClientBuilder = webClientBuilder;
@@ -74,14 +75,18 @@ public class AuthService {
         if (fristUserRepository.existsByEmail(registerRequest.getEmail()))
             throw new RuntimeException("Email already exists");
 
+        // Crea l'utente con i gruppi come List<String>
         User user = new User();
         user.setUsername(registerRequest.getUsername());
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         user.setEmail(registerRequest.getEmail());
         user.setFirstName(registerRequest.getFirstName());
         user.setLastName(registerRequest.getLastName());
+        user.setGroups(registerRequest.getGroups()); // Deve essere List<String>
+
         User savedUser = fristUserRepository.save(user);
 
+        // Pubblica evento Kafka
         UserEvent userEvent = UserEvent.builder()
                 .id(savedUser.getId())
                 .username(savedUser.getUsername())
@@ -89,38 +94,61 @@ public class AuthService {
                 .firstName(savedUser.getFirstName())
                 .lastName(savedUser.getLastName())
                 .password(savedUser.getPassword())
+                .groups(savedUser.getGroups())
                 .eventType(EventType.CREATE)
                 .build();
 
         kafkaTemplate.send(USER_TOPIC, String.valueOf(savedUser.getId()), userEvent);
 
-        // Crea DTO per il servizio caffè
+        // Crea DTO per il servizio coffee
         UtenteDto utenteDto = new UtenteDto();
-        utenteDto.setId(user.getId());
+        utenteDto.setId(savedUser.getId());
         utenteDto.setAuthId(savedUser.getId());
         utenteDto.setUsername(savedUser.getUsername());
         utenteDto.setEmail(savedUser.getEmail());
         utenteDto.setName(savedUser.getFirstName());
         utenteDto.setLastname(savedUser.getLastName());
-
+        utenteDto.setGroups(savedUser.getGroups()); // Invia List<String>
 
         log.info("ID :: {}", utenteDto.getId());
 
-
         // Invia dati al servizio caffè usando WebFlux
+//        webClientBuilder.build()
+//                .post()
+//                .uri("http://localhost:8082" + "/api/coffee/user")
+//                .body(Mono.just(utenteDto), UtenteDto.class)
+//                .retrieve()
+//                .bodyToMono(UtenteDto.class)
+//                .doOnSuccess(response -> log.info("Utente sincronizzato con successo: {}", response))
+//                .doOnError(error -> log.error("Errore durante la sincronizzazione con il servizio caffè", error))
+//                .subscribe();
+
+        // Make the WebClient call with enhanced error handling
         webClientBuilder.build()
                 .post()
-                .uri("http://localhost:8082" + "/api/coffee/user")
-                .body(Mono.just(utenteDto), UtenteDto.class)
+                .uri("http://localhost:8082/api/coffee/user")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(utenteDto)
                 .retrieve()
-                .bodyToMono(UtenteDto.class)
-                .doOnSuccess(response -> log.info("Utente sincronizzato con successo: {}", response))
-                .doOnError(error -> log.error("Errore durante la sincronizzazione con il servizio caffè", error))
+                .onStatus(HttpStatusCode::isError, response ->
+                        response.bodyToMono(String.class)
+                                .flatMap(errorBody -> {
+                                    String errorMsg = String.format(
+                                            "Coffee service error - Status: %s, Body: %s",
+                                            response.statusCode(),
+                                            errorBody
+                                    );
+                                    log.error(errorMsg);
+                                    return Mono.error(new RuntimeException(errorMsg));
+                                })
+                )
+                .bodyToMono(Void.class)
+                .doOnSuccess(x -> log.info("User successfully synchronized with coffee service"))
+                .doOnError(error -> log.error("Error synchronizing with coffee service", error))
                 .subscribe();
 
         return savedUser;
     }
-
 
     private String generateToken(User user) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
