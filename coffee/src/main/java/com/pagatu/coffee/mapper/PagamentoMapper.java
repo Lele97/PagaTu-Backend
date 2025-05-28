@@ -16,9 +16,9 @@ public class PagamentoMapper {
         dto.setId(pagamento.getId());
 
         // Ottieni lo userId e lo username dall'oggetto utente associato al pagamento
-        if (pagamento.getUtente() != null) {
-            dto.setUserId(pagamento.getUtente().getId());
-            dto.setUsername(pagamento.getUtente().getUsername());
+        if (pagamento.getUserGroupMembership() != null) {
+            dto.setUserId(pagamento.getUserGroupMembership().getId());
+            dto.setUsername(pagamento.getUserGroupMembership().getUtente().getUsername());
         }
 
         dto.setDataPagamento(pagamento.getDataPagamento());

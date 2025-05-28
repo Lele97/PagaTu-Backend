@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 public class NuovoPagamentoRequest {
     @Positive(message = "L'importo deve essere positivo")
     private Double importo;
-
     private String descrizione;
+    private String gruppo;
 }

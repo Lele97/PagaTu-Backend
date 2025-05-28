@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "user_group_memberships")
 @Data
@@ -34,6 +37,11 @@ public class UserGroupMembership {
 
     @Column(name = "is_admin")
     private Boolean isAdmin = false;
+
+    @OneToMany(mappedBy = "userGroupMembership", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Pagamento> pagamenti = new ArrayList<>();
+
+
 
     @PrePersist
     protected void onCreate() {

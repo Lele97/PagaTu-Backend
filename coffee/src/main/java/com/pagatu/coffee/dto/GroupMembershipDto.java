@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GroupMembershipDto {
+    private String groupId;
     private String groupName;
     private Status status;
     private Boolean isAdmin;
