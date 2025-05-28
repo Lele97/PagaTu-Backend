@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -33,7 +34,7 @@ public class Group {
 
     // Replace direct many-to-many with membership relationship
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<UserGroupMembership> userMemberships;
+    private List<UserGroupMembership> userMemberships =  new ArrayList<>();
 
     // Helper method to get users (for backward compatibility)
     public List<Utente> getUsers() {

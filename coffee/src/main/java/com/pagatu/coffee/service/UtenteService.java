@@ -41,9 +41,13 @@ public class UtenteService {
             Utente existing = existingByAuthId.get();
             log.info("Existing user found by authId: {}", utenteDto.getAuthId());
 
+
+            List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(utenteDto.getGroups());
+
+
             // Update group memberships if provided
-            if (utenteDto.getGroupMemberships() != null) {
-                updateUserGroupMemberships(existing, utenteDto.getGroupMemberships());
+            if (userGroupMemberships != null) {
+                updateUserGroupMemberships(existing, userGroupMemberships);
             }
 
             return mapToDto(existing);
@@ -56,9 +60,11 @@ public class UtenteService {
             existing.setAuthId(utenteDto.getAuthId());
             existing.setEmail(utenteDto.getEmail());
 
+            List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(utenteDto.getGroups());
+
             // Update group memberships
-            if (utenteDto.getGroupMemberships() != null) {
-                updateUserGroupMemberships(existing, utenteDto.getGroupMemberships());
+            if (userGroupMemberships != null) {
+                updateUserGroupMemberships(existing, userGroupMemberships);
             }
 
             Utente updated = utenteRepository.save(existing);
@@ -77,118 +83,124 @@ public class UtenteService {
         // Save user first to generate ID
         Utente savedUser = utenteRepository.save(utente);
 
-        // Process group memberships with the saved user ID
-        if (utenteDto.getGroupMemberships() != null) {
-            updateUserGroupMemberships(savedUser, utenteDto.getGroupMemberships());
+        System.out.println(utente.getGroupMemberships());
+
+        List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(utenteDto.getGroups());
+
+        if (userGroupMemberships != null && !userGroupMemberships.isEmpty()) {
+            updateUserGroupMemberships(savedUser, userGroupMemberships);
         }
 
         log.info("New user created: {}", savedUser.getUsername());
         return mapToDto(savedUser);
     }
 
-    @Transactional
-    public void addUserToGroup(AddUserToGroupRequest request) {
-        Utente user = utenteRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Group group = groupRepository.findById(request.getGroupId())
-                .orElseThrow(() -> new RuntimeException("Group not found"));
-
-        // Check if membership already exists
-        if (membershipRepository.existsByUtenteAndGroup(user, group)) {
-            throw new RuntimeException("User is already a member of this group");
-        }
-
-        // Create new membership
-        UserGroupMembership membership = new UserGroupMembership(user, group, request.getStatus());
-        membership.setIsAdmin(request.getIsAdmin());
-        membershipRepository.save(membership);
-
-        log.info("Added user {} to group {} with status {}", user.getUsername(), group.getName(), request.getStatus());
-    }
+//    @Transactional
+//    public void addUserToGroup(AddUserToGroupRequest request) {
+//        // Delegate to GroupService for proper entity creation and relationship management
+//        try {
+//            log.info("Adding user {} to group {} with status {}",
+//                    request.getUserId(), request.getGroupId(), request.getStatus());
+//
+//            // Delegate to GroupService - you need to implement this method there
+//            groupService.addUserToGroup(request);
+//
+//        } catch (Exception e) {
+//            log.error("Error adding user to group: {}", e.getMessage());
+//            throw new RuntimeException("Failed to add user to group: " + e.getMessage());
+//        }
+//    }
 
     @Transactional
     public void updateMembershipStatus(UpdateMembershipStatusRequest request) {
-        Utente user = utenteRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // Delegate to GroupService for proper membership management
+        try {
+            log.info("Updating membership status for user {} in group {} to {}",
+                    request.getUserId(), request.getGroupId(), request.getNewStatus());
 
-        Group group = groupRepository.findById(request.getGroupId())
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+            // Delegate to GroupService - you need to implement this method there
+            groupService.updateMembershipStatus(request);
 
-        UserGroupMembership membership = membershipRepository.findByUtenteAndGroup(user, group)
-                .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
+        } catch (Exception e) {
+            log.error("Error updating membership status: {}", e.getMessage());
+            throw new RuntimeException("Failed to update membership status: " + e.getMessage());
+        }
+    }
 
-        membership.setStatus(request.getNewStatus());
-        membershipRepository.save(membership);
+    private List<GroupMembershipDto> convertGroupsToMemberships(List<String> groups) {
+        if (groups == null) {
+            return Collections.emptyList();
+        }
+        return groups.stream()
+                .map(groupName -> {
+                    Optional<Group> groupOpt = groupRepository.getGroupByName(groupName);
+                    GroupMembershipDto membership = new GroupMembershipDto();
 
-        log.info("Updated membership status for user {} in group {} to {}",
-                user.getUsername(), group.getName(), request.getNewStatus());
+                    membership.setGroupId(String.valueOf(groupOpt.map(Group::getId).orElse(null))); // qui prendiamo l'id
+                    membership.setGroupName(groupName);
+                    membership.setStatus(Status.NON_PAGATO);
+                    membership.setIsAdmin(false);
+                    membership.setJoinedAt(null);
+
+                    return membership;
+                })
+                .toList();
     }
 
     @Transactional
     public void removeUserFromGroup(Long userId, Long groupId) {
-        Utente user = utenteRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        // Delegate to GroupService for proper membership management
+        try {
+            log.info("Removing user {} from group {}", userId, groupId);
 
-        Group group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+            // Delegate to GroupService - you need to implement this method there
+            groupService.removeUserFromGroup(userId, groupId);
 
-        UserGroupMembership membership = membershipRepository.findByUtenteAndGroup(user, group)
-                .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
-
-        membershipRepository.delete(membership);
-        log.info("Removed user {} from group {}", user.getUsername(), group.getName());
+        } catch (Exception e) {
+            log.error("Error removing user from group: {}", e.getMessage());
+            throw new RuntimeException("Failed to remove user from group: " + e.getMessage());
+        }
     }
 
     private void updateUserGroupMemberships(Utente user, List<GroupMembershipDto> membershipDtos) {
-        // Get current memberships
-        List<UserGroupMembership> currentMemberships = membershipRepository.findByUtente(user);
-        Map<String, UserGroupMembership> currentMembershipMap = currentMemberships.stream()
-                .collect(Collectors.toMap(m -> m.getGroup().getName(), m -> m));
-
-        // Process new memberships
         for (GroupMembershipDto membershipDto : membershipDtos) {
-            Group group = findOrCreateGroup(membershipDto.getGroupName(), user.getId());
+            try {
 
-            UserGroupMembership existingMembership = currentMembershipMap.get(membershipDto.getGroupName());
+                // Controlla se il gruppo esiste
+                Optional<Group> existingGroup = groupRepository.getGroupByName(membershipDto.getGroupName());
+                Long groupId;
 
-            if (existingMembership != null) {
-                // Update existing membership
-                existingMembership.setStatus(membershipDto.getStatus());
-                if (membershipDto.getIsAdmin() != null) {
-                    existingMembership.setIsAdmin(membershipDto.getIsAdmin());
+                if (existingGroup.isEmpty()) {
+                    // Se il gruppo non esiste, crealo
+                    // here groupId is null !!!!!!
+                    log.info("Creating new group: {} for user ID: {}", membershipDto.getGroupName(), user.getId());
+                    NuovoGruppoRequest nuovoGruppoRequest = new NuovoGruppoRequest();
+                    nuovoGruppoRequest.setName(membershipDto.getGroupName());
+                    GroupDto createdGroup = groupService.createGroup(nuovoGruppoRequest, user.getId());
+                    groupId = createdGroup.getId();
+                } else {
+                    groupId = existingGroup.get().getId();
                 }
-                membershipRepository.save(existingMembership);
-            } else {
-                // Create new membership
-                UserGroupMembership newMembership = new UserGroupMembership();
-                newMembership.setUtente(user);
-                newMembership.setGroup(group);
-                newMembership.setStatus(membershipDto.getStatus() != null ? membershipDto.getStatus() : Status.NON_PAGATO);
-                newMembership.setIsAdmin(membershipDto.getIsAdmin() != null ? membershipDto.getIsAdmin() : false);
-                membershipRepository.save(newMembership);
+
+                System.out.println("AAAAA"+groupId);
+
+                // Aggiungi o aggiorna la membership delegando al GroupService
+                AddUserToGroupRequest addRequest = new AddUserToGroupRequest();
+                addRequest.setUserId(user.getId());
+                addRequest.setGroupId(groupId);
+                addRequest.setStatus(membershipDto.getStatus() != null ? membershipDto.getStatus() : Status.NON_PAGATO);
+                addRequest.setIsAdmin(membershipDto.getIsAdmin() != null ? membershipDto.getIsAdmin() : false);
+
+                groupService.addUserToGroup(addRequest);
+
+                log.info("Processed membership for user {} in group {}", user.getUsername(), membershipDto.getGroupName());
+
+            } catch (Exception e) {
+                log.error("Error processing membership for group {}: {}", membershipDto.getGroupName(), e.getMessage());
             }
         }
     }
 
-    private Group findOrCreateGroup(String groupName, Long userId) {
-        return groupRepository.getGroupByName(groupName)
-                .orElseGet(() -> {
-                    log.info("Creating new group: {} for user ID: {}", groupName, userId);
-                    try {
-                        NuovoGruppoRequest nuovoGruppoRequest = new NuovoGruppoRequest();
-                        nuovoGruppoRequest.setName(groupName);
-                        groupService.createGroup(nuovoGruppoRequest, userId);
-                        return groupRepository.getGroupByName(groupName)
-                                .orElseThrow(() -> new RuntimeException("Failed to create group: " + groupName));
-                    } catch (Exception e) {
-                        log.error("Error creating group through GroupService: {}", e.getMessage());
-                        Group newGroup = new Group();
-                        newGroup.setName(groupName);
-                        return groupRepository.save(newGroup);
-                    }
-                });
-    }
 
     @Transactional(readOnly = true)
     public Optional<Utente> findByUsername(String username) {
@@ -224,12 +236,12 @@ public class UtenteService {
         dto.setName(utente.getName());
         dto.setLastname(utente.getLastname());
 
-        // Convert memberships to DTOs
+        // 🌟 Converte solo i nomi dei gruppi
         if (utente.getGroupMemberships() != null) {
-            List<GroupMembershipDto> membershipDtos = utente.getGroupMemberships().stream()
-                    .map(this::mapMembershipToDto)
+            List<String> groupNames = utente.getGroupMemberships().stream()
+                    .map(membership -> membership.getGroup().getName())
                     .toList();
-            dto.setGroupMemberships(membershipDtos);
+            dto.setGroups(groupNames);
         }
 
         return dto;

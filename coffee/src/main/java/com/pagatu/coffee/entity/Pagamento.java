@@ -8,13 +8,14 @@ import java.time.LocalDateTime;
 @Entity
 @Data
 public class Pagamento {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "utente_id")
-    private Utente utente;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_group_membership", nullable = false)
+    private UserGroupMembership userGroupMembership;
 
     private Double importo;
 
