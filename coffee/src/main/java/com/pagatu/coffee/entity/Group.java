@@ -11,12 +11,12 @@ import java.util.List;
 
 @Entity
 @Data
-@Table(name = "user_groups")  // Changed from "group" to "user_groups"
+@Table(name = "groups")
 @NoArgsConstructor
 @AllArgsConstructor
 public class Group {
 
-    @JsonCreator // Aggiungi questo!
+    @JsonCreator
     public Group(@JsonProperty("name") String name) {
         this.name = name;
     }
@@ -28,6 +28,36 @@ public class Group {
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 
-    @ManyToMany(mappedBy = "groups") // 🌟 usa lo stesso nome della lista in Utente
-    private List<Utente> users;
+    @Column(name = "description")
+    private String description;
+
+    // Replace direct many-to-many with membership relationship
+    @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<UserGroupMembership> userMemberships;
+
+    // Helper method to get users (for backward compatibility)
+    public List<Utente> getUsers() {
+        if (userMemberships == null) return List.of();
+        return userMemberships.stream()
+                .map(UserGroupMembership::getUtente)
+                .toList();
+    }
+
+    // Helper method to get users with specific status
+    public List<Utente> getUsersWithStatus(Status status) {
+        if (userMemberships == null) return List.of();
+        return userMemberships.stream()
+                .filter(membership -> membership.getStatus() == status)
+                .map(UserGroupMembership::getUtente)
+                .toList();
+    }
+
+    // Helper method to get group admins
+    public List<Utente> getAdmins() {
+        if (userMemberships == null) return List.of();
+        return userMemberships.stream()
+                .filter(membership -> Boolean.TRUE.equals(membership.getIsAdmin()))
+                .map(UserGroupMembership::getUtente)
+                .toList();
+    }
 }
