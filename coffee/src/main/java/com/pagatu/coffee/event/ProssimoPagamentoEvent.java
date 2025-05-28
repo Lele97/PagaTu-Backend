@@ -18,4 +18,5 @@ public class ProssimoPagamentoEvent {
     private String prossimoEmail;
     private LocalDateTime dataUltimoPagamento;
     private Double importo;
+    private String groupName;
 }

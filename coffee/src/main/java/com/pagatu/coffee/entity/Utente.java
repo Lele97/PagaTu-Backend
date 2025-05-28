@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -28,20 +27,41 @@ public class Utente {
     @Column(name = "auth_id", nullable = false)
     private Long authId;
 
-    @Column(name = "status")
-    private Status status;
-
     @Column(name = "name")
     private String name;
 
     @Column(name = "lastname")
     private String lastname;
 
-    @ManyToMany(cascade = CascadeType.PERSIST)
-    @JoinTable(
-            name = "user_groups", // 🌟 tabella di join
-            joinColumns = @JoinColumn(name = "utente_id"), // chiave esterna verso Utente
-            inverseJoinColumns = @JoinColumn(name = "group_id") // chiave esterna verso Group
-    )
-    private List<Group> groups = new ArrayList<>();
+    // Replace direct many-to-many with membership relationship
+    @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<UserGroupMembership> groupMemberships;
+
+    // Helper method to get groups (for backward compatibility)
+    public List<Group> getGroups() {
+        if (groupMemberships == null) return List.of();
+        return groupMemberships.stream()
+                .map(UserGroupMembership::getGroup)
+                .toList();
+    }
+
+    // Helper method to get status for a specific group
+    public Status getStatusForGroup(Group group) {
+        if (groupMemberships == null) return null;
+        return groupMemberships.stream()
+                .filter(membership -> membership.getGroup().equals(group))
+                .findFirst()
+                .map(UserGroupMembership::getStatus)
+                .orElse(null);
+    }
+
+    // Helper method to check if user is admin of a specific group
+    public boolean isAdminOfGroup(Group group) {
+        if (groupMemberships == null) return false;
+        return groupMemberships.stream()
+                .filter(membership -> membership.getGroup().equals(group))
+                .findFirst()
+                .map(UserGroupMembership::getIsAdmin)
+                .orElse(false);
+    }
 }

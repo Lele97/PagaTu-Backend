@@ -112,16 +112,7 @@ public class AuthService {
 
         log.info("ID :: {}", utenteDto.getId());
 
-        // Invia dati al servizio caffè usando WebFlux
-//        webClientBuilder.build()
-//                .post()
-//                .uri("http://localhost:8082" + "/api/coffee/user")
-//                .body(Mono.just(utenteDto), UtenteDto.class)
-//                .retrieve()
-//                .bodyToMono(UtenteDto.class)
-//                .doOnSuccess(response -> log.info("Utente sincronizzato con successo: {}", response))
-//                .doOnError(error -> log.error("Errore durante la sincronizzazione con il servizio caffè", error))
-//                .subscribe();
+
 
         // Make the WebClient call with enhanced error handling
         webClientBuilder.build()

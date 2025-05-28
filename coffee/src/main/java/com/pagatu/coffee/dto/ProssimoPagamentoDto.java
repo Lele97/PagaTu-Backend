@@ -11,4 +11,6 @@ public class ProssimoPagamentoDto {
     private Long userId;
     private String username;
     private String email;
+    private Long groupId;      // Added group information
+    private String groupName;  // Added group information
 }

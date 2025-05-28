@@ -1,20 +1,19 @@
 package com.pagatu.coffee.dto;
 
+import com.pagatu.coffee.entity.Status;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class UtenteDto {
-    private Long id;
-    private Long authId;
+@NoArgsConstructor
+public class UserMembershipDto {
+    private Long userId;
     private String username;
-    private String email;
     private String name;
     private String lastname;
-    private List<String> groups;
+    private Status status;
+    private Boolean isAdmin;
+    private java.time.LocalDateTime joinedAt;
 }
