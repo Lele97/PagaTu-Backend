@@ -136,7 +136,10 @@ public class UtenteService {
                     Optional<Group> groupOpt = groupRepository.getGroupByName(groupName);
                     GroupMembershipDto membership = new GroupMembershipDto();
 
-                    membership.setGroupId(String.valueOf(groupOpt.map(Group::getId).orElse(null))); // qui prendiamo l'id
+                    // Prendi l’id solo se esiste
+                    Long groupId = groupOpt.map(Group::getId).orElse(null);
+                    membership.setGroupId(groupId);
+
                     membership.setGroupName(groupName);
                     membership.setStatus(Status.NON_PAGATO);
                     membership.setIsAdmin(false);
