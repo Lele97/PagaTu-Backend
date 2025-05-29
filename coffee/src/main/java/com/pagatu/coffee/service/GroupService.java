@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -45,19 +44,14 @@ public class GroupService {
 
         Group group = new Group();
         group.setName(nuovoGruppoRequest.getName());
-
-        // Il cuore del gruppo pulsante
         UserGroupMembership membership = new UserGroupMembership();
         membership.setGroup(group);
         membership.setUtente(utente);
         membership.setStatus(Status.NON_PAGATO);
         membership.setIsAdmin(true);
         membership.setJoinedAt(LocalDateTime.now());
-
-        // **IMPORTANTE** – Mantieni la relazione viva
         group.getUserMemberships().add(membership);
 
-        // **Magia del cascade**: salva solo il gruppo, e Hibernate salverà anche la membership
         Group savedGroup = groupRepository.save(group);
 
         return mapToDto(savedGroup);
@@ -65,60 +59,38 @@ public class GroupService {
 
     @Transactional
     public void addUserToGroup(AddUserToGroupRequest request) {
+
         try {
 
-            System.out.println(request.getUserId());
-            System.out.println(request.getGroupId());
-
-            // Cerca l'utente tra le stelle del database, altrimenti getta un grido nell’oscurità
             Utente user = utenteRepository.findById(request.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // Trova il gruppo, come un faro nell’oceano dei dati
             Group group = groupRepository.findById(request.getGroupId())
                     .orElseThrow(() -> new RuntimeException("Group not found"));
 
-            // Se l'utente è già nell'orbita del gruppo, nessun bisogno di duplicare la costellazione
-//            if (userGroupMembershipRepository.existsByUtenteAndGroup(user, group)) {
-//                throw new RuntimeException("User is already a member of this group");
-//            }
-
-            // Forgia un nuovo legame, come un'alleanza di anime
             UserGroupMembership membership = new UserGroupMembership();
             membership.setUtente(user);
             membership.setGroup(group);
-
-            // Lo status, come un presagio: se non esiste, lascialo dormire in uno stato primordiale
-            membership.setStatus(
-                    request.getStatus() != null ? request.getStatus() : Status.NON_PAGATO
-            );
-
-            // L’amministratore – custode del fuoco sacro – se non esiste, è un semplice viaggiatore
-            membership.setIsAdmin(
-                    request.getIsAdmin() != null ? request.getIsAdmin() : false
-            );
-
-            // Segna il tempo dell’unione, come un’ora segreta nella notte
+            membership.setStatus(request.getStatus() != null ? request.getStatus() : Status.NON_PAGATO);
+            membership.setIsAdmin(request.getIsAdmin() != null ? request.getIsAdmin() : false);
             membership.setJoinedAt(LocalDateTime.now());
 
-            // Scolpisci questo legame nel marmo del database
             userGroupMembershipRepository.save(membership);
 
-            // Un’ode al log – canta la nascita di un nuovo membro
             log.info("Added user {} to group {} with status {}",
                     user.getUsername(), group.getName(), membership.getStatus());
 
         } catch (RuntimeException ex) {
-            // Se l’incanto si spezza, raccontalo in un sussurro al log
             log.error("Error adding user to group: {}", ex.getMessage(), ex);
             throw ex;
         }
     }
 
-
     @Transactional
     public void updateMembershipStatus(UpdateMembershipStatusRequest request) {
+
         try {
+
             Utente user = utenteRepository.findById(request.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -142,7 +114,9 @@ public class GroupService {
 
     @Transactional
     public void removeUserFromGroup(Long userId, Long groupId) {
+
         try {
+
             Utente user = utenteRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -163,9 +137,20 @@ public class GroupService {
 
     private GroupDto mapToDto(Group group) {
         GroupDto groupDto = new GroupDto();
-        groupDto.setId(group.getId()); // Aggiungi questo!
+        groupDto.setId(group.getId());
         groupDto.setName(group.getName());
-        groupDto.setUserMemberships(group.getUserMemberships());
+
+        List<UserMembershipDto> membershipDtos = group.getUserMemberships().stream()
+                .map(m -> {
+                    UserMembershipDto membershipDto = new UserMembershipDto();
+                    membershipDto.setUserId(m.getUtente().getId());
+                    membershipDto.setUsername(m.getUtente().getUsername());
+                    membershipDto.setStatus(m.getStatus());
+                    membershipDto.setIsAdmin(m.getIsAdmin());
+                    return membershipDto;
+                }).toList();
+
+        groupDto.setUserMembershipsdto(membershipDtos);
         return groupDto;
     }
 }
