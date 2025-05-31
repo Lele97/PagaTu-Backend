@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -34,7 +35,9 @@ public class GroupService {
     @Transactional
     public GroupDto createGroup(NuovoGruppoRequest nuovoGruppoRequest, Long userId) {
 
-        Utente utente = utenteRepository.findById(userId)
+        System.out.println(userId);
+
+        Utente utente = utenteRepository.findByAuthId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         groupRepository.getGroupByName(nuovoGruppoRequest.getName())
@@ -72,7 +75,7 @@ public class GroupService {
             membership.setUtente(user);
             membership.setGroup(group);
             membership.setStatus(request.getStatus() != null ? request.getStatus() : Status.NON_PAGATO);
-            membership.setIsAdmin(request.getIsAdmin() != null ? request.getIsAdmin() : false);
+            membership.setIsAdmin(request.getIsAdmin());
             membership.setJoinedAt(LocalDateTime.now());
 
             userGroupMembershipRepository.save(membership);
@@ -152,5 +155,20 @@ public class GroupService {
 
         groupDto.setUserMembershipsdto(membershipDtos);
         return groupDto;
+    }
+
+    private void deleteGroupByName(String groupName) {
+
+        Optional<Group> group = groupRepository.getGroupByName(groupName);
+
+        if (group.isPresent()) {
+            group.stream().filter(f -> f.getUserMemberships().size() < 2);
+
+        }
+
+
+
+
+        groupRepository.deleteGroupByName(groupName);
     }
 }
