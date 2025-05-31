@@ -41,8 +41,6 @@ public class UserGroupMembership {
     @OneToMany(mappedBy = "userGroupMembership", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Pagamento> pagamenti = new ArrayList<>();
 
-
-
     @PrePersist
     protected void onCreate() {
         joinedAt = java.time.LocalDateTime.now();
