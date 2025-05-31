@@ -82,7 +82,7 @@ public class AuthService {
         user.setEmail(registerRequest.getEmail());
         user.setFirstName(registerRequest.getFirstName());
         user.setLastName(registerRequest.getLastName());
-        user.setGroups(registerRequest.getGroups()); // Deve essere List<String>
+        user.setGroups(registerRequest.getGroups());
 
         User savedUser = fristUserRepository.save(user);
 
@@ -108,11 +108,9 @@ public class AuthService {
         utenteDto.setEmail(savedUser.getEmail());
         utenteDto.setName(savedUser.getFirstName());
         utenteDto.setLastname(savedUser.getLastName());
-        utenteDto.setGroups(savedUser.getGroups()); // Invia List<String>
+        utenteDto.setGroups(savedUser.getGroups());
 
         log.info("ID :: {}", utenteDto.getId());
-
-
 
         // Make the WebClient call with enhanced error handling
         webClientBuilder.build()
@@ -142,6 +140,7 @@ public class AuthService {
     }
 
     private String generateToken(User user) {
+
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
 
         return Jwts.builder()

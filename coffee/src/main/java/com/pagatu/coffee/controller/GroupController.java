@@ -27,4 +27,16 @@ public class GroupController {
         Long user_id = jwtUtil.getUserIdFromToken(authHeader.substring(7));
         return ResponseEntity.ok(groupService.createGroup(nuovoGruppoRequest, user_id));
     }
+
+
+//    @DeleteMapping("/delete/{groupName}")
+//    public ResponseEntity<String> deleteGroupByName(@PathVariable String groupName) {
+//        groupService.deleteGroupByName(groupName);
+//        return ResponseEntity.ok("Delete group named " + groupName);
+//
+//    }
+//
+
+
+
 }

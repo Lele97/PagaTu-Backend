@@ -1,7 +1,10 @@
 package com.pagatu.coffee.service;
 
 import com.pagatu.coffee.dto.*;
-import com.pagatu.coffee.entity.*;
+import com.pagatu.coffee.entity.Group;
+import com.pagatu.coffee.entity.Status;
+import com.pagatu.coffee.entity.UserGroupMembership;
+import com.pagatu.coffee.entity.Utente;
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
 import com.pagatu.coffee.repository.UtenteRepository;
@@ -9,8 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -33,83 +37,52 @@ public class UtenteService {
 
     @Transactional
     public UtenteDto createUtente(UtenteDto utenteDto) {
+
         log.info("Creating/updating user: {}", utenteDto);
 
-        // Check if user exists by authId
         Optional<Utente> existingByAuthId = utenteRepository.findByAuthId(utenteDto.getAuthId());
+
         if (existingByAuthId.isPresent()) {
             Utente existing = existingByAuthId.get();
             log.info("Existing user found by authId: {}", utenteDto.getAuthId());
-
-
             List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(utenteDto.getGroups());
-
-
-            // Update group memberships if provided
-            if (userGroupMemberships != null) {
-                updateUserGroupMemberships(existing, userGroupMemberships);
-            }
-
+            if (userGroupMemberships != null)
+                createGroupAndAddUserToTheGroup(existing, userGroupMemberships);
             return mapToDto(existing);
         }
 
-        // Check if user exists by username
         Optional<Utente> existingByUsername = utenteRepository.findByUsername(utenteDto.getUsername());
+
         if (existingByUsername.isPresent()) {
             Utente existing = existingByUsername.get();
             existing.setAuthId(utenteDto.getAuthId());
             existing.setEmail(utenteDto.getEmail());
-
             List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(utenteDto.getGroups());
-
-            // Update group memberships
-            if (userGroupMemberships != null) {
-                updateUserGroupMemberships(existing, userGroupMemberships);
-            }
-
+            if (userGroupMemberships != null)
+                createGroupAndAddUserToTheGroup(existing, userGroupMemberships);
             Utente updated = utenteRepository.save(existing);
             log.info("Updated existing user by username: {}", utenteDto.getUsername());
             return mapToDto(updated);
         }
 
-        // Create new user
         Utente utente = new Utente();
         utente.setAuthId(utenteDto.getAuthId());
         utente.setUsername(utenteDto.getUsername());
         utente.setEmail(utenteDto.getEmail());
         utente.setName(utenteDto.getName());
         utente.setLastname(utenteDto.getLastname());
-
-        // Save user first to generate ID
         Utente savedUser = utenteRepository.save(utente);
-
-        System.out.println(utente.getGroupMemberships());
 
         List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(utenteDto.getGroups());
 
-        if (userGroupMemberships != null && !userGroupMemberships.isEmpty()) {
-            updateUserGroupMemberships(savedUser, userGroupMemberships);
-        }
+        System.out.println(userGroupMemberships);
+
+        if (userGroupMemberships != null && !userGroupMemberships.isEmpty())
+            createGroupAndAddUserToTheGroup(savedUser, userGroupMemberships);
 
         log.info("New user created: {}", savedUser.getUsername());
         return mapToDto(savedUser);
     }
-
-//    @Transactional
-//    public void addUserToGroup(AddUserToGroupRequest request) {
-//        // Delegate to GroupService for proper entity creation and relationship management
-//        try {
-//            log.info("Adding user {} to group {} with status {}",
-//                    request.getUserId(), request.getGroupId(), request.getStatus());
-//
-//            // Delegate to GroupService - you need to implement this method there
-//            groupService.addUserToGroup(request);
-//
-//        } catch (Exception e) {
-//            log.error("Error adding user to group: {}", e.getMessage());
-//            throw new RuntimeException("Failed to add user to group: " + e.getMessage());
-//        }
-//    }
 
     @Transactional
     public void updateMembershipStatus(UpdateMembershipStatusRequest request) {
@@ -142,7 +115,7 @@ public class UtenteService {
 
                     membership.setGroupName(groupName);
                     membership.setStatus(Status.NON_PAGATO);
-                    membership.setIsAdmin(false);
+                    membership.setIsAdmin(true);
                     membership.setJoinedAt(null);
 
                     return membership;
@@ -165,45 +138,24 @@ public class UtenteService {
         }
     }
 
-    private void updateUserGroupMemberships(Utente user, List<GroupMembershipDto> membershipDtos) {
+    private void createGroupAndAddUserToTheGroup(Utente user, List<GroupMembershipDto> membershipDtos) {
+
         for (GroupMembershipDto membershipDto : membershipDtos) {
+
             try {
 
-                // Controlla se il gruppo esiste
-                Optional<Group> existingGroup = groupRepository.getGroupByName(membershipDto.getGroupName());
-                Long groupId;
-
-                if (existingGroup.isEmpty()) {
-                    // Se il gruppo non esiste, crealo
-                    // here groupId is null !!!!!!
-                    log.info("Creating new group: {} for user ID: {}", membershipDto.getGroupName(), user.getId());
+                if (groupRepository.getGroupByName(membershipDto.getGroupName()).isEmpty()) {
                     NuovoGruppoRequest nuovoGruppoRequest = new NuovoGruppoRequest();
                     nuovoGruppoRequest.setName(membershipDto.getGroupName());
                     GroupDto createdGroup = groupService.createGroup(nuovoGruppoRequest, user.getId());
-                    groupId = createdGroup.getId();
-                } else {
-                    groupId = existingGroup.get().getId();
+                    log.info("Creating new group: {} with ID: {} for user ID: {}", membershipDto.getGroupName(), createdGroup.getId(), user.getId());
+                    log.info("Processed membership for user {} in group {}", user.getUsername(), membershipDto.getGroupName());
                 }
-
-                System.out.println("AAAAA"+groupId);
-
-                // Aggiungi o aggiorna la membership delegando al GroupService
-                AddUserToGroupRequest addRequest = new AddUserToGroupRequest();
-                addRequest.setUserId(user.getId());
-                addRequest.setGroupId(groupId);
-                addRequest.setStatus(membershipDto.getStatus() != null ? membershipDto.getStatus() : Status.NON_PAGATO);
-                addRequest.setIsAdmin(membershipDto.getIsAdmin() != null ? membershipDto.getIsAdmin() : false);
-
-                groupService.addUserToGroup(addRequest);
-
-                log.info("Processed membership for user {} in group {}", user.getUsername(), membershipDto.getGroupName());
-
             } catch (Exception e) {
                 log.error("Error processing membership for group {}: {}", membershipDto.getGroupName(), e.getMessage());
             }
         }
     }
-
 
     @Transactional(readOnly = true)
     public Optional<Utente> findByUsername(String username) {

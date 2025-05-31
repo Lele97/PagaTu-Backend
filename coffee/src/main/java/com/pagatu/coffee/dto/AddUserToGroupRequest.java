@@ -12,5 +12,5 @@ public class AddUserToGroupRequest {
     private Long userId;
     private Long groupId;
     private Status status = Status.NON_PAGATO; // Default status
-    private Boolean isAdmin = false;
+    private Boolean isAdmin;
 }
