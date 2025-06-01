@@ -28,15 +28,10 @@ public class GroupController {
         return ResponseEntity.ok(groupService.createGroup(nuovoGruppoRequest, user_id));
     }
 
-
-//    @DeleteMapping("/delete/{groupName}")
-//    public ResponseEntity<String> deleteGroupByName(@PathVariable String groupName) {
-//        groupService.deleteGroupByName(groupName);
-//        return ResponseEntity.ok("Delete group named " + groupName);
-//
-//    }
-//
-
-
-
+    @DeleteMapping("/delete/{groupName}")
+    public ResponseEntity<String> deleteGroupByName(@PathVariable String groupName,@RequestHeader("Authorization") String authHeader) throws Exception {
+        Long user_id = jwtUtil.getUserIdFromToken(authHeader.substring(7));
+        groupService.deleteGroupByName(groupName,user_id);
+        return ResponseEntity.ok("Delete group: " + groupName);
+    }
 }

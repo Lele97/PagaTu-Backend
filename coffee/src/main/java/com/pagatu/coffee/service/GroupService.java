@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Slf4j
@@ -34,8 +33,6 @@ public class GroupService {
 
     @Transactional
     public GroupDto createGroup(NuovoGruppoRequest nuovoGruppoRequest, Long userId) {
-
-        System.out.println(userId);
 
         Utente utente = utenteRepository.findByAuthId(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -157,18 +154,20 @@ public class GroupService {
         return groupDto;
     }
 
-    private void deleteGroupByName(String groupName) {
+    @Transactional
+    public void deleteGroupByName(String groupName, Long userId) throws Exception {
 
-        Optional<Group> group = groupRepository.getGroupByName(groupName);
+        Group group = groupRepository.getGroupByName(groupName)
+                .orElseThrow(() -> new Exception("The group does not exist."));
 
-        if (group.isPresent()) {
-            group.stream().filter(f -> f.getUserMemberships().size() < 2);
+        boolean isMember = group.getUserMemberships().stream()
+                .anyMatch(m -> m.getUtente().getAuthId().equals(userId));
 
+        if (group.getUserMemberships().size() < 2 && isMember) {
+            groupRepository.deleteGroupByName(groupName);
+            log.info("Group '{}' deleted by user with ID {}", groupName, userId);
+        } else {
+            throw new Exception("has more than one user, or you are not a member.");
         }
-
-
-
-
-        groupRepository.deleteGroupByName(groupName);
     }
 }
