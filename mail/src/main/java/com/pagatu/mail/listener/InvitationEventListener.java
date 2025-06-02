@@ -16,9 +16,9 @@ public class InvitationEventListener {
         this.emailService = emailService;
     }
 
-    @KafkaListener(topics = "invitation-caffe", groupId = "email-service")
-    public void sendEmailInvitation(InvitationEvent event){
-        log.info("");
-        emailService.inviaInvitoUtenteNelGruppo(event).subscribe();
-    }
+//    @KafkaListener(topics = "invitation-caffe", groupId = "email-service")
+//    public void sendEmailInvitation(InvitationEvent event){
+//        log.info("");
+//        emailService.inviaInvitoUtenteNelGruppo(event).subscribe();
+//    }
 }
