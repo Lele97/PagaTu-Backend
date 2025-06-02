@@ -103,16 +103,16 @@ public class EmailService {
         });
     }
 
-    public Flow.Publisher<Object> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
-
-
-
-
-
-
-
-
-    }
+//    public Flow.Publisher<Object> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
+//
+//
+//
+//
+//
+//
+//
+//
+//    }
 
     private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {}
 }
