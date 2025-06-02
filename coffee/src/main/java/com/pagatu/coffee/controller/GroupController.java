@@ -1,5 +1,6 @@
 package com.pagatu.coffee.controller;
 
+import com.pagatu.coffee.dto.AddUserToGroupRequest;
 import com.pagatu.coffee.dto.GroupDto;
 import com.pagatu.coffee.dto.NuovoGruppoRequest;
 import com.pagatu.coffee.jwt.jwtUtil;
@@ -33,5 +34,16 @@ public class GroupController {
         Long user_id = jwtUtil.getUserIdFromToken(authHeader.substring(7));
         groupService.deleteGroupByName(groupName,user_id);
         return ResponseEntity.ok("Delete group: " + groupName);
+    }
+
+    @PutMapping("/update/addtogroup")
+    public ResponseEntity<String> addUserToGroup(@Valid @RequestBody AddUserToGroupRequest addUserToGroupRequest){
+        groupService.addUserToGroup(addUserToGroupRequest);
+        return ResponseEntity.ok("User add to the group");
+    }
+
+    @PostMapping("/update/invitation")
+    public ResponseEntity<String> sendInvitationToGroup(){
+        return ResponseEntity.ok("...");
     }
 }

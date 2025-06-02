@@ -2,28 +2,16 @@ server:
   port: 8082
 
 spring:
+  config:
+    import: "optional:configserver:"
   cloud:
     config:
       enabled: false
+      import-check:
+        enabled: false
+
   application:
     name: coffee
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:caffedb}
-    username: ${SPRING_DATASOURCE_USERNAME:sa}
-    password: ${SPRING_DATASOURCE_PASSWORD:password}
-    driver-class-name: org.h2.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-    database-platform: org.hibernate.dialect.H2Dialect
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
 
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -34,7 +22,60 @@ spring:
         spring.json.type.mapping: prossimopagamento:com.pagatu.coffee.event.ProssimoPagamentoEvent
     topics:
       pagamenti-caffe: pagamenti-caffe
+      invitation-caffe: invitation-caffe
 
+  profiles:
+    active: dev
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/coffee}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:PswRoot97Mysql!}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.MySQLDialect
+
+  h2:
+    console:
+      enabled: false
+      path: /h2-console
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:caffedb}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+---
 jwt:
   secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
 
