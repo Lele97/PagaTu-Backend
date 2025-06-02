@@ -5,11 +5,14 @@ import com.pagatu.coffee.entity.Group;
 import com.pagatu.coffee.entity.Status;
 import com.pagatu.coffee.entity.UserGroupMembership;
 import com.pagatu.coffee.entity.Utente;
+import com.pagatu.coffee.event.InvitaionEvent;
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
 import com.pagatu.coffee.repository.UtenteRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -22,13 +25,18 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final UtenteRepository utenteRepository;
     private final UserGroupMembershipRepository userGroupMembershipRepository;
+    private KafkaTemplate<String, InvitaionEvent> kafkaTemplate;
+
+    @Value("${spring.kafka.topics.invitation-caffe}")
+    private String invitationTopic;
 
     public GroupService(GroupRepository groupRepository,
                         UtenteRepository utenteRepository,
-                        UserGroupMembershipRepository userGroupMembershipRepository) {
+                        UserGroupMembershipRepository userGroupMembershipRepository, KafkaTemplate<String, InvitaionEvent> kafkaTemplate) {
         this.groupRepository = groupRepository;
         this.utenteRepository = utenteRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Transactional
@@ -62,28 +70,57 @@ public class GroupService {
 
         try {
 
-            Utente user = utenteRepository.findById(request.getUserId())
+            Utente user = utenteRepository.findByUsername(request.getUsername())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            Group group = groupRepository.findById(request.getGroupId())
+            Group group = groupRepository.getGroupByName(request.getGroupname())
                     .orElseThrow(() -> new RuntimeException("Group not found"));
 
             UserGroupMembership membership = new UserGroupMembership();
             membership.setUtente(user);
             membership.setGroup(group);
-            membership.setStatus(request.getStatus() != null ? request.getStatus() : Status.NON_PAGATO);
-            membership.setIsAdmin(request.getIsAdmin());
+            membership.setStatus(Status.NON_PAGATO);
+            membership.setIsAdmin(false);
             membership.setJoinedAt(LocalDateTime.now());
 
             userGroupMembershipRepository.save(membership);
 
-            log.info("Added user {} to group {} with status {}",
-                    user.getUsername(), group.getName(), membership.getStatus());
+            log.info("Added user {} to group {}",
+                    user.getUsername(), group.getName());
 
         } catch (RuntimeException ex) {
             log.error("Error adding user to group: {}", ex.getMessage(), ex);
             throw ex;
         }
+    }
+
+
+    public void sendInvitationToGroup(Long user_id, String groupName, String username) throws Exception {
+
+        Group group = groupRepository.findGroupWithMembershipsByName(groupName).orElseThrow(() -> new Exception("Group not found"));
+
+        boolean isAdmin = group.getUserMemberships().stream()
+                .anyMatch(membership ->
+                        membership.getUtente() != null &&
+                                membership.getUtente().getAuthId() != null &&  // Usa authId (String) invece di id (Long)?
+                                membership.getUtente().getAuthId().equals(user_id) &&
+                                Boolean.TRUE.equals(membership.getIsAdmin())
+                );
+
+        if (!isAdmin)
+            throw new Exception("You are not an admin of this group!");
+
+
+        Utente utente = utenteRepository.findByUsername(username).orElseThrow(() -> new Exception("The user you want to add does not exist"));
+
+        InvitaionEvent event = new InvitaionEvent();
+        event.setUsername(utente.getUsername());
+        event.setGroupName(group.getName());
+
+        kafkaTemplate.send(invitationTopic, event);
+
+        log.info("Invitation event sent for user {} to group {}", username, groupName);
+
     }
 
     @Transactional

@@ -2,6 +2,7 @@ package com.pagatu.mail.service;
 
 import com.pagatu.mail.dto.ProssimoPagatoreDto;
 import com.pagatu.mail.dto.UltimoPagatoreDto;
+import com.pagatu.mail.event.InvitationEvent;
 import com.pagatu.mail.event.ProssimoPagamentoEvent;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -17,6 +18,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.concurrent.Flow;
 
 @Service
 @Log4j2
@@ -50,6 +52,7 @@ public class EmailService {
                 )
                 .then();
     }
+
     private Mono<UserData> fetchUserData(ProssimoPagamentoEvent event) {
         Mono<UltimoPagatoreDto> ultimoPagatoreMono = webClient.get()
                 .uri("/api/coffee/user?username={username}", event.getUltimoPagatoreUsername())
@@ -100,6 +103,16 @@ public class EmailService {
         });
     }
 
-    private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {
+    public Flow.Publisher<Object> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
+
+
+
+
+
+
+
+
     }
+
+    private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {}
 }

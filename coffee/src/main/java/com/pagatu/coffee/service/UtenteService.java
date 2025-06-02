@@ -202,12 +202,12 @@ public class UtenteService {
         return dto;
     }
 
-    private GroupMembershipDto mapMembershipToDto(UserGroupMembership membership) {
-        GroupMembershipDto dto = new GroupMembershipDto();
-        dto.setGroupName(membership.getGroup().getName());
-        dto.setStatus(membership.getStatus());
-        dto.setIsAdmin(membership.getIsAdmin());
-        dto.setJoinedAt(membership.getJoinedAt());
-        return dto;
-    }
+//    private GroupMembershipDto mapMembershipToDto(UserGroupMembership membership) {
+//        GroupMembershipDto dto = new GroupMembershipDto();
+//        dto.setGroupName(membership.getGroup().getName());
+//        dto.setStatus(membership.getStatus());
+//        dto.setIsAdmin(membership.getIsAdmin());
+//        dto.setJoinedAt(membership.getJoinedAt());
+//        return dto;
+//    }
 }
