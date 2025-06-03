@@ -56,7 +56,7 @@ spring:
     activate:
       on-profile: test
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:caffedb}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./coffee/data/coffeedb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:password}
     driver-class-name: org.h2.Driver
