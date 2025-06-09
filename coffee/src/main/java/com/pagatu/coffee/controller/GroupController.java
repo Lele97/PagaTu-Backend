@@ -2,6 +2,7 @@ package com.pagatu.coffee.controller;
 
 import com.pagatu.coffee.dto.AddUserToGroupRequest;
 import com.pagatu.coffee.dto.GroupDto;
+import com.pagatu.coffee.dto.InvitationRequest;
 import com.pagatu.coffee.dto.NuovoGruppoRequest;
 import com.pagatu.coffee.jwt.jwtUtil;
 import com.pagatu.coffee.service.GroupService;
@@ -30,20 +31,22 @@ public class GroupController {
     }
 
     @DeleteMapping("/delete/{groupName}")
-    public ResponseEntity<String> deleteGroupByName(@PathVariable String groupName,@RequestHeader("Authorization") String authHeader) throws Exception {
+    public ResponseEntity<String> deleteGroupByName(@PathVariable String groupName, @RequestHeader("Authorization") String authHeader) throws Exception {
         Long user_id = jwtUtil.getUserIdFromToken(authHeader.substring(7));
-        groupService.deleteGroupByName(groupName,user_id);
+        groupService.deleteGroupByName(groupName, user_id);
         return ResponseEntity.ok("Delete group: " + groupName);
     }
 
     @PutMapping("/update/addtogroup")
-    public ResponseEntity<String> addUserToGroup(@Valid @RequestBody AddUserToGroupRequest addUserToGroupRequest){
-        groupService.addUserToGroup(addUserToGroupRequest);
+    public ResponseEntity<String> addUserToGroup(@RequestParam("username") String username, @RequestParam("groupName") String groupName) throws Exception {
+        groupService.addUserToGroup(groupName, username);
         return ResponseEntity.ok("User add to the group");
     }
 
     @PostMapping("/update/invitation")
-    public ResponseEntity<String> sendInvitationToGroup(){
-        return ResponseEntity.ok("...");
+    public ResponseEntity<String> sendInvitationToGroup(@RequestBody InvitationRequest invitationRequest, @RequestHeader("Authorization") String authHeader) throws Exception {
+        Long user_id = jwtUtil.getUserIdFromToken(authHeader.substring(7));
+        groupService.sendInvitationToGroup(user_id, invitationRequest);
+        return ResponseEntity.ok("Email sent to the user: " + invitationRequest.getUsername());
     }
 }

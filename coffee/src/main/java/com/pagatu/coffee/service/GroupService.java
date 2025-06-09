@@ -12,6 +12,7 @@ import com.pagatu.coffee.repository.UtenteRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
@@ -66,16 +67,19 @@ public class GroupService {
     }
 
     @Transactional
-    public void addUserToGroup(AddUserToGroupRequest request) {
+    public void addUserToGroup(String groupName, String username) throws Exception {
+
+        Utente user = utenteRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Group group = groupRepository.getGroupByName(groupName)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        if (userGroupMembershipRepository.existsByUtenteAndGroup(user, group))
+            throw new Exception("User already in group");
+
 
         try {
-
-            Utente user = utenteRepository.findByUsername(request.getUsername())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            Group group = groupRepository.getGroupByName(request.getGroupname())
-                    .orElseThrow(() -> new RuntimeException("Group not found"));
-
             UserGroupMembership membership = new UserGroupMembership();
             membership.setUtente(user);
             membership.setGroup(group);
@@ -88,39 +92,41 @@ public class GroupService {
             log.info("Added user {} to group {}",
                     user.getUsername(), group.getName());
 
+        } catch (DataIntegrityViolationException ex) {
+            log.warn("User {} already in group {}", username, groupName);
+            throw new Exception("User is already in the group");
         } catch (RuntimeException ex) {
             log.error("Error adding user to group: {}", ex.getMessage(), ex);
             throw ex;
         }
     }
 
+    public void sendInvitationToGroup(Long userId, InvitationRequest invitationRequest) throws Exception {
 
-    public void sendInvitationToGroup(Long user_id, String groupName, String username) throws Exception {
-
-        Group group = groupRepository.findGroupWithMembershipsByName(groupName).orElseThrow(() -> new Exception("Group not found"));
+        Group group = groupRepository.findGroupWithMembershipsByName(invitationRequest.getGroupName()).orElseThrow(() -> new Exception("Group not found"));
+        Utente utente = utenteRepository.findByUsername(invitationRequest.getUsername()).orElseThrow(() -> new Exception("The user you want to add does not exist"));
+        Utente userWhoSentTheInvitation = utenteRepository.findByAuthId(userId).orElseThrow(() -> new Exception("User not found"));
 
         boolean isAdmin = group.getUserMemberships().stream()
                 .anyMatch(membership ->
                         membership.getUtente() != null &&
                                 membership.getUtente().getAuthId() != null &&  // Usa authId (String) invece di id (Long)?
-                                membership.getUtente().getAuthId().equals(user_id) &&
+                                membership.getUtente().getAuthId().equals(userId) &&
                                 Boolean.TRUE.equals(membership.getIsAdmin())
                 );
 
         if (!isAdmin)
             throw new Exception("You are not an admin of this group!");
 
-
-        Utente utente = utenteRepository.findByUsername(username).orElseThrow(() -> new Exception("The user you want to add does not exist"));
-
         InvitaionEvent event = new InvitaionEvent();
         event.setUsername(utente.getUsername());
         event.setGroupName(group.getName());
+        event.setEmail(utente.getEmail());
+        event.setUserWhoSentTheInvitation(userWhoSentTheInvitation.getUsername());
 
         kafkaTemplate.send(invitationTopic, event);
 
-        log.info("Invitation event sent for user {} to group {}", username, groupName);
-
+        log.info("Invitation event sent for user {} to group {}", invitationRequest.getUsername(), invitationRequest.getGroupName());
     }
 
     @Transactional
