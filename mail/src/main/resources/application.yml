@@ -5,6 +5,12 @@ coffee:
   service:
     base-url: http://localhost:8082
 
+# For Email Service
+app:
+  frontend:
+    base-url: https://a547-83-225-26-26.ngrok-free.app
+    path: /update/addtogroup
+
 spring:
   thymeleaf:
     prefix: classpath:/templates/
@@ -25,6 +31,7 @@ spring:
           auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
           starttls:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
@@ -33,8 +40,12 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: com.pagatu.caffe.event,com.pagatu.email.event
-        spring.json.type.mapping: prossimopagamento:com.pagatu.email.event.ProssimoPagamentoEvent
+        spring.json.trusted.packages: com.pagatu.coffee.event,com.pagatu.email.event
+        spring.json.use.type.headers: false
+        spring.json.type.mapping: >
+          prossimopagamento:com.pagatu.email.event.ProssimoPagamentoEvent,
+          invitation:com.pagatu.email.event.InvitationEvent
+
 
 jwt:
   secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}

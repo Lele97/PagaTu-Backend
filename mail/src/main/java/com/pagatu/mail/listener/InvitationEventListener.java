@@ -16,9 +16,11 @@ public class InvitationEventListener {
         this.emailService = emailService;
     }
 
-//    @KafkaListener(topics = "invitation-caffe", groupId = "email-service")
-//    public void sendEmailInvitation(InvitationEvent event){
-//        log.info("");
-//        emailService.inviaInvitoUtenteNelGruppo(event).subscribe();
-//    }
+    @KafkaListener(topics = "invitation-caffe", groupId = "email-service", containerFactory = "kafkaListenerContainerFactory_invitation")
+    public void sendEmailInvitation(InvitationEvent event){
+        log.info("Ricevuto evento di invito per utente {} nel gruppo {}",
+                event.getUsername(), event.getGroupName());
+        emailService.inviaInvitoUtenteNelGruppo(event).subscribe();
+    }
+
 }

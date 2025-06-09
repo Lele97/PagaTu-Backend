@@ -17,7 +17,7 @@ spring:
   second-datasource:
     url: ${SECOND_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/auth?allowPublicKeyRetrieval=true&useSSL=false}
     username: ${SECOND_DATASOURCE_USERNAME:root}
-    password: ${SECOND_DATASOURCE_PASSWORD:PswRoot97Mysql!}
+    password: ${SECOND_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:

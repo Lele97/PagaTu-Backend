@@ -14,5 +14,4 @@ public interface GroupRepository  extends JpaRepository<Group, Long> {
     void deleteGroupByName(String groupName);
     @Query("SELECT g FROM Group g JOIN FETCH g.userMemberships m JOIN FETCH m.utente WHERE g.name = :name")
     Optional<Group> findGroupWithMembershipsByName(@Param("name") String name);
-
 }

@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InvitationEvent {
+    private String email;
     private String username;
     private String groupName;
+    private String userWhoSentTheInvitation;
 }

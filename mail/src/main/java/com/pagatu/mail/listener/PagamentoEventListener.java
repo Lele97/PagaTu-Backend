@@ -15,7 +15,7 @@ public class PagamentoEventListener {
         this.emailService = emailService;
     }
 
-    @KafkaListener(topics = "pagamenti-caffe", groupId = "email-service")
+    @KafkaListener(topics = "pagamenti-caffe", groupId = "email-service", containerFactory = "kafkaListenerContainerFactory")
     public void consumePagamentoEvent(ProssimoPagamentoEvent event) {
         log.info("Ricevuto evento di pagamento caffè: {}", event);
         emailService.inviaNotificaProssimoPagatore(event).subscribe();

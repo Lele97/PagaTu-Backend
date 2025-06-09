@@ -33,6 +33,12 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
+    @Value("${app.frontend.base-url}")
+    private String baseUrl;
+
+    @Value("${app.frontend.path}")
+    private String requestPath;
+
     public EmailService(JavaMailSender mailSender,
                         TemplateEngine templateEngine,
                         WebClient.Builder webClientBuilder,
@@ -103,16 +109,48 @@ public class EmailService {
         });
     }
 
-//    public Flow.Publisher<Object> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
-//
-//
-//
-//
-//
-//
-//
-//
-//    }
+    private Mono<Void> sendEmailInvitation(InvitationEvent event) {
 
-    private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {}
+        return Mono.fromCallable(() -> {
+            try {
+
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+                helper.setFrom(fromEmail);
+                helper.setTo(event.getEmail());
+                helper.setSubject("Paga-Tu: Sei stato invitato in un gruppo!");
+
+                Context context = new Context(ITALIAN_LOCALE);
+
+                context.setVariable("user", event.getUsername());
+                context.setVariable("userWhoSentTheInvitation", event.getUserWhoSentTheInvitation());
+                context.setVariable("groupName", event.getGroupName());
+
+                // Create invitation link that redirects to frontend with group info
+                String invitationLink = String.format("%s%s?username=%s&groupName=%s",
+                        baseUrl, requestPath, event.getUsername(), event.getGroupName());
+                context.setVariable("link", invitationLink);
+
+                String htmlContent = templateEngine.process("invitation", context);
+                helper.setText(htmlContent, true);
+
+                mailSender.send(message);
+                return null;
+            } catch (MessagingException e) {
+                throw new RuntimeException("Errore nell'invio dell'email", e);
+            }
+        });
+
+    }
+
+    public Mono<Void> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
+        return sendEmailInvitation(event)
+                .doOnSuccess(__ -> log.info("Email di invito inviata con successo a {}", event.getEmail()))
+                .doOnError(error -> log.error("Errore nell'invio dell'email di invito", error))
+                .then();
+    }
+
+    private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {
+    }
 }
