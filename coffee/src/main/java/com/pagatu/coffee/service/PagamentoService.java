@@ -52,19 +52,18 @@ public class PagamentoService {
     }
 
     @Transactional
-    public PagamentoDto registraPagamento(Long userId, @Valid NuovoPagamentoRequest request) {
+    public PagamentoDto registraPagamento(Long userId, String groupNme, @Valid NuovoPagamentoRequest request) {
 
 
-         Utente utente = utenteRepository.findById(userId).orElse(null);
+        Utente utente = utenteRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
-         Group group = groupRepository.getGroupByName(request.getGruppo()).orElseThrow(() -> new RuntimeException("Group non trovato"));
+        Group group = groupRepository.getGroupByName(groupNme).orElseThrow(() -> new RuntimeException("Group non trovato"));
 
-         List<UserGroupMembership> userGroupMembership = userGroupMembershipRepository.findByGroup(group);
+        List<UserGroupMembership> userGroupMembership = userGroupMembershipRepository.findByGroup(group);
 
+        UserGroupMembership userGroupMembership1 = userGroupMembership.stream().filter(p -> p.getUtente().equals(utente)).toList().get(0);
 
-         UserGroupMembership userGroupMembership1 = userGroupMembership.stream().filter(p -> p.getUtente().equals(utente)).toList().get(0);
-
-         userGroupMembership1.setStatus(Status.PAGATO);
+        userGroupMembership1.setStatus(Status.PAGATO);
 
         UserGroupMembership savedUserGroupMembership = userGroupMembershipRepository.save(userGroupMembership1);
 
@@ -79,7 +78,7 @@ public class PagamentoService {
         // Determina chi sarà il prossimo a pagare
         ProssimoPagamentoDto prossimoPagamento = self.determinaProssimoPagatore(group);
 
-        ProssimoPagamentoEvent event = createPagamentoEvent(savedPagamento,utente,prossimoPagamento);
+        ProssimoPagamentoEvent event = createPagamentoEvent(savedPagamento, utente, prossimoPagamento);
 
         kafkaTemplate.send(pagamentiTopic, event);
 
@@ -122,24 +121,24 @@ public class PagamentoService {
     }
 
     // Overloaded method for backward compatibility (if called without group)
-    @Deprecated
-    @Transactional
-    public ProssimoPagamentoDto determinaProssimoPagatore() {
-        log.warn("determinaProssimoPagatore() called without group parameter - this is deprecated");
-
-        // Find the most recently active group or default group
-        // This is a fallback - ideally all calls should specify a group
-        List<Group> allGroups = groupRepository.findAll();
-        if (allGroups.isEmpty()) {
-            throw new RuntimeException("No groups found - cannot determine next payer");
-        }
-
-        // Use the first group as default (you might want different logic here)
-        Group defaultGroup = allGroups.get(0);
-        log.info("Using default group {} for payment determination", defaultGroup.getName());
-
-        return determinaProssimoPagatore(defaultGroup);
-    }
+//    @Deprecated
+//    @Transactional
+//    public ProssimoPagamentoDto determinaProssimoPagatore() {
+//        log.warn("determinaProssimoPagatore() called without group parameter - this is deprecated");
+//
+//        // Find the most recently active group or default group
+//        // This is a fallback - ideally all calls should specify a group
+//        List<Group> allGroups = groupRepository.findAll();
+//        if (allGroups.isEmpty()) {
+//            throw new RuntimeException("No groups found - cannot determine next payer");
+//        }
+//
+//        // Use the first group as default (you might want different logic here)
+//        Group defaultGroup = allGroups.get(0);
+//        log.info("Using default group {} for payment determination", defaultGroup.getName());
+//
+//        return determinaProssimoPagatore(defaultGroup);
+//    }
 
     private List<UserGroupMembership> resetGroupMembersToNonPagato(Group group) {
         log.info("Resetting all members in group {} to NON_PAGATO status", group.getName());
@@ -181,32 +180,32 @@ public class PagamentoService {
     }
 
     // Additional utility methods for group-specific queries
-    @Transactional(readOnly = true)
-    public List<UserGroupMembership> getMembersWithStatus(String groupName, Status status) {
-        Group group = groupRepository.getGroupByName(groupName)
-                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
+//    @Transactional(readOnly = true)
+//    public List<UserGroupMembership> getMembersWithStatus(String groupName, Status status) {
+//        Group group = groupRepository.getGroupByName(groupName)
+//                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
+//
+//        return userGroupMembershipRepository.findByGroupAndStatus(group, status);
+//    }
 
-        return userGroupMembershipRepository.findByGroupAndStatus(group, status);
-    }
+//    @Transactional(readOnly = true)
+//    public long countMembersWithStatus(String groupName, Status status) {
+//        Group group = groupRepository.getGroupByName(groupName)
+//                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
+//
+//        return userGroupMembershipRepository.countByGroupAndStatus(group, status);
+//    }
 
-    @Transactional(readOnly = true)
-    public long countMembersWithStatus(String groupName, Status status) {
-        Group group = groupRepository.getGroupByName(groupName)
-                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
-
-        return userGroupMembershipRepository.countByGroupAndStatus(group, status);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Pagamento> getGroupPaymentHistory(String groupName) {
-        Group group = groupRepository.getGroupByName(groupName)
-                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
-
-        List<UserGroupMembership> groupMemberships = userGroupMembershipRepository.findByGroup(group);
-
-        return groupMemberships.stream()
-                .flatMap(membership -> pagamentoRepository.findByUserGroupMembershipOrderByDataPagamentoDesc(membership).stream())
-                .sorted((p1, p2) -> p2.getDataPagamento().compareTo(p1.getDataPagamento()))
-                .toList();
-    }
+//    @Transactional(readOnly = true)
+//    public List<Pagamento> getGroupPaymentHistory(String groupName) {
+//        Group group = groupRepository.getGroupByName(groupName)
+//                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
+//
+//        List<UserGroupMembership> groupMemberships = userGroupMembershipRepository.findByGroup(group);
+//
+//        return groupMemberships.stream()
+//                .flatMap(membership -> pagamentoRepository.findByUserGroupMembershipOrderByDataPagamentoDesc(membership).stream())
+//                .sorted((p1, p2) -> p2.getDataPagamento().compareTo(p1.getDataPagamento()))
+//                .toList();
+//    }
 }
