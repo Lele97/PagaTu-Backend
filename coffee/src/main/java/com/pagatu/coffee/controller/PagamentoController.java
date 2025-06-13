@@ -24,9 +24,9 @@ public class PagamentoController {
     @PostMapping("/pagamenti")
     public ResponseEntity<PagamentoDto> registraPagamento(
             @RequestHeader("Authorization") String authHeader,
-            @Valid @RequestBody NuovoPagamentoRequest request) {
+            @Valid @RequestBody NuovoPagamentoRequest request, @RequestParam("groupNme") String groupNme) {
         Long userId = jwtUtil.getUserIdFromToken(authHeader.substring(7));
-        return ResponseEntity.ok(pagamentoService.registraPagamento(userId, request));
+        return ResponseEntity.ok(pagamentoService.registraPagamento(userId, groupNme, request));
     }
 
 //    @GetMapping("/pagamenti/ultimi")

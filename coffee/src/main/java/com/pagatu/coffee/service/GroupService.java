@@ -26,7 +26,7 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final UtenteRepository utenteRepository;
     private final UserGroupMembershipRepository userGroupMembershipRepository;
-    private KafkaTemplate<String, InvitaionEvent> kafkaTemplate;
+    private final KafkaTemplate<String, InvitaionEvent> kafkaTemplate;
 
     @Value("${spring.kafka.topics.invitation-caffe}")
     private String invitationTopic;
@@ -129,54 +129,54 @@ public class GroupService {
         log.info("Invitation event sent for user {} to group {}", invitationRequest.getUsername(), invitationRequest.getGroupName());
     }
 
-    @Transactional
-    public void updateMembershipStatus(UpdateMembershipStatusRequest request) {
+//    @Transactional
+//    public void updateMembershipStatus(UpdateMembershipStatusRequest request) {
+//
+//        try {
+//
+//            Utente user = utenteRepository.findById(request.getUserId())
+//                    .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//            Group group = groupRepository.findById(request.getGroupId())
+//                    .orElseThrow(() -> new RuntimeException("Group not found"));
+//
+//            UserGroupMembership membership = userGroupMembershipRepository.findByUtenteAndGroup(user, group)
+//                    .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
+//
+//            membership.setStatus(request.getNewStatus());
+//            userGroupMembershipRepository.save(membership);
+//
+//            log.info("Updated membership status for user {} in group {} to {}",
+//                    user.getUsername(), group.getName(), request.getNewStatus());
+//
+//        } catch (RuntimeException ex) {
+//            log.error("Error updating membership status: {}", ex.getMessage(), ex);
+//            throw ex;
+//        }
+//    }
 
-        try {
-
-            Utente user = utenteRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            Group group = groupRepository.findById(request.getGroupId())
-                    .orElseThrow(() -> new RuntimeException("Group not found"));
-
-            UserGroupMembership membership = userGroupMembershipRepository.findByUtenteAndGroup(user, group)
-                    .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
-
-            membership.setStatus(request.getNewStatus());
-            userGroupMembershipRepository.save(membership);
-
-            log.info("Updated membership status for user {} in group {} to {}",
-                    user.getUsername(), group.getName(), request.getNewStatus());
-
-        } catch (RuntimeException ex) {
-            log.error("Error updating membership status: {}", ex.getMessage(), ex);
-            throw ex;
-        }
-    }
-
-    @Transactional
-    public void removeUserFromGroup(Long userId, Long groupId) {
-
-        try {
-
-            Utente user = utenteRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            Group group = groupRepository.findById(groupId)
-                    .orElseThrow(() -> new RuntimeException("Group not found"));
-
-            UserGroupMembership membership = userGroupMembershipRepository.findByUtenteAndGroup(user, group)
-                    .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
-
-            userGroupMembershipRepository.delete(membership);
-            log.info("Removed user {} from group {}", user.getUsername(), group.getName());
-
-        } catch (RuntimeException ex) {
-            log.error("Error removing user from group: {}", ex.getMessage(), ex);
-            throw ex;
-        }
-    }
+//    @Transactional
+//    public void removeUserFromGroup(Long userId, Long groupId) {
+//
+//        try {
+//
+//            Utente user = utenteRepository.findById(userId)
+//                    .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//            Group group = groupRepository.findById(groupId)
+//                    .orElseThrow(() -> new RuntimeException("Group not found"));
+//
+//            UserGroupMembership membership = userGroupMembershipRepository.findByUtenteAndGroup(user, group)
+//                    .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
+//
+//            userGroupMembershipRepository.delete(membership);
+//            log.info("Removed user {} from group {}", user.getUsername(), group.getName());
+//
+//        } catch (RuntimeException ex) {
+//            log.error("Error removing user from group: {}", ex.getMessage(), ex);
+//            throw ex;
+//        }
+//    }
 
     private GroupDto mapToDto(Group group) {
         GroupDto groupDto = new GroupDto();

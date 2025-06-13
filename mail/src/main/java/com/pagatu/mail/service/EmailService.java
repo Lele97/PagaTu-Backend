@@ -8,7 +8,6 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -26,6 +25,7 @@ public class EmailService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final Locale ITALIAN_LOCALE = Locale.ITALIAN;
+
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
     private final WebClient webClient;
@@ -62,6 +62,13 @@ public class EmailService {
                 .then();
     }
 
+    public Mono<Void> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
+        return sendEmailInvitation(event)
+                .doOnSuccess(__ -> log.info("Email di invito inviata con successo a {}", event.getEmail()))
+                .doOnError(error -> log.error("Errore nell'invio dell'email di invito", error))
+                .then();
+    }
+
     private Mono<UserData> fetchUserData(ProssimoPagamentoEvent event) {
         Mono<UltimoPagatoreDto> ultimoPagatoreMono = webClient.get()
                 .uri("/api/coffee/user?username={username}", event.getUltimoPagatoreUsername())
@@ -82,83 +89,59 @@ public class EmailService {
     }
 
     private Mono<Void> sendEmail(ProssimoPagamentoEvent event, UserData userData) {
-        return Mono.fromCallable(() -> {
-            try {
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-                helper.setFrom(fromEmail);
-                helper.setTo(event.getProssimoEmail());
-                helper.setBcc(event.getUltimoPagatoreEmail());
-                helper.setSubject("Paga-Tu: È il tuo turno di pagare il caffè!");
-
-                Context context = getContext(event, userData);
-
-                String htmlContent = templateEngine.process("notifica-prossimo-pagatore", context);
-                helper.setText(htmlContent, true);
-
-                mailSender.send(message);
-                return null;
-            } catch (MessagingException e) {
-                throw new RuntimeException("Errore nell'invio dell'email", e);
-            }
+        return Mono.fromRunnable(() -> {
+            Context context = getContext(event, userData);
+            buildAndSendEmail(
+                    event.getProssimoEmail(),
+                    event.getUltimoPagatoreEmail(),
+                    "Paga-Tu: È il tuo turno di pagare il caffè!",
+                    "notifica-prossimo-pagatore",
+                    context
+            );
         });
     }
 
     private Mono<Void> sendEmailInvitation(InvitationEvent event) {
-        return Mono.fromCallable(() -> {
-            try {
-
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-                // Add custom headers
-                message.setHeader("X-Mailer", company + " Invitation System");
-                message.setHeader("X-Priority", "3");
-                message.setHeader("List-Unsubscribe", "<mailto:" + fromEmail + "?subject=unsubscribe>");
-                message.setHeader("X-Auto-Response-Suppress", "OOF, DR, RN, NRN");
-
-                helper.setFrom(fromEmail);
-                helper.setTo(event.getEmail());
-                helper.setSubject("Paga-Tu: Sei stato invitato in un gruppo!");
-                helper.addInline("logoContentId", new ClassPathResource("image/pagaTu.png"));
-
-                Context context = getContextForInvitation(event);
-
-                String htmlContent = templateEngine.process("invitation", context);
-                helper.setText(htmlContent, true);
-
-                mailSender.send(message);
-                return null;
-            } catch (MessagingException e) {
-                throw new RuntimeException("Errore nell'invio dell'email", e);
-            }
+        return Mono.fromRunnable(() -> {
+            Context context = getContextForInvitation(event);
+            buildAndSendEmail(
+                    event.getEmail(),
+                    null,
+                    "Paga-Tu: Sei stato invitato in un gruppo!",
+                    "invitation",
+                    context
+            );
         });
     }
 
-    private Context getContextForInvitation(InvitationEvent event) {
+    private void buildAndSendEmail(String to, String bcc, String subject, String templateName, Context context) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-        Context context = new Context(ITALIAN_LOCALE);
+            message.setHeader("X-Mailer", company + " Invitation System");
+            message.setHeader("X-Priority", "3");
+            message.setHeader("List-Unsubscribe", "<mailto:" + fromEmail + "?subject=unsubscribe>");
+            message.setHeader("X-Auto-Response-Suppress", "OOF, DR, RN, NRN");
 
-        context.setVariable("user", event.getUsername());
-        context.setVariable("userWhoSentTheInvitation", event.getUserWhoSentTheInvitation());
-        context.setVariable("groupName", event.getGroupName());
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            if (bcc != null) {
+                helper.setBcc(bcc);
+            }
+            helper.setSubject(subject);
 
-        // Create invitation link that redirects to frontend with group info
-        String invitationLink = String.format("%s%s?username=%s&groupName=%s",
-                baseUrl, requestPath, event.getUsername(), event.getGroupName());
+            String htmlContent = templateEngine.process(templateName, context);
+            helper.setText(htmlContent, true);
 
-        context.setVariable("link", invitationLink);
-
-        context.setVariable("logoCid", "cid:logoContentId");
-
-        return context;
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Errore nell'invio dell'email", e);
+        }
     }
 
     private Context getContext(ProssimoPagamentoEvent event, UserData userData) {
-
         Context context = new Context(ITALIAN_LOCALE);
-
         context.setVariable("ultimoPagatore",
                 userData.ultimoPagatore().getName() + " " + userData.ultimoPagatore().getLastname());
         context.setVariable("prossimoPagatore",
@@ -166,15 +149,20 @@ public class EmailService {
         context.setVariable("dataUltimoPagamento",
                 event.getDataUltimoPagamento().format(DATE_FORMATTER));
         context.setVariable("importo", String.format("%.2f€", event.getImporto()));
-
         return context;
     }
 
-    public Mono<Void> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
-        return sendEmailInvitation(event)
-                .doOnSuccess(__ -> log.info("Email di invito inviata con successo a {}", event.getEmail()))
-                .doOnError(error -> log.error("Errore nell'invio dell'email di invito", error))
-                .then();
+    private Context getContextForInvitation(InvitationEvent event) {
+        Context context = new Context(ITALIAN_LOCALE);
+        context.setVariable("user", event.getUsername());
+        context.setVariable("userWhoSentTheInvitation", event.getUserWhoSentTheInvitation());
+        context.setVariable("groupName", event.getGroupName());
+
+        String invitationLink = String.format("%s%s?username=%s&groupName=%s",
+                baseUrl, requestPath, event.getUsername(), event.getGroupName());
+        context.setVariable("link", invitationLink);
+
+        return context;
     }
 
     private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {
