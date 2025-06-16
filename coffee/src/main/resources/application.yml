@@ -19,10 +19,14 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
-        spring.json.type.mapping: prossimopagamento:com.pagatu.coffee.event.ProssimoPagamentoEvent
+        spring.json.trusted.packages: com.pagatu.coffee.event
+        spring.json.type.mapping: >
+          prossimopagamento:com.pagatu.coffee.event.ProssimoPagamentoEvent,
+          saltapagamento:com.pagatu.coffee.event.SaltaPagamentoEvent
     topics:
       pagamenti-caffe: pagamenti-caffe
       invitation-caffe: invitation-caffe
+      saltaPagamento-caffe: salta-pagamento-caffe
 
   profiles:
     active: dev

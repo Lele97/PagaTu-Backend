@@ -1,5 +1,6 @@
 package com.pagatu.coffee.controller;
 
+import com.pagatu.coffee.dto.UtenteDetailDto;
 import com.pagatu.coffee.dto.UtenteDto;
 import com.pagatu.coffee.entity.Utente;
 import com.pagatu.coffee.service.UtenteService;
@@ -24,7 +25,7 @@ public class UtenteController {
     }
 
     @GetMapping
-    public Optional<Utente> findUserByUsername(@RequestParam("username") String username) {
-        return utenteService.findByUsername(username);
+    public Optional<UtenteDetailDto> findUserByUsername(@RequestParam("username") String username) {
+        return utenteService.findUtenteByUsername(username);
     }
 }

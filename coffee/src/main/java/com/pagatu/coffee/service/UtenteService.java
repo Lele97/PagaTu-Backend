@@ -163,6 +163,11 @@ public class UtenteService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<UtenteDetailDto> findUtenteByUsername(String username) {
+        return utenteRepository.findUserByUsername(username);
+    }
+
+    @Transactional(readOnly = true)
     public List<Utente> findAll() {
         return utenteRepository.findAll();
     }

@@ -4,6 +4,7 @@ import com.pagatu.mail.dto.ProssimoPagatoreDto;
 import com.pagatu.mail.dto.UltimoPagatoreDto;
 import com.pagatu.mail.event.InvitationEvent;
 import com.pagatu.mail.event.ProssimoPagamentoEvent;
+import com.pagatu.mail.event.SaltaPagamentoEvent;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.log4j.Log4j2;
@@ -62,6 +63,17 @@ public class EmailService {
                 .then();
     }
 
+    public Mono<Void> inviaNotificaSaltaPagamento(SaltaPagamentoEvent event) {
+        return fetchUserData_SaltaPagamento(event)
+                .flatMap(userDataSaltaPagamento -> sendEmailSaltaPagamento(event, userDataSaltaPagamento))
+                .doOnSuccess(__ -> log.info("Email di notifica inviata con successo a {}",
+                        event.getProssimoEmail()))
+                .doOnError(error ->
+                        log.error("Errore nell'invio dell'email di notifica", error)
+                )
+                .then();
+    }
+
     public Mono<Void> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
         return sendEmailInvitation(event)
                 .doOnSuccess(__ -> log.info("Email di invito inviata con successo a {}", event.getEmail()))
@@ -88,6 +100,17 @@ public class EmailService {
                 .map(tuple -> new UserData(tuple.getT1(), tuple.getT2()));
     }
 
+    private Mono<UserData_SaltaPagamento> fetchUserData_SaltaPagamento(SaltaPagamentoEvent event) {
+        return webClient.get()
+                .uri("/api/coffee/user?username={username}", event.getProssimoUsername())
+                .retrieve()
+                .bodyToFlux(ProssimoPagatoreDto.class)
+                .next()
+                .doOnSuccess(response -> log.info("Prossimo pagatore recuperato con successo: {}", response))
+                .doOnError(error -> log.error("Errore durante il recupero del prossimo pagatore", error))
+                .map(UserData_SaltaPagamento::new);
+    }
+
     private Mono<Void> sendEmail(ProssimoPagamentoEvent event, UserData userData) {
         return Mono.fromRunnable(() -> {
             Context context = getContext(event, userData);
@@ -109,6 +132,19 @@ public class EmailService {
                     null,
                     "Paga-Tu: Sei stato invitato in un gruppo!",
                     "invitation",
+                    context
+            );
+        });
+    }
+
+    private Mono<Void> sendEmailSaltaPagamento(SaltaPagamentoEvent event, UserData_SaltaPagamento userDataSaltaPagamento) {
+        return Mono.fromRunnable(() -> {
+            Context context = getContextForSaltaPagamento(event, userDataSaltaPagamento);
+            buildAndSendEmail(
+                    event.getProssimoEmail(),
+                    null,
+                    "Paga-Tu: È il tuo turno di pagare il caffè!",
+                    "notifica-saltato-pagamento-prossimo-pagatore",
                     context
             );
         });
@@ -149,6 +185,7 @@ public class EmailService {
         context.setVariable("dataUltimoPagamento",
                 event.getDataUltimoPagamento().format(DATE_FORMATTER));
         context.setVariable("importo", String.format("%.2f€", event.getImporto()));
+        context.setVariable("companyName", company);
         return context;
     }
 
@@ -161,10 +198,21 @@ public class EmailService {
         String invitationLink = String.format("%s%s?username=%s&groupName=%s",
                 baseUrl, requestPath, event.getUsername(), event.getGroupName());
         context.setVariable("link", invitationLink);
+        context.setVariable("companyName", company);
+        return context;
+    }
 
+    private Context getContextForSaltaPagamento(SaltaPagamentoEvent event, UserData_SaltaPagamento userDataSaltaPagamento) {
+        Context context = new Context(ITALIAN_LOCALE);
+        context.setVariable("prossimoPagatore",
+                userDataSaltaPagamento.prossimoPagatoreDto().getName() + " " + userDataSaltaPagamento.prossimoPagatoreDto().getLastname());
+        context.setVariable("companyName", company);
         return context;
     }
 
     private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {
+    }
+
+    private record UserData_SaltaPagamento(ProssimoPagatoreDto prossimoPagatoreDto) {
     }
 }

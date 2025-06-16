@@ -2,6 +2,7 @@ package com.pagatu.coffee.config;
 
 import com.pagatu.coffee.event.InvitaionEvent;
 import com.pagatu.coffee.event.ProssimoPagamentoEvent;
+import com.pagatu.coffee.event.SaltaPagamentoEvent;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -47,5 +48,19 @@ public class KafkaProducerConfig {
     @Bean
     public KafkaTemplate<String, InvitaionEvent> kafkaTemplate_invitation(){
         return new KafkaTemplate<>(producerFactory_invitation());
+    }
+
+    @Bean
+    public ProducerFactory<String, SaltaPagamentoEvent> producerFactory_salta_pagamenti() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+
+    @Bean
+    public KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplate_salta_pagamenti() {
+        return new KafkaTemplate<>(producerFactory_salta_pagamenti());
     }
 }

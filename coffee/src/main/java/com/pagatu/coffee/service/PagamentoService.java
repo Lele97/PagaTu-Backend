@@ -4,6 +4,7 @@ import com.pagatu.coffee.dto.PagamentoDto;
 import com.pagatu.coffee.dto.ProssimoPagamentoDto;
 import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.ProssimoPagamentoEvent;
+import com.pagatu.coffee.event.SaltaPagamentoEvent;
 import com.pagatu.coffee.mapper.PagamentoMapper;
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.PagamentoRepository;
@@ -37,25 +38,30 @@ public class PagamentoService {
     private final GroupRepository groupRepository;
     private final UserGroupMembershipRepository userGroupMembershipRepository;
     private final KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate;
+    private final KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplate_saltaPagamento;
 
     @Value("${spring.kafka.topics.pagamenti-caffe}")
     private String pagamentiTopic;
 
+    @Value("saltaPagamento-caffe")
+    private String saltaPagamentoTopic;
+
     public PagamentoService(PagamentoRepository pagamentoRepository, UtenteRepository utenteRepository,
-                            PagamentoMapper pagamentoMapper, GroupRepository groupRepository, UserGroupMembershipRepository userGroupMembershipRepository, KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate) {
+                            PagamentoMapper pagamentoMapper, GroupRepository groupRepository, UserGroupMembershipRepository userGroupMembershipRepository, KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate, KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento) {
         this.pagamentoRepository = pagamentoRepository;
         this.utenteRepository = utenteRepository;
         this.pagamentoMapper = pagamentoMapper;
         this.groupRepository = groupRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
         this.kafkaTemplate = kafkaTemplate;
+        kafkaTemplate_saltaPagamento = kafkaTemplateSaltaPagamento;
     }
 
     @Transactional
     public PagamentoDto registraPagamento(Long userId, String groupNme, @Valid NuovoPagamentoRequest request) {
 
 
-        Utente utente = utenteRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        Utente utente = utenteRepository.findByAuthId(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
         Group group = groupRepository.getGroupByName(groupNme).orElseThrow(() -> new RuntimeException("Group non trovato"));
 
@@ -177,6 +183,41 @@ public class PagamentoService {
         event.setImporto(pagamento.getImporto());
         event.setGroupName(prossimo.getGroupName());
         return event;
+    }
+
+    private SaltaPagamentoEvent saltaPagamentoEvent(Utente pagatore, ProssimoPagamentoDto prossimo) {
+        SaltaPagamentoEvent event = new SaltaPagamentoEvent();
+        event.setProssimoUserId(prossimo.getUserId());
+        event.setProssimoUsername(prossimo.getUsername());
+        event.setProssimoEmail(prossimo.getEmail());
+        return event;
+    }
+
+
+    @Transactional
+    public void saltaPagamento(Long userId, String groupNme) {
+
+        Utente utente = utenteRepository.findByAuthId(userId).orElseThrow(() -> new RuntimeException("User not found"));
+
+        Group group = groupRepository.getGroupByName(groupNme).orElseThrow(() -> new RuntimeException("Group non trovato"));
+
+        List<UserGroupMembership> userGroupMembership = userGroupMembershipRepository.findByGroup(group);
+
+        UserGroupMembership userGroupMembership1 = userGroupMembership.stream().filter(p -> p.getUtente().equals(utente)).toList().get(0);
+
+        userGroupMembership1.setStatus(Status.SALTATO);
+
+        userGroupMembershipRepository.save(userGroupMembership1);
+
+        // Determina chi sarà il prossimo a pagare
+        ProssimoPagamentoDto prossimoPagamento = self.determinaProssimoPagatore(group);
+
+        SaltaPagamentoEvent event = saltaPagamentoEvent(utente, prossimoPagamento);
+
+        kafkaTemplate_saltaPagamento.send(saltaPagamentoTopic, event);
+
+        log.info("Utente: {} ha saltato il pagamento - Prossimo pagatore: {}", utente.getUsername(), prossimoPagamento.getUsername());
+
     }
 
     // Additional utility methods for group-specific queries
