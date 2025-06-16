@@ -21,7 +21,7 @@ public class PagamentoController {
         this.jwtUtil = jwtUtil;
     }
 
-    @PostMapping("/pagamenti")
+    @PostMapping("/pagamento")
     public ResponseEntity<PagamentoDto> registraPagamento(
             @RequestHeader("Authorization") String authHeader,
             @Valid @RequestBody NuovoPagamentoRequest request, @RequestParam("groupNme") String groupNme) {
@@ -29,13 +29,10 @@ public class PagamentoController {
         return ResponseEntity.ok(pagamentoService.registraPagamento(userId, groupNme, request));
     }
 
-//    @GetMapping("/pagamenti/ultimi")
-//    public ResponseEntity<List<PagamentoDto>> getUltimiPagamenti() {
-//        return ResponseEntity.ok(pagamentoService.getUltimiPagamenti());
-//    }
-//
-//    @GetMapping("/pagamenti/prossimo")
-//    public ResponseEntity<ProssimoPagamentoDto> getProssimoPagatore() {
-//        return ResponseEntity.ok(pagamentoService.getProssimoPagatore());
-//    }
+    @PostMapping("/salta/pagamento")
+    public ResponseEntity<String> saltaPagamentoDto(@RequestHeader("Authorization") String authHeader, @RequestParam("groupNme") String groupNme) {
+        Long userId = jwtUtil.getUserIdFromToken(authHeader.substring(7));
+        pagamentoService.saltaPagamento(userId,groupNme);
+        return ResponseEntity.ok("User: "+ userId+ " ha saltato il pagamento");
+    }
 }

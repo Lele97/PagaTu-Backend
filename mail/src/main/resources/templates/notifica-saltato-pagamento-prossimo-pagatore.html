@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>È il tuo turno di pagare il caffè!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8f9fa;">
+<div style="width: 100%; background-color: #f8f9fa; padding: 20px 0;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); overflow: hidden;">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #643718 0%, #A0522D 100%); color: #ffffff; text-align: center; padding: 30px 20px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin-bottom: 20px;">
+                <tr>
+                    <td style="text-align: center; font-size: 0;">
+                        <span style="display: inline-block; font-size: 60px; font-family: 'Macadamia', Arial, sans-serif; color: #ffffff;">Paga</span>
+                        <span style="display: inline-block; font-size: 60px; font-family: 'Macadamia', Arial, sans-serif; color: #ffffff;">Tu</span>
+                    </td>
+                </tr>
+            </table>
+
+            <h1 style="margin: 0; font-size: 24px; font-weight: normal;">sei il prossimo a offrire il caffè al
+                gruppo!</h1>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 40px 30px;">
+            <p style="font-size: 16px;">Ciao <strong th:text="${prossimoPagatore}">Nome Utente</strong>!</p>
+
+            <p style="font-size: 16px;">È il tuo turno di pagare il caffè!</p>
+
+            <!-- Blocco Gruppo con stesso sfondo -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="margin: 25px 0; background-color: #f8f9fa; padding: 25px; border-left: 4px solid #643718; border-radius: 8px;">
+                <tr>
+                    <td align="center">
+                        <h2 style="font-size: 22px; font-weight: bold; color: #333; margin: 0 0 10px;">Non ci sono
+                            dettagli dell ultimo pagamento</h2>
+                        <span style="font-size: 14px; color: #6c757d; margin: 0;">L'utente ha saltato il turno</span>
+                    </td>
+                </tr>
+            </table>
+
+            <!-- Firma -->
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #6c757d;">
+                Cordiali saluti,<br>
+                <strong>Il team di <span th:text="${companyName}">Paga-Tu</span></strong>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8f9fa; text-align: center; padding: 30px 20px; border-top: 1px solid #e9ecef;">
+            <p style="font-size: 12px; color: #6c757d; margin: 5px 0;">Questo è un messaggio automatico dal sistema
+                <span th:text="${companyName}">Paga-Tu</span>.</p>
+            <p style="font-size: 12px; color: #6c757d; margin: 5px 0;">Se non dovevi ricevere questo invito, puoi
+                tranquillamente ignorare questa email.</p>
+            <p style="font-size: 12px; color: #6c757d; margin: 5px 0;">Per domande o supporto: <a
+                    href="mailto:support@pagatu.com"
+                    style="color: #643718; text-decoration: none;">support@pagatu.com</a></p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+

@@ -1,8 +1,8 @@
 package com.pagatu.mail.config;
 
-
 import com.pagatu.mail.event.InvitationEvent;
 import com.pagatu.mail.event.ProssimoPagamentoEvent;
+import com.pagatu.mail.event.SaltaPagamentoEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,6 +71,32 @@ public class KafkaConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<String, InvitationEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory_invitation());
+        return factory;
+    }
+
+    @Bean
+    public ConsumerFactory<String, SaltaPagamentoEvent> consumerFactory_saltaPagamento() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "email-service");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        JsonDeserializer<SaltaPagamentoEvent> deserializer = new JsonDeserializer<>(SaltaPagamentoEvent.class);
+        deserializer.setRemoveTypeHeaders(false);
+        deserializer.addTrustedPackages("com.pagatu.coffee.event");
+        deserializer.setUseTypeMapperForKey(true);
+
+        return new DefaultKafkaConsumerFactory<>(
+                props,
+                new StringDeserializer(),
+                deserializer);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, SaltaPagamentoEvent> kafkaListenerContainerFactory_saltaPagamento() {
+        ConcurrentKafkaListenerContainerFactory<String, SaltaPagamentoEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory_saltaPagamento());
         return factory;
     }
 }

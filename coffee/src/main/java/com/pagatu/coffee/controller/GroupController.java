@@ -1,6 +1,5 @@
 package com.pagatu.coffee.controller;
 
-import com.pagatu.coffee.dto.AddUserToGroupRequest;
 import com.pagatu.coffee.dto.GroupDto;
 import com.pagatu.coffee.dto.InvitationRequest;
 import com.pagatu.coffee.dto.NuovoGruppoRequest;
