@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -60,7 +61,6 @@ public class PagamentoService {
     @Transactional
     public PagamentoDto registraPagamento(Long userId, String groupNme, @Valid NuovoPagamentoRequest request) {
 
-
         Utente utente = utenteRepository.findByAuthId(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
         Group group = groupRepository.getGroupByName(groupNme).orElseThrow(() -> new RuntimeException("Group non trovato"));
@@ -80,6 +80,8 @@ public class PagamentoService {
         pagamento.setDataPagamento(LocalDateTime.now());
 
         Pagamento savedPagamento = pagamentoRepository.save(pagamento);
+
+        resetUtenteSaltatoinNonPagato(group);
 
         // Determina chi sarà il prossimo a pagare
         ProssimoPagamentoDto prossimoPagamento = self.determinaProssimoPagatore(group);
@@ -125,26 +127,6 @@ public class PagamentoService {
             return creaProssimoPagamentoDto(nextPayer.getUtente(), group);
         }
     }
-
-    // Overloaded method for backward compatibility (if called without group)
-//    @Deprecated
-//    @Transactional
-//    public ProssimoPagamentoDto determinaProssimoPagatore() {
-//        log.warn("determinaProssimoPagatore() called without group parameter - this is deprecated");
-//
-//        // Find the most recently active group or default group
-//        // This is a fallback - ideally all calls should specify a group
-//        List<Group> allGroups = groupRepository.findAll();
-//        if (allGroups.isEmpty()) {
-//            throw new RuntimeException("No groups found - cannot determine next payer");
-//        }
-//
-//        // Use the first group as default (you might want different logic here)
-//        Group defaultGroup = allGroups.get(0);
-//        log.info("Using default group {} for payment determination", defaultGroup.getName());
-//
-//        return determinaProssimoPagatore(defaultGroup);
-//    }
 
     private List<UserGroupMembership> resetGroupMembersToNonPagato(Group group) {
         log.info("Resetting all members in group {} to NON_PAGATO status", group.getName());
@@ -193,7 +175,6 @@ public class PagamentoService {
         return event;
     }
 
-
     @Transactional
     public void saltaPagamento(Long userId, String groupNme) {
 
@@ -201,9 +182,14 @@ public class PagamentoService {
 
         Group group = groupRepository.getGroupByName(groupNme).orElseThrow(() -> new RuntimeException("Group non trovato"));
 
+        resetUtenteSaltatoinNonPagato(group);
+
         List<UserGroupMembership> userGroupMembership = userGroupMembershipRepository.findByGroup(group);
 
-        UserGroupMembership userGroupMembership1 = userGroupMembership.stream().filter(p -> p.getUtente().equals(utente)).toList().get(0);
+        UserGroupMembership userGroupMembership1 = userGroupMembership.stream()
+                .filter(p -> p.getUtente().equals(utente))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Membership non trovata per utente nel gruppo"));
 
         userGroupMembership1.setStatus(Status.SALTATO);
 
@@ -218,6 +204,24 @@ public class PagamentoService {
 
         log.info("Utente: {} ha saltato il pagamento - Prossimo pagatore: {}", utente.getUsername(), prossimoPagamento.getUsername());
 
+    }
+
+    public void resetUtenteSaltatoinNonPagato(Group group) {
+
+        List<UserGroupMembership> allMemberships = userGroupMembershipRepository.findByGroup(group);
+
+        Optional<UserGroupMembership> maybeMembership = allMemberships.stream()
+                .filter(p -> p.getStatus().equals(Status.SALTATO))
+                .findFirst();
+
+        if (maybeMembership.isPresent()) {
+            UserGroupMembership userGroupMembership = maybeMembership.get();
+            log.info("Reset member in status SALTATO in group {} to NON_PAGATO status", group.getName());
+            userGroupMembership.setStatus(Status.NON_PAGATO);
+            userGroupMembershipRepository.save(userGroupMembership);
+        } else {
+            log.info("Non c'è nessun membro del gruppo '{}' che ha saltato", group.getName());
+        }
     }
 
     // Additional utility methods for group-specific queries
