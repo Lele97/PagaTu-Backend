@@ -5,12 +5,17 @@ import com.pagatu.auth.dto.LoginResponse;
 import com.pagatu.auth.dto.RegisterRequest;
 import com.pagatu.auth.dto.UtenteDto;
 import com.pagatu.auth.entity.EventType;
+import com.pagatu.auth.entity.TokenForUserPasswordReset;
+import com.pagatu.auth.entity.TokenStatus;
 import com.pagatu.auth.entity.User;
+import com.pagatu.auth.event.ResetPasswordMailEvent;
 import com.pagatu.auth.event.UserEvent;
 import com.pagatu.auth.repository.FirstUserRepository;
+import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -24,8 +29,11 @@ import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -34,22 +42,35 @@ public class AuthService {
     @Value("${spring.kafka.topics.user-service}")
     private String USER_TOPIC;
 
+    @Value("${spring.kafka.topics.resetPasswordMail}")
+    private String RESET_PASSWORD_TOPIC;
+
     @Value("${jwt.secret}")
     private String jwtSecret;
 
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
+    private final int LIMITER = 10;
+
     private final FirstUserRepository fristUserRepository;
+    private final TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository;
     private final PasswordEncoder passwordEncoder;
     private final WebClient.Builder webClientBuilder;
+
+    @Qualifier("userEventKafkaTemplate")
     private final KafkaTemplate<String, UserEvent> kafkaTemplate;
 
-    public AuthService(FirstUserRepository fristUserRepository, PasswordEncoder passwordEncoder, WebClient.Builder webClientBuilder, KafkaTemplate<String, UserEvent> kafkaTemplate) {
+    @Qualifier("resetPasswordMailKafkaTemplate")
+    private final KafkaTemplate<String, ResetPasswordMailEvent> kafkaTemplateResetPasswordMail;
+
+    public AuthService(FirstUserRepository fristUserRepository, TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository, PasswordEncoder passwordEncoder, WebClient.Builder webClientBuilder, KafkaTemplate<String, UserEvent> kafkaTemplate, KafkaTemplate<String, ResetPasswordMailEvent> kafkaTemplateResetPasswordMail) {
         this.fristUserRepository = fristUserRepository;
+        this.tokenForUserPasswordResetRepository = tokenForUserPasswordResetRepository;
         this.passwordEncoder = passwordEncoder;
         this.webClientBuilder = webClientBuilder;
         this.kafkaTemplate = kafkaTemplate;
+        this.kafkaTemplateResetPasswordMail = kafkaTemplateResetPasswordMail;
     }
 
     public LoginResponse login(LoginRequest loginRequest) {
@@ -137,6 +158,57 @@ public class AuthService {
                 .subscribe();
 
         return savedUser;
+    }
+
+    public void sendEmailForResetPassword(String email) {
+
+        if (fristUserRepository.existsByEmail(email)) {
+
+            // CHECK LIMIT GIORNALIERO DI RESET PASSWORD
+            LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
+            if (tokenForUserPasswordResetRepository.countRecnetTokensByEmail(email, twentyFourHoursAgo) >= LIMITER) {
+                log.warn("Daily password reset limit exceeded for user {}", email);
+                throw new RuntimeException("You have exceeded the daily limit for password reset requests.");
+            }
+
+            TokenForUserPasswordReset tokenForUserPasswordReset = createTokenForUserPasswordReset(email);
+
+            TokenForUserPasswordReset saved = tokenForUserPasswordResetRepository.save(tokenForUserPasswordReset);
+
+            log.info("Saved token with ID: {}", saved.getId());
+
+            ResetPasswordMailEvent event = new ResetPasswordMailEvent();
+            event.setEmail(email);
+            event.setToken(tokenForUserPasswordReset.getToken());
+
+            kafkaTemplateResetPasswordMail.send(RESET_PASSWORD_TOPIC, event);
+
+            log.info("Reset password event sent for user {}", email);
+
+        } else {
+            log.warn("Reset password event not sent for user {}", email);
+            throw new RuntimeException("Unable sent Reset password event");
+        }
+    }
+
+    public void resetPassword() {
+    }
+
+    private TokenForUserPasswordReset createTokenForUserPasswordReset(String email) {
+        String token_header = "Paga_Tu_";
+        String tokenTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + "_";
+        String token_body = UUID.randomUUID().toString();
+        String token_final = "_Reset_Token_";
+        String token = token_header + tokenTimestamp + token_body + token_final;
+        TokenForUserPasswordReset tokenForUserPasswordReset = new TokenForUserPasswordReset();
+        tokenForUserPasswordReset.setToken(token);
+        tokenForUserPasswordReset.setEmail(email);
+        tokenForUserPasswordReset.setCreatedAt(LocalDateTime.now());
+        //Token valido da un ora a partire dalla sua creazione
+        tokenForUserPasswordReset.setExpiredDate(LocalDateTime.now().plusMinutes(60));
+        tokenForUserPasswordReset.setTokenStatus(TokenStatus.ACTIVE);
+        log.info("Creato token attivo fino a {}", LocalDateTime.now().plusMinutes(60));
+        return tokenForUserPasswordReset;
     }
 
     private String generateToken(User user) {

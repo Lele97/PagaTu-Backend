@@ -45,14 +45,26 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+        # Add these properties to the producer configuration
+      properties:
+        spring.json.type.mapping: >
+          userEvent:com.pagatu.auth.event.UserEvent,
+          eventType:com.pagatu.auth.entity.EventType,
+          resetPasswordMail:com.pagatu.auth.event.ResetPasswordMailEvent
     consumer:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: "com.pagatu.auth.event"
-        spring.json.type.mapping: "userEvent:com.pagatu.auth.event.UserEvent,eventType:com.pagatu.auth.entity.EventType"
+        spring.json.trusted.packages: com.pagatu.auth.event
+        spring.json.use.type.headers: true
+        spring.json.type.mapping: >
+          userEvent:com.pagatu.auth.event.UserEvent,
+          eventType:com.pagatu.auth.entity.EventType,
+          resetPasswordMail:com.pagatu.auth.event.ResetPasswordMailEvent
+
     topics:
       user-service: user-service
+      resetPasswordMail: reset-password-mail
 
 jwt:
   secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}

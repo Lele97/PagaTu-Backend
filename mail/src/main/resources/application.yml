@@ -47,6 +47,7 @@ spring:
           prossimopagamento:com.pagatu.email.event.ProssimoPagamentoEvent,
           invitation:com.pagatu.email.event.InvitationEvent,
           saltapagamento:com.pagatu.email.event.SaltaPagamentoEvent
+          resetPasswordMail:com.pagatu.email.event.ResetPasswordMailEvent
 
 
 jwt:

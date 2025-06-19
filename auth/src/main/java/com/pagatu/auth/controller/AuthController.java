@@ -7,10 +7,7 @@ import com.pagatu.auth.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,5 +28,21 @@ public class AuthController {
     public ResponseEntity<Object> register(@Valid @RequestBody RegisterRequest registerRequest) {
         authService.register(registerRequest);
         return new ResponseEntity<>("User registered successfully", HttpStatus.CREATED);
+    }
+
+    @PostMapping("/forgotPassword")
+    public ResponseEntity<String> sendEmailForPasswordChange(@RequestParam("email") String email) {
+        try {
+            authService.sendEmailForResetPassword(email);
+            return new ResponseEntity<>("Password reset email sent successfully for: " + email, HttpStatus.OK);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Unable to process password reset request");
+        }
+    }
+
+    @PutMapping("/resetPassword")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody LoginRequest loginRequest) {
+        return null;
     }
 }

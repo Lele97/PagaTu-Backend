@@ -109,5 +109,6 @@ public class DataSourceConfig {
             entityManagerFactoryRef = "secondEntityManagerFactory",
             transactionManagerRef = "secondTransactionManager"
     )
-    static class SecondaryJpaRepositoriesConfig {}
+    static class SecondaryJpaRepositoriesConfig {
+    }
 }
