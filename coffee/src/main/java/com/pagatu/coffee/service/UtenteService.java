@@ -84,22 +84,6 @@ public class UtenteService {
         return mapToDto(savedUser);
     }
 
-//    @Transactional
-//    public void updateMembershipStatus(UpdateMembershipStatusRequest request) {
-//        // Delegate to GroupService for proper membership management
-//        try {
-//            log.info("Updating membership status for user {} in group {} to {}",
-//                    request.getUserId(), request.getGroupId(), request.getNewStatus());
-//
-//            // Delegate to GroupService - you need to implement this method there
-//            groupService.updateMembershipStatus(request);
-//
-//        } catch (Exception e) {
-//            log.error("Error updating membership status: {}", e.getMessage());
-//            throw new RuntimeException("Failed to update membership status: " + e.getMessage());
-//        }
-//    }
-
     private List<GroupMembershipDto> convertGroupsToMemberships(List<String> groups) {
         if (groups == null) {
             return Collections.emptyList();
@@ -122,21 +106,6 @@ public class UtenteService {
                 })
                 .toList();
     }
-
-//    @Transactional
-//    public void removeUserFromGroup(Long userId, Long groupId) {
-//        // Delegate to GroupService for proper membership management
-//        try {
-//            log.info("Removing user {} from group {}", userId, groupId);
-//
-//            // Delegate to GroupService - you need to implement this method there
-//            groupService.removeUserFromGroup(userId, groupId);
-//
-//        } catch (Exception e) {
-//            log.error("Error removing user from group: {}", e.getMessage());
-//            throw new RuntimeException("Failed to remove user from group: " + e.getMessage());
-//        }
-//    }
 
     private void createGroupAndAddUserToTheGroup(Utente user, List<GroupMembershipDto> membershipDtos) {
 
@@ -206,6 +175,37 @@ public class UtenteService {
 
         return dto;
     }
+
+//    @Transactional
+//    public void removeUserFromGroup(Long userId, Long groupId) {
+//        // Delegate to GroupService for proper membership management
+//        try {
+//            log.info("Removing user {} from group {}", userId, groupId);
+//
+//            // Delegate to GroupService - you need to implement this method there
+//            groupService.removeUserFromGroup(userId, groupId);
+//
+//        } catch (Exception e) {
+//            log.error("Error removing user from group: {}", e.getMessage());
+//            throw new RuntimeException("Failed to remove user from group: " + e.getMessage());
+//        }
+//    }
+
+//    @Transactional
+//    public void updateMembershipStatus(UpdateMembershipStatusRequest request) {
+//        // Delegate to GroupService for proper membership management
+//        try {
+//            log.info("Updating membership status for user {} in group {} to {}",
+//                    request.getUserId(), request.getGroupId(), request.getNewStatus());
+//
+//            // Delegate to GroupService - you need to implement this method there
+//            groupService.updateMembershipStatus(request);
+//
+//        } catch (Exception e) {
+//            log.error("Error updating membership status: {}", e.getMessage());
+//            throw new RuntimeException("Failed to update membership status: " + e.getMessage());
+//        }
+//    }
 
 //    private GroupMembershipDto mapMembershipToDto(UserGroupMembership membership) {
 //        GroupMembershipDto dto = new GroupMembershipDto();
