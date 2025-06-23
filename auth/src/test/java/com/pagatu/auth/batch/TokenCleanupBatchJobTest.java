@@ -14,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -63,15 +62,14 @@ class TokenCleanupBatchJobTest {
     @Test
     void testCleanupExpiredTokens_BatchUpdate_Success() {
         // Given
-        TokenCleanupMonitoringService.TokenStatistics stats = 
-            new TokenCleanupMonitoringService.TokenStatistics(2, 2, 0, 1);
-        
+        TokenStatistics stats =
+                new TokenStatistics(2, 2, 0, 1);
+
         when(monitoringService.getTokenStatistics()).thenReturn(stats);
         when(monitoringService.hasTokensToCleanup()).thenReturn(true);
         when(tokenRepository.updateExpiredTokensStatus(
-            eq(TokenStatus.ACTIVE), 
-            eq(TokenStatus.EXPIRED), 
-            any(LocalDateTime.class)
+                eq(TokenStatus.EXPIRED),
+                any(LocalDateTime.class)
         )).thenReturn(1);
 
         // When
@@ -81,9 +79,8 @@ class TokenCleanupBatchJobTest {
         verify(monitoringService, times(2)).getTokenStatistics();
         verify(monitoringService).hasTokensToCleanup();
         verify(tokenRepository).updateExpiredTokensStatus(
-            eq(TokenStatus.ACTIVE), 
-            eq(TokenStatus.EXPIRED), 
-            any(LocalDateTime.class)
+                eq(TokenStatus.EXPIRED),
+                any(LocalDateTime.class)
         );
         verify(tokenRepository, never()).findAllByTokenStatus(any());
     }
@@ -91,9 +88,9 @@ class TokenCleanupBatchJobTest {
     @Test
     void testCleanupExpiredTokens_NoTokensToCleanup() {
         // Given
-        TokenCleanupMonitoringService.TokenStatistics stats = 
-            new TokenCleanupMonitoringService.TokenStatistics(2, 2, 0, 0);
-        
+        TokenStatistics stats =
+                new TokenStatistics(2, 2, 0, 0);
+
         when(monitoringService.getTokenStatistics()).thenReturn(stats);
         when(monitoringService.hasTokensToCleanup()).thenReturn(false);
 
@@ -103,23 +100,22 @@ class TokenCleanupBatchJobTest {
         // Then
         verify(monitoringService).getTokenStatistics();
         verify(monitoringService).hasTokensToCleanup();
-        verify(tokenRepository, never()).updateExpiredTokensStatus(any(), any(), any());
+        verify(tokenRepository, never()).updateExpiredTokensStatus(any(), any());
         verify(tokenRepository, never()).findAllByTokenStatus(any());
     }
 
     @Test
     void testCleanupExpiredTokens_FallbackToIndividualProcessing() {
         // Given
-        TokenCleanupMonitoringService.TokenStatistics stats = 
-            new TokenCleanupMonitoringService.TokenStatistics(2, 2, 0, 1);
+        TokenStatistics stats =
+                new TokenStatistics(2, 2, 0, 1);
         List<TokenForUserPasswordReset> activeTokens = Arrays.asList(expiredToken, activeToken);
-        
+
         when(monitoringService.getTokenStatistics()).thenReturn(stats);
         when(monitoringService.hasTokensToCleanup()).thenReturn(true);
         when(tokenRepository.updateExpiredTokensStatus(
-            eq(TokenStatus.ACTIVE), 
-            eq(TokenStatus.EXPIRED), 
-            any(LocalDateTime.class)
+                eq(TokenStatus.EXPIRED),
+                any(LocalDateTime.class)
         )).thenReturn(0);
         when(tokenRepository.findAllByTokenStatus(TokenStatus.ACTIVE)).thenReturn(activeTokens);
         when(tokenRepository.save(any(TokenForUserPasswordReset.class))).thenReturn(expiredToken);
@@ -129,9 +125,8 @@ class TokenCleanupBatchJobTest {
 
         // Then
         verify(tokenRepository).updateExpiredTokensStatus(
-            eq(TokenStatus.ACTIVE), 
-            eq(TokenStatus.EXPIRED), 
-            any(LocalDateTime.class)
+                eq(TokenStatus.EXPIRED),
+                any(LocalDateTime.class)
         );
         verify(tokenRepository).findAllByTokenStatus(TokenStatus.ACTIVE);
         verify(tokenRepository).save(expiredToken);
@@ -141,9 +136,9 @@ class TokenCleanupBatchJobTest {
     @Test
     void testManualTrigger() {
         // Given
-        TokenCleanupMonitoringService.TokenStatistics stats = 
-            new TokenCleanupMonitoringService.TokenStatistics(0, 0, 0, 0);
-        
+        TokenStatistics stats =
+                new TokenStatistics(0, 0, 0, 0);
+
         when(monitoringService.getTokenStatistics()).thenReturn(stats);
         when(monitoringService.hasTokensToCleanup()).thenReturn(false);
 

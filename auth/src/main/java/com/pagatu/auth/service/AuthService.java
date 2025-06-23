@@ -45,6 +45,7 @@ public class AuthService {
     @Value("${spring.kafka.topics.resetPasswordMail}")
     private String RESET_PASSWORD_TOPIC;
 
+
     @Value("${jwt.secret}")
     private String jwtSecret;
 
@@ -205,9 +206,9 @@ public class AuthService {
         tokenForUserPasswordReset.setEmail(email);
         tokenForUserPasswordReset.setCreatedAt(LocalDateTime.now());
         //Token valido da un ora a partire dalla sua creazione
-        tokenForUserPasswordReset.setExpiredDate(LocalDateTime.now().plusMinutes(60));
+        tokenForUserPasswordReset.setExpiredDate(LocalDateTime.now().plusMinutes(30));
         tokenForUserPasswordReset.setTokenStatus(TokenStatus.ACTIVE);
-        log.info("Creato token attivo fino a {}", LocalDateTime.now().plusMinutes(60));
+        log.info("Creato token attivo fino a {}", LocalDateTime.now().plusMinutes(30));
         return tokenForUserPasswordReset;
     }
 

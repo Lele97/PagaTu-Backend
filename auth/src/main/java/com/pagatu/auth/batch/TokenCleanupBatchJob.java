@@ -1,21 +1,19 @@
 package com.pagatu.auth.batch;
 
-import java.time.LocalDateTime;
-import java.util.List;
-
+import com.pagatu.auth.entity.TokenForUserPasswordReset;
+import com.pagatu.auth.entity.TokenStatus;
+import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
+import com.pagatu.auth.service.TokenCleanupMonitoringService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pagatu.auth.entity.TokenForUserPasswordReset;
-import com.pagatu.auth.entity.TokenStatus;
-import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
-import com.pagatu.auth.service.TokenCleanupMonitoringService;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Batch job component responsible for cleaning up expired password reset tokens.
@@ -30,30 +28,31 @@ public class TokenCleanupBatchJob {
     private final TokenCleanupMonitoringService monitoringService;
 
     /**
-     * Scheduled method that runs every 2 hours (7200000 milliseconds).
+     * Scheduled method that runs every 15 minutes (900000 milliseconds).
      * Uses fixedRate to ensure consistent execution intervals.
-     */    @Scheduled(fixedRate = 2 * 60 * 60 * 1000) // 2 hours in milliseconds
+     */
+    @Scheduled(fixedRate = 900000) // 15 minutes in milliseconds
     public void cleanupExpiredTokens() {
         log.info("Starting token cleanup batch job at {}", LocalDateTime.now());
-        
+
         long startTime = System.currentTimeMillis();
         int processedTokens = 0;
         int updatedTokens = 0;
-        
+
         try {
             // Log initial statistics
-            TokenCleanupMonitoringService.TokenStatistics initialStats = monitoringService.getTokenStatistics();
+            TokenStatistics initialStats = monitoringService.getTokenStatistics();
             log.info("Initial token statistics: {}", initialStats);
-            
+
             // Skip processing if no tokens need cleanup
             if (!monitoringService.hasTokensToCleanup()) {
                 log.info("No expired active tokens found, skipping cleanup");
                 return;
             }
-            
+
             // Process tokens with batch update for better performance
             updatedTokens = performBatchTokenCleanup();
-            
+
             // If batch update didn't work or returned 0, fall back to individual processing
             if (updatedTokens == 0) {
                 log.info("Batch update returned 0 results, falling back to individual token processing");
@@ -63,21 +62,21 @@ public class TokenCleanupBatchJob {
             } else {
                 processedTokens = updatedTokens; // For batch update, processed = updated
             }
-            
+
             // Log final statistics
-            TokenCleanupMonitoringService.TokenStatistics finalStats = monitoringService.getTokenStatistics();
+            TokenStatistics finalStats = monitoringService.getTokenStatistics();
             long executionTime = System.currentTimeMillis() - startTime;
-            
+
             log.info("Token cleanup batch job completed successfully. " +
-                    "Processed: {}, Updated: {}, Execution time: {} ms", 
+                            "Processed: {}, Updated: {}, Execution time: {} ms",
                     processedTokens, updatedTokens, executionTime);
             log.info("Final token statistics: {}", finalStats);
-                    
+
         } catch (Exception e) {
             long executionTime = System.currentTimeMillis() - startTime;
             log.error("Token cleanup batch job failed after {} ms. " +
-                     "Processed: {}, Updated: {}, Error: {}", 
-                     executionTime, processedTokens, updatedTokens, e.getMessage(), e);
+                            "Processed: {}, Updated: {}, Error: {}",
+                    executionTime, processedTokens, updatedTokens, e.getMessage(), e);
             throw new RuntimeException("Token cleanup batch job failed", e);
         }
     }
@@ -88,20 +87,19 @@ public class TokenCleanupBatchJob {
      */
     @Transactional("secondTransactionManager")
     @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
-    private int performBatchTokenCleanup() {
+    protected int performBatchTokenCleanup() {
         try {
             LocalDateTime currentTime = LocalDateTime.now();
             log.debug("Executing batch update for tokens expired before {}", currentTime);
-            
+
             int updatedCount = tokenRepository.updateExpiredTokensStatus(
-                TokenStatus.ACTIVE, 
-                TokenStatus.EXPIRED, 
-                currentTime
+                    TokenStatus.EXPIRED,
+                    currentTime
             );
-            
+
             log.info("Batch update completed: {} tokens updated from ACTIVE to EXPIRED", updatedCount);
             return updatedCount;
-            
+
         } catch (Exception e) {
             log.error("Error during batch token cleanup: {}", e.getMessage(), e);
             throw e;
@@ -114,25 +112,25 @@ public class TokenCleanupBatchJob {
      */
     @Transactional("secondTransactionManager")
     @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
-    private TokenProcessingResult processTokensIndividually() {
+    protected TokenProcessingResult processTokensIndividually() {
         try {
             LocalDateTime currentTime = LocalDateTime.now();
             log.debug("Retrieving active tokens for individual processing at {}", currentTime);
-            
+
             List<TokenForUserPasswordReset> activeTokens = tokenRepository.findAllByTokenStatus(TokenStatus.ACTIVE);
             log.info("Found {} active tokens to process", activeTokens.size());
-            
+
             int updatedCount = 0;
-            
+
             for (TokenForUserPasswordReset token : activeTokens) {
                 try {
                     if (isTokenExpired(token, currentTime)) {
                         updateTokenToExpired(token);
                         updatedCount++;
-                        log.debug("Updated token ID {} to EXPIRED status (expired at: {})", 
+                        log.debug("Updated token ID {} to EXPIRED status (expired at: {})",
                                 token.getId(), token.getExpiredDate());
                     } else {
-                        log.debug("Token ID {} is still active (expires at: {})", 
+                        log.debug("Token ID {} is still active (expires at: {})",
                                 token.getId(), token.getExpiredDate());
                     }
                 } catch (Exception e) {
@@ -140,12 +138,12 @@ public class TokenCleanupBatchJob {
                     // Continue processing other tokens even if one fails
                 }
             }
-            
-            log.info("Individual token processing completed: {} out of {} tokens updated", 
+
+            log.info("Individual token processing completed: {} out of {} tokens updated",
                     updatedCount, activeTokens.size());
-            
+
             return new TokenProcessingResult(activeTokens.size(), updatedCount);
-            
+
         } catch (Exception e) {
             log.error("Error during individual token processing: {}", e.getMessage(), e);
             throw e;
@@ -162,8 +160,9 @@ public class TokenCleanupBatchJob {
     /**
      * Updates a single token to EXPIRED status with retry mechanism.
      */
+    @Transactional(value = "secondTransactionManager")
     @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 1.5))
-    private void updateTokenToExpired(TokenForUserPasswordReset token) {
+    protected void updateTokenToExpired(TokenForUserPasswordReset token) {
         try {
             token.setTokenStatus(TokenStatus.EXPIRED);
             tokenRepository.save(token);
@@ -181,18 +180,5 @@ public class TokenCleanupBatchJob {
     public void manualTrigger() {
         log.info("Manual trigger initiated for token cleanup batch job");
         cleanupExpiredTokens();
-    }
-
-    /**
-     * Data class to hold processing results.
-     */
-    private static class TokenProcessingResult {
-        final int processed;
-        final int updated;
-        
-        TokenProcessingResult(int processed, int updated) {
-            this.processed = processed;
-            this.updated = updated;
-        }
     }
 }
