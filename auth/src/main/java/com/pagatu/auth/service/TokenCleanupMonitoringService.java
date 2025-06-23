@@ -1,15 +1,14 @@
 package com.pagatu.auth.service;
 
-import java.time.LocalDateTime;
-
+import com.pagatu.auth.batch.TokenStatistics;
+import com.pagatu.auth.entity.TokenStatus;
+import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.pagatu.auth.entity.TokenStatus;
-import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
 
 /**
  * Service class providing monitoring and statistics for token cleanup operations.
@@ -59,45 +58,6 @@ public class TokenCleanupMonitoringService {
         } catch (Exception e) {
             log.error("Error checking for tokens to cleanup: {}", e.getMessage(), e);
             return false;
-        }
-    }
-
-    /**
-     * Data class representing token statistics.
-     */
-    public static class TokenStatistics {
-        private final long totalTokens;
-        private final long activeTokens;
-        private final long expiredTokens;
-        private final long expiredActiveTokens;
-
-        public TokenStatistics(long totalTokens, long activeTokens, long expiredTokens, long expiredActiveTokens) {
-            this.totalTokens = totalTokens;
-            this.activeTokens = activeTokens;
-            this.expiredTokens = expiredTokens;
-            this.expiredActiveTokens = expiredActiveTokens;
-        }
-
-        public long getTotalTokens() {
-            return totalTokens;
-        }
-
-        public long getActiveTokens() {
-            return activeTokens;
-        }
-
-        public long getExpiredTokens() {
-            return expiredTokens;
-        }
-
-        public long getExpiredActiveTokens() {
-            return expiredActiveTokens;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("TokenStatistics{total=%d, active=%d, expired=%d, expiredActive=%d}", 
-                               totalTokens, activeTokens, expiredTokens, expiredActiveTokens);
         }
     }
 }

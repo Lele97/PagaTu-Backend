@@ -1,19 +1,18 @@
 package com.pagatu.auth.controller;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import com.pagatu.auth.batch.TokenCleanupBatchJob;
+import com.pagatu.auth.batch.TokenStatistics;
+import com.pagatu.auth.service.TokenCleanupMonitoringService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.pagatu.auth.batch.TokenCleanupBatchJob;
-import com.pagatu.auth.service.TokenCleanupMonitoringService;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * REST controller for managing and monitoring token cleanup operations.
@@ -34,7 +33,7 @@ public class TokenCleanupController {
     @GetMapping("/statistics")
     public ResponseEntity<Map<String, Object>> getStatistics() {
         try {
-            TokenCleanupMonitoringService.TokenStatistics stats = monitoringService.getTokenStatistics();
+            TokenStatistics stats = monitoringService.getTokenStatistics();
             
             Map<String, Object> response = new HashMap<>();
             response.put("totalTokens", stats.getTotalTokens());
@@ -66,13 +65,13 @@ public class TokenCleanupController {
             log.info("Manual token cleanup triggered via REST endpoint");
             
             // Get statistics before cleanup
-            TokenCleanupMonitoringService.TokenStatistics beforeStats = monitoringService.getTokenStatistics();
+            TokenStatistics beforeStats = monitoringService.getTokenStatistics();
             
             // Trigger the cleanup
             batchJob.manualTrigger();
             
             // Get statistics after cleanup
-            TokenCleanupMonitoringService.TokenStatistics afterStats = monitoringService.getTokenStatistics();
+            TokenStatistics afterStats = monitoringService.getTokenStatistics();
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -113,7 +112,7 @@ public class TokenCleanupController {
     public ResponseEntity<Map<String, Object>> healthCheck() {
         try {
             boolean needsCleanup = monitoringService.hasTokensToCleanup();
-            TokenCleanupMonitoringService.TokenStatistics stats = monitoringService.getTokenStatistics();
+            TokenStatistics stats = monitoringService.getTokenStatistics();
             
             Map<String, Object> response = new HashMap<>();
             response.put("status", "healthy");
