@@ -110,7 +110,7 @@ public class KafkaConsumerConfig {
 
         JsonDeserializer<ResetPasswordMailEvent> deserializer = new JsonDeserializer<>(ResetPasswordMailEvent.class);
         deserializer.setRemoveTypeHeaders(false);
-        deserializer.addTrustedPackages("com.pagatu.coffee.event");
+        deserializer.addTrustedPackages("com.pagatu.auth.event");
         deserializer.setUseTypeMapperForKey(true);
 
         return new DefaultKafkaConsumerFactory<>(

@@ -2,8 +2,10 @@ package com.pagatu.mail.service;
 
 import com.pagatu.mail.dto.ProssimoPagatoreDto;
 import com.pagatu.mail.dto.UltimoPagatoreDto;
+import com.pagatu.mail.dto.UtenteDto;
 import com.pagatu.mail.event.InvitationEvent;
 import com.pagatu.mail.event.ProssimoPagamentoEvent;
+import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SaltaPagamentoEvent;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -26,7 +28,6 @@ public class EmailService {
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final Locale ITALIAN_LOCALE = Locale.ITALIAN;
-
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
     private final WebClient webClient;
@@ -39,6 +40,9 @@ public class EmailService {
 
     @Value("${app.frontend.path}")
     private String requestPath;
+
+    @Value("${app.frontend.resetPswPath}")
+    private String resetPswPath;
 
     @Value("${app.frontend.company}")
     private String company;
@@ -68,6 +72,17 @@ public class EmailService {
                 .flatMap(userDataSaltaPagamento -> sendEmailSaltaPagamento(event, userDataSaltaPagamento))
                 .doOnSuccess(__ -> log.info("Email di notifica inviata con successo a {}",
                         event.getProssimoEmail()))
+                .doOnError(error ->
+                        log.error("Errore nell'invio dell'email di notifica", error)
+                )
+                .then();
+    }
+
+    public Mono<Void> inviaNotificaResetPassword(ResetPasswordMailEvent event) {
+        return fetchUserData_ResetPassword(event)
+                .flatMap(userDataResetForgotUserPassword -> sendResetPasswordMail(event, userDataResetForgotUserPassword))
+                .doOnSuccess(__ -> log.info("Email di notifica inviata con successo a {}",
+                        event.getEmail()))
                 .doOnError(error ->
                         log.error("Errore nell'invio dell'email di notifica", error)
                 )
@@ -111,6 +126,30 @@ public class EmailService {
                 .map(UserData_SaltaPagamento::new);
     }
 
+    private Mono<UserData_ResetForgotUserPassword> fetchUserData_ResetPassword(ResetPasswordMailEvent event) {
+        return webClient.get()
+                .uri("/api/coffee/user?email={email}", event.getEmail())
+                .retrieve()
+                .bodyToFlux(UtenteDto.class)
+                .next()
+                .doOnSuccess(response -> log.info("Utente recuperato con successo: {}", response))
+                .doOnError(error -> log.error("Errore durante il recupero dell'utente", error))
+                .map(UserData_ResetForgotUserPassword::new);
+    }
+
+    private Mono<Void> sendResetPasswordMail(ResetPasswordMailEvent event, UserData_ResetForgotUserPassword userDataResetForgotUserPassword) {
+        return Mono.fromRunnable(() -> {
+            Context context = getContextForResetPassword(event, userDataResetForgotUserPassword);
+            buildAndSendEmail(
+                    event.getEmail(),
+                    null,
+                    "Paga-Tu: Hai richiesto un reset della password",
+                    "reset-password",
+                    context
+            );
+        });
+    }
+
     private Mono<Void> sendEmail(ProssimoPagamentoEvent event, UserData userData) {
         return Mono.fromRunnable(() -> {
             Context context = getContext(event, userData);
@@ -139,7 +178,7 @@ public class EmailService {
 
     private Mono<Void> sendEmailSaltaPagamento(SaltaPagamentoEvent event, UserData_SaltaPagamento userDataSaltaPagamento) {
         return Mono.fromRunnable(() -> {
-            Context context = getContextForSaltaPagamento(event, userDataSaltaPagamento);
+            Context context = getContextForSaltaPagamento(userDataSaltaPagamento);
             buildAndSendEmail(
                     event.getProssimoEmail(),
                     null,
@@ -194,7 +233,6 @@ public class EmailService {
         context.setVariable("user", event.getUsername());
         context.setVariable("userWhoSentTheInvitation", event.getUserWhoSentTheInvitation());
         context.setVariable("groupName", event.getGroupName());
-
         String invitationLink = String.format("%s%s?username=%s&groupName=%s",
                 baseUrl, requestPath, event.getUsername(), event.getGroupName());
         context.setVariable("link", invitationLink);
@@ -202,10 +240,19 @@ public class EmailService {
         return context;
     }
 
-    private Context getContextForSaltaPagamento(SaltaPagamentoEvent event, UserData_SaltaPagamento userDataSaltaPagamento) {
+    private Context getContextForSaltaPagamento(UserData_SaltaPagamento userDataSaltaPagamento) {
         Context context = new Context(ITALIAN_LOCALE);
         context.setVariable("prossimoPagatore",
                 userDataSaltaPagamento.prossimoPagatoreDto().getName() + " " + userDataSaltaPagamento.prossimoPagatoreDto().getLastname());
+        context.setVariable("companyName", company);
+        return context;
+    }
+
+    private Context getContextForResetPassword(ResetPasswordMailEvent event, UserData_ResetForgotUserPassword userDataResetForgotUserPassword) {
+        Context context = new Context(ITALIAN_LOCALE);
+        context.setVariable("user", userDataResetForgotUserPassword.utentedto().getUsername());
+        String resetLink = String.format("%s%s?key=%s", baseUrl, resetPswPath, event.getToken());
+        context.setVariable("resetLink", resetLink);
         context.setVariable("companyName", company);
         return context;
     }
@@ -214,5 +261,8 @@ public class EmailService {
     }
 
     private record UserData_SaltaPagamento(ProssimoPagatoreDto prossimoPagatoreDto) {
+    }
+
+    private record UserData_ResetForgotUserPassword(UtenteDto utentedto) {
     }
 }

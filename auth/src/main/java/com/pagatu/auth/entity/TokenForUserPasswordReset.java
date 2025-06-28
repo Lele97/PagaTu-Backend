@@ -27,4 +27,5 @@ public class TokenForUserPasswordReset {
     private String token;
     private String email;
     private LocalDateTime createdAt;
+    private LocalDateTime usedAt;
 }

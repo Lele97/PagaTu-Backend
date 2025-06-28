@@ -1,48 +1,172 @@
 package com.pagatu.auth.controller;
 
+import com.pagatu.auth.dto.ResetPasswordRequest;
 import com.pagatu.auth.dto.LoginRequest;
 import com.pagatu.auth.dto.LoginResponse;
 import com.pagatu.auth.dto.RegisterRequest;
+import com.pagatu.auth.dto.TokenValidationResponse;
+import com.pagatu.auth.entity.RateLimiterResult;
 import com.pagatu.auth.service.AuthService;
+import com.pagatu.auth.service.RateLimiterService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
+    private final RateLimiterService rateLimiterService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, RateLimiterService rateLimiterService) {
         this.authService = authService;
+        this.rateLimiterService = rateLimiterService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
-        return ResponseEntity.ok(authService.login(loginRequest));
+        try {
+            LoginResponse response = authService.login(loginRequest);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Login failed for user: {}", loginRequest.getUsername(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(null);
+        }
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Object> register(@Valid @RequestBody RegisterRequest registerRequest) {
-        authService.register(registerRequest);
-        return new ResponseEntity<>("User registered successfully", HttpStatus.CREATED);
+    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        try {
+            authService.register(registerRequest);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body("User registered successfully");
+        } catch (RuntimeException e) {
+            log.error("Registration failed for user: {}", registerRequest.getUsername(), e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error during registration", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Registration failed due to internal error");
+        }
     }
 
     @PostMapping("/forgotPassword")
-    public ResponseEntity<String> sendEmailForPasswordChange(@RequestParam("email") String email) {
+    public ResponseEntity<String> sendEmailForPasswordChange(
+            @RequestParam("email") String email,
+            HttpServletRequest request) {
+
+        // Apply rate limiting based on IP address
+        String clientIp = getClientIpAddress(request);
+        RateLimiterResult rateLimitResult = rateLimiterService.checkRateLimit(clientIp);
+
+        if (!rateLimitResult.isAllowed()) {
+            log.warn("Rate limit exceeded for IP: {}, wait time: {} seconds",
+                    clientIp, rateLimitResult.getWaitTimeSeconds());
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(rateLimitResult.getWaitTimeSeconds()))
+                    .body("Too many requests. Please try again later.");
+        }
+
         try {
             authService.sendEmailForResetPassword(email);
-            return new ResponseEntity<>("Password reset email sent successfully for: " + email, HttpStatus.OK);
-        } catch (Exception e) {
+            return ResponseEntity.ok("Password reset email sent successfully");
+        } catch (RuntimeException e) {
+            log.error("Password reset request failed for email: {}", email, e);
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error during password reset request", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Unable to process password reset request");
         }
     }
 
+    @GetMapping("/reset-password")
+    public ResponseEntity<TokenValidationResponse> validateResetTokenFromEmail(@RequestParam("key") String token) {
+        try {
+            if (token == null || token.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new TokenValidationResponse(false, null, "Token is required"));
+            }
+
+            // Validate the token and get associated email
+            String email = authService.validateResetTokenAndGetEmail(token);
+
+            if (email != null) {
+                // Return success response with email for the frontend
+                return ResponseEntity.ok()
+                        .body(new TokenValidationResponse(true, email, "Token is valid"));
+            } else {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new TokenValidationResponse(false, null, "Invalid or expired token"));
+            }
+        } catch (Exception e) {
+            log.error("Error validating reset token", e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new TokenValidationResponse(false, null, "Invalid or expired token"));
+        }
+    }
+
     @PutMapping("/resetPassword")
-    public ResponseEntity<String> resetPassword(@Valid @RequestBody LoginRequest loginRequest) {
-        return null;
+    public ResponseEntity<String> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest resetPasswordRequest,
+            @RequestHeader("X-Reset-Token") String token) {
+        try {
+            if (token == null || token.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Reset token is required");
+            }
+
+            authService.resetPassword(resetPasswordRequest, token);
+            return ResponseEntity.ok("Password reset successfully");
+        } catch (RuntimeException e) {
+            log.error("Password reset failed", e);
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error during password reset", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unable to process password reset request");
+        }
+    }
+
+    /**
+     * Extract client IP address from request, considering proxy headers
+     */
+    private String getClientIpAddress(HttpServletRequest request) {
+        String[] headerNames = {
+                "X-Forwarded-For",
+                "X-Real-IP",
+                "Proxy-Client-IP",
+                "WL-Proxy-Client-IP",
+                "HTTP_X_FORWARDED_FOR",
+                "HTTP_X_FORWARDED",
+                "HTTP_X_CLUSTER_CLIENT_IP",
+                "HTTP_CLIENT_IP",
+                "HTTP_FORWARDED_FOR",
+                "HTTP_FORWARDED",
+                "HTTP_VIA",
+                "REMOTE_ADDR"
+        };
+
+        for (String header : headerNames) {
+            String ip = request.getHeader(header);
+            if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
+                // Handle multiple IPs in X-Forwarded-For
+                if (ip.contains(",")) {
+                    ip = ip.split(",")[0].trim();
+                }
+                return ip;
+            }
+        }
+
+        return request.getRemoteAddr();
     }
 }
