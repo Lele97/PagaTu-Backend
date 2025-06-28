@@ -22,9 +22,8 @@ public class UserEventConsumer {
         try {
             switch (userEvent.getEventType()) {
                 case CREATE -> handleCreate(userEvent);
-                case UPDATE, DELETE -> {
-                    // Intenzionalmente vuoto: questi eventi non sono gestiti
-                }
+                case UPDATE -> handleUpdate(userEvent);
+                default -> throw new Exception("Invalid event type");
             }
         } catch (DataIntegrityViolationException ex) {
             log.warn("Violazione vincolo UNIQUE per utente '{}'. Probabilmente già esistente. Ignorato.",
@@ -50,5 +49,17 @@ public class UserEventConsumer {
         user.setGroups(userEvent.getGroups());
         secondRepository.save(user);
         log.info("Utente creato con successo: {}", user.getUsername());
+    }
+
+    private void handleUpdate(UserEvent userEvent) {
+        User user = new User();
+        user.setUsername(userEvent.getUsername());
+        user.setEmail(userEvent.getEmail());
+        user.setPassword(userEvent.getPassword());
+        user.setFirstName(userEvent.getFirstName());
+        user.setLastName(userEvent.getLastName());
+        user.setGroups(userEvent.getGroups());
+        secondRepository.save(user);
+        log.info("Utente aggiornato con successo: {}", user.getUsername());
     }
 }
