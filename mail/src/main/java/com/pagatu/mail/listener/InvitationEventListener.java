@@ -22,5 +22,4 @@ public class InvitationEventListener {
                 event.getUsername(), event.getGroupName());
         emailService.inviaInvitoUtenteNelGruppo(event).subscribe();
     }
-
 }
