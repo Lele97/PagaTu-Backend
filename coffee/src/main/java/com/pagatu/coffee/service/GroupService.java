@@ -1,14 +1,17 @@
 package com.pagatu.coffee.service;
 
-import com.pagatu.coffee.dto.*;
+import com.pagatu.coffee.dto.GroupDto;
+import com.pagatu.coffee.dto.InvitationRequest;
+import com.pagatu.coffee.dto.NuovoGruppoRequest;
+import com.pagatu.coffee.dto.UserMembershipDto;
 import com.pagatu.coffee.entity.Group;
 import com.pagatu.coffee.entity.Status;
 import com.pagatu.coffee.entity.UserGroupMembership;
 import com.pagatu.coffee.entity.Utente;
 import com.pagatu.coffee.event.InvitaionEvent;
+import com.pagatu.coffee.exception.BusinessException;
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
-import com.pagatu.coffee.repository.UtenteRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,31 +27,31 @@ import java.util.List;
 public class GroupService {
 
     private final GroupRepository groupRepository;
-    private final UtenteRepository utenteRepository;
     private final UserGroupMembershipRepository userGroupMembershipRepository;
     private final KafkaTemplate<String, InvitaionEvent> kafkaTemplate;
+    private final BaseUserService baseUserService;
 
     @Value("${spring.kafka.topics.invitation-caffe}")
     private String invitationTopic;
 
     public GroupService(GroupRepository groupRepository,
-                        UtenteRepository utenteRepository,
-                        UserGroupMembershipRepository userGroupMembershipRepository, KafkaTemplate<String, InvitaionEvent> kafkaTemplate) {
+                        UserGroupMembershipRepository userGroupMembershipRepository,
+                        KafkaTemplate<String, InvitaionEvent> kafkaTemplate,
+                        BaseUserService baseUserService) {
         this.groupRepository = groupRepository;
-        this.utenteRepository = utenteRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.baseUserService = baseUserService;
     }
 
     @Transactional
     public GroupDto createGroup(NuovoGruppoRequest nuovoGruppoRequest, Long userId) {
 
-        Utente utente = utenteRepository.findByAuthId(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        Utente utente = baseUserService.findUserByAuthId(userId);
 
         groupRepository.getGroupByName(nuovoGruppoRequest.getName())
                 .ifPresent(g -> {
-                    throw new RuntimeException("Gruppo già esistente");
+                    throw new BusinessException("Group already exists: " + nuovoGruppoRequest.getName());
                 });
 
         Group group = new Group();
@@ -67,16 +70,13 @@ public class GroupService {
     }
 
     @Transactional
-    public void addUserToGroup(String groupName, String username) throws Exception {
+    public void addUserToGroup(String groupName, String username) {
 
-        Utente user = utenteRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Group group = groupRepository.getGroupByName(groupName)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+        Utente user = baseUserService.findUserByUsername(username);
+        Group group = baseUserService.findGroupByName(groupName);
 
         if (userGroupMembershipRepository.existsByUtenteAndGroup(user, group))
-            throw new Exception("User already in group");
+            throw new BusinessException("User '" + username + "' is already a member of group '" + groupName + "'");
 
 
         try {
@@ -94,18 +94,18 @@ public class GroupService {
 
         } catch (DataIntegrityViolationException ex) {
             log.warn("User {} already in group {}", username, groupName);
-            throw new Exception("User is already in the group");
+            throw new BusinessException("User is already in the group");
         } catch (RuntimeException ex) {
             log.error("Error adding user to group: {}", ex.getMessage(), ex);
             throw ex;
         }
     }
 
-    public void sendInvitationToGroup(Long userId, InvitationRequest invitationRequest) throws Exception {
+    public void sendInvitationToGroup(Long userId, InvitationRequest invitationRequest) {
 
-        Group group = groupRepository.findGroupWithMembershipsByName(invitationRequest.getGroupName()).orElseThrow(() -> new Exception("Group not found"));
-        Utente utente = utenteRepository.findByUsername(invitationRequest.getUsername()).orElseThrow(() -> new Exception("The user you want to add does not exist"));
-        Utente userWhoSentTheInvitation = utenteRepository.findByAuthId(userId).orElseThrow(() -> new Exception("User not found"));
+        Group group = baseUserService.findGroupWithMembershipsByName(invitationRequest.getGroupName());
+        Utente utente = baseUserService.findUserByUsername(invitationRequest.getUsername());
+        Utente userWhoSentTheInvitation = baseUserService.findUserByAuthId(userId);
 
         boolean isAdmin = group.getUserMemberships().stream()
                 .anyMatch(membership ->
@@ -116,7 +116,7 @@ public class GroupService {
                 );
 
         if (!isAdmin)
-            throw new Exception("You are not an admin of this group!");
+            throw new BusinessException("You are not an admin of group '" + invitationRequest.getGroupName() + "'");
 
         InvitaionEvent event = new InvitaionEvent();
         event.setUsername(utente.getUsername());
@@ -128,55 +128,6 @@ public class GroupService {
 
         log.info("Invitation event sent for user {} to group {}", invitationRequest.getUsername(), invitationRequest.getGroupName());
     }
-
-//    @Transactional
-//    public void updateMembershipStatus(UpdateMembershipStatusRequest request) {
-//
-//        try {
-//
-//            Utente user = utenteRepository.findById(request.getUserId())
-//                    .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//            Group group = groupRepository.findById(request.getGroupId())
-//                    .orElseThrow(() -> new RuntimeException("Group not found"));
-//
-//            UserGroupMembership membership = userGroupMembershipRepository.findByUtenteAndGroup(user, group)
-//                    .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
-//
-//            membership.setStatus(request.getNewStatus());
-//            userGroupMembershipRepository.save(membership);
-//
-//            log.info("Updated membership status for user {} in group {} to {}",
-//                    user.getUsername(), group.getName(), request.getNewStatus());
-//
-//        } catch (RuntimeException ex) {
-//            log.error("Error updating membership status: {}", ex.getMessage(), ex);
-//            throw ex;
-//        }
-//    }
-
-//    @Transactional
-//    public void removeUserFromGroup(Long userId, Long groupId) {
-//
-//        try {
-//
-//            Utente user = utenteRepository.findById(userId)
-//                    .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//            Group group = groupRepository.findById(groupId)
-//                    .orElseThrow(() -> new RuntimeException("Group not found"));
-//
-//            UserGroupMembership membership = userGroupMembershipRepository.findByUtenteAndGroup(user, group)
-//                    .orElseThrow(() -> new RuntimeException("User is not a member of this group"));
-//
-//            userGroupMembershipRepository.delete(membership);
-//            log.info("Removed user {} from group {}", user.getUsername(), group.getName());
-//
-//        } catch (RuntimeException ex) {
-//            log.error("Error removing user from group: {}", ex.getMessage(), ex);
-//            throw ex;
-//        }
-//    }
 
     private GroupDto mapToDto(Group group) {
         GroupDto groupDto = new GroupDto();
@@ -198,10 +149,9 @@ public class GroupService {
     }
 
     @Transactional
-    public void deleteGroupByName(String groupName, Long userId) throws Exception {
+    public void deleteGroupByName(String groupName, Long userId) {
 
-        Group group = groupRepository.getGroupByName(groupName)
-                .orElseThrow(() -> new Exception("The group does not exist."));
+        Group group = baseUserService.findGroupByName(groupName);
 
         boolean isMember = group.getUserMemberships().stream()
                 .anyMatch(m -> m.getUtente().getAuthId().equals(userId));
@@ -210,7 +160,7 @@ public class GroupService {
             groupRepository.deleteGroupByName(groupName);
             log.info("Group '{}' deleted by user with ID {}", groupName, userId);
         } else {
-            throw new Exception("has more than one user, or you are not a member.");
+            throw new BusinessException("Cannot delete group '" + groupName + "': group has more than one member or you are not a member");
         }
     }
 }
