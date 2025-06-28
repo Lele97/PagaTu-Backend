@@ -2,6 +2,7 @@ package com.pagatu.coffee.controller;
 
 import com.pagatu.coffee.dto.UtenteDetailDto;
 import com.pagatu.coffee.dto.UtenteDto;
+import com.pagatu.coffee.entity.Utente;
 import com.pagatu.coffee.service.UtenteService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +24,13 @@ public class UtenteController {
         return ResponseEntity.ok(utenteService.createUtente(utenteDto));
     }
 
-    @GetMapping
+    @GetMapping(params = "username")
     public Optional<UtenteDetailDto> findUserByUsername(@RequestParam("username") String username) {
         return utenteService.findUtenteByUsername(username);
+    }
+    
+    @GetMapping(params = "email")
+    public Utente findUserByEmail(@RequestParam("email") String email) {
+        return utenteService.findByEmail(email);
     }
 }

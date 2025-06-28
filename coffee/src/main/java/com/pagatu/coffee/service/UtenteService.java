@@ -136,6 +136,11 @@ public class UtenteService {
         return utenteRepository.findUserByUsername(username);
     }
 
+    @Transactional
+    public Utente findByEmail(String email) {
+        return utenteRepository.findByEmail(email);
+    }
+
     @Transactional(readOnly = true)
     public List<Utente> findAll() {
         return utenteRepository.findAll();
