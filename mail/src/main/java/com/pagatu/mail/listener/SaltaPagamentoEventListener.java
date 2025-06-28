@@ -16,7 +16,7 @@ public class SaltaPagamentoEventListener {
         this.emailService = emailService;
     }
 
-    @KafkaListener(topics = "saltaPagamento-caffe", groupId = "email-service", containerFactory = "kafkaListenerContainerFactory_saltaPagamento")
+    @KafkaListener(topics = "saltaPagamento-caffe", groupId = " ", containerFactory = "kafkaListenerContainerFactory_saltaPagamento")
     public void consumeSaltaPagamentoEvent(SaltaPagamentoEvent event) {
         log.info("Ricevuto evento di saltaPagamento: {}", event);
         emailService.inviaNotificaSaltaPagamento(event).subscribe();
