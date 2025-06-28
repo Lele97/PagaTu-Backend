@@ -69,7 +69,8 @@ class TokenCleanupBatchJobTest {
         when(monitoringService.hasTokensToCleanup()).thenReturn(true);
         when(tokenRepository.updateExpiredTokensStatus(
                 eq(TokenStatus.EXPIRED),
-                any(LocalDateTime.class)
+                any(LocalDateTime.class),
+                eq(TokenStatus.ACTIVE)
         )).thenReturn(1);
 
         // When
@@ -80,7 +81,8 @@ class TokenCleanupBatchJobTest {
         verify(monitoringService).hasTokensToCleanup();
         verify(tokenRepository).updateExpiredTokensStatus(
                 eq(TokenStatus.EXPIRED),
-                any(LocalDateTime.class)
+                any(LocalDateTime.class),
+                eq(TokenStatus.ACTIVE)
         );
         verify(tokenRepository, never()).findAllByTokenStatus(any());
     }
@@ -100,7 +102,7 @@ class TokenCleanupBatchJobTest {
         // Then
         verify(monitoringService).getTokenStatistics();
         verify(monitoringService).hasTokensToCleanup();
-        verify(tokenRepository, never()).updateExpiredTokensStatus(any(), any());
+        verify(tokenRepository, never()).updateExpiredTokensStatus(any(), any(), any());
         verify(tokenRepository, never()).findAllByTokenStatus(any());
     }
 
@@ -115,7 +117,8 @@ class TokenCleanupBatchJobTest {
         when(monitoringService.hasTokensToCleanup()).thenReturn(true);
         when(tokenRepository.updateExpiredTokensStatus(
                 eq(TokenStatus.EXPIRED),
-                any(LocalDateTime.class)
+                any(LocalDateTime.class),
+                eq(TokenStatus.ACTIVE)
         )).thenReturn(0);
         when(tokenRepository.findAllByTokenStatus(TokenStatus.ACTIVE)).thenReturn(activeTokens);
         when(tokenRepository.save(any(TokenForUserPasswordReset.class))).thenReturn(expiredToken);
@@ -126,7 +129,8 @@ class TokenCleanupBatchJobTest {
         // Then
         verify(tokenRepository).updateExpiredTokensStatus(
                 eq(TokenStatus.EXPIRED),
-                any(LocalDateTime.class)
+                any(LocalDateTime.class),
+                eq(TokenStatus.ACTIVE)
         );
         verify(tokenRepository).findAllByTokenStatus(TokenStatus.ACTIVE);
         verify(tokenRepository).save(expiredToken);

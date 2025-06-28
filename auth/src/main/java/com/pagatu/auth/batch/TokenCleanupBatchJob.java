@@ -94,7 +94,8 @@ public class TokenCleanupBatchJob {
 
             int updatedCount = tokenRepository.updateExpiredTokensStatus(
                     TokenStatus.EXPIRED,
-                    currentTime
+                    currentTime,
+                    TokenStatus.ACTIVE
             );
 
             log.info("Batch update completed: {} tokens updated from ACTIVE to EXPIRED", updatedCount);
