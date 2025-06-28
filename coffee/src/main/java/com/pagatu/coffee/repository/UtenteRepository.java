@@ -26,7 +26,7 @@ public interface UtenteRepository extends JpaRepository<Utente, Long> {
             """)
     Optional<UtenteDetailDto> findUserByUsername(@Param("username") String username);
 
-    Optional<Utente> findByEmail(String email);
+    Utente findByEmail(String email);
 
     Optional<Utente> findByAuthId(Long authId);
 
