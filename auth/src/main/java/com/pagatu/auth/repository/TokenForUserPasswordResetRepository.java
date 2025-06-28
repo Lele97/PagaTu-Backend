@@ -38,7 +38,7 @@ public interface TokenForUserPasswordResetRepository extends JpaRepository<Token
      */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional(value = "secondTransactionManager")
-    @Query("UPDATE TokenForUserPasswordReset t SET t.tokenStatus = :newStatus WHERE t.expiredDate < :currentTime")
-    int updateExpiredTokensStatus(@Param("newStatus") TokenStatus newStatus, @Param("currentTime") LocalDateTime currentTime);
-
+    @Query("UPDATE TokenForUserPasswordReset t SET t.tokenStatus = :newStatus WHERE t.expiredDate < :currentTime AND t.tokenStatus = :currentStatus")
+    int
+    updateExpiredTokensStatus(@Param("newStatus") TokenStatus newStatus, @Param("currentTime") LocalDateTime currentTime, @Param("currentStatus")TokenStatus currentStatus);
 }
