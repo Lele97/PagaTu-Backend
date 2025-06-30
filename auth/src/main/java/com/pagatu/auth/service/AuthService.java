@@ -8,6 +8,7 @@ import com.pagatu.auth.entity.User;
 import com.pagatu.auth.event.ResetPasswordMailEvent;
 import com.pagatu.auth.event.TokenForgotPswUserEvent;
 import com.pagatu.auth.event.UserEvent;
+import com.pagatu.auth.exception.*;
 import com.pagatu.auth.repository.FirstUserRepository;
 import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
 import io.jsonwebtoken.Jwts;
@@ -18,7 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,13 +31,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Slf4j
 public class AuthService {
+
     @Value("${spring.kafka.topics.user-service}")
     private String USER_TOPIC;
 
@@ -96,9 +95,14 @@ public class AuthService {
 
         Optional<User> userOpt = firstUserRepository.findByUsername(loginRequest.getUsername());
 
-        if (userOpt.isEmpty() || !passwordEncoder.matches(loginRequest.getPassword(), userOpt.get().getPassword())) {
-            log.warn("Failed login attempt for user: {}", loginRequest.getUsername());
-            throw new BadCredentialsException("Invalid username or password");
+        if (userOpt.isEmpty()) {
+            log.warn("Failed login attempt - user not found: {}", loginRequest.getUsername());
+            throw new UserNotFoundException("User not found", loginRequest.getUsername(), "username");
+        }
+
+        if (!passwordEncoder.matches(loginRequest.getPassword(), userOpt.get().getPassword())) {
+            log.warn("Failed login attempt - invalid password for user: {}", loginRequest.getUsername());
+            throw new AuthenticationException("Invalid username or password");
         }
 
         User user = userOpt.get();
@@ -114,11 +118,11 @@ public class AuthService {
 
         // Validate unique constraints
         if (firstUserRepository.existsByUsername(registerRequest.getUsername())) {
-            throw new RuntimeException("Username already exists");
+            throw new UserAlreadyExistsException("Username already exists", "username", registerRequest.getUsername());
         }
 
         if (firstUserRepository.existsByEmail(registerRequest.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new UserAlreadyExistsException("Email already exists", "email", registerRequest.getEmail());
         }
 
         // Create user entity
@@ -137,19 +141,21 @@ public class AuthService {
         publishUserEvent(savedUser, EventType.CREATE);
 
         // Sync with coffee service
-        syncWithCoffeeService(savedUser,  "/api/coffee/user");
+        try {
+            syncWithCoffeeService(savedUser, "/api/coffee/user");
+        } catch (Exception e) {
+            log.error("Failed to sync with coffee service", e);
+            throw new ServiceUnavailableException("Failed to sync with coffee service", e);
+        }
 
         return savedUser;
     }
 
-    /**
-     * Improved token validation that returns the associated email
-     */
     public String validateResetTokenAndGetEmail(String token) {
         try {
             if (token == null || token.trim().isEmpty()) {
                 log.warn("Empty or null token provided");
-                return null;
+                throw new InvalidTokenException("Token is required", "RESET_TOKEN");
             }
 
             Optional<TokenForUserPasswordReset> tokenOpt = tokenForUserPasswordResetRepository
@@ -157,7 +163,7 @@ public class AuthService {
 
             if (tokenOpt.isEmpty()) {
                 log.warn("Token not found: {}", token);
-                return null;
+                throw new InvalidTokenException("Token not found", "RESET_TOKEN");
             }
 
             TokenForUserPasswordReset resetToken = tokenOpt.get();
@@ -165,7 +171,7 @@ public class AuthService {
             // Check if token is already used
             if (resetToken.getTokenStatus() == TokenStatus.USED) {
                 log.warn("Token already used: {}", token);
-                return null;
+                throw new InvalidTokenException("Token has already been used", "RESET_TOKEN");
             }
 
             // Check if token is expired
@@ -174,16 +180,19 @@ public class AuthService {
                 // Automatically mark expired tokens
                 resetToken.setTokenStatus(TokenStatus.EXPIRED);
                 tokenForUserPasswordResetRepository.save(resetToken);
-                return null;
+                throw new TokenExpiredException("Token has expired", "RESET_TOKEN");
             }
 
             // Token is valid, return the associated email
             log.info("Token validated successfully for email: {}", resetToken.getEmail());
             return resetToken.getEmail();
 
+        } catch (TokenExpiredException | InvalidTokenException e) {
+            // Re-throw custom exceptions
+            throw e;
         } catch (Exception e) {
             log.error("Error validating reset token", e);
-            return null;
+            throw new InvalidTokenException("Error validating reset token", e);
         }
     }
 
@@ -192,7 +201,7 @@ public class AuthService {
 
         if (!firstUserRepository.existsByEmail(email)) {
             log.warn("Password reset requested for non-existent email: {}", email);
-            throw new RuntimeException("Email not found");
+            throw new UserNotFoundException("Email not found", email, "email");
         }
 
         // Check daily limit
@@ -201,7 +210,8 @@ public class AuthService {
 
         if (recentTokenCount >= LIMITER) {
             log.warn("Daily password reset limit exceeded for user: {}", email);
-            throw new RuntimeException("You have exceeded the daily limit for password reset requests.");
+            throw new RateLimiterException("You have exceeded the daily limit for password reset requests.",
+                    3600, email); // 1 hour wait time
         }
 
         // Create and save token
@@ -216,7 +226,7 @@ public class AuthService {
     }
 
     @Transactional("firstTransactionManager")
-    public void resetPassword(ResetPasswordRequest resetPasswordRequest, String token) throws Exception {
+    public void resetPassword(ResetPasswordRequest resetPasswordRequest, String token) {
         log.debug("Processing password reset for email: {}", resetPasswordRequest.getEmail());
 
         // Validate inputs
@@ -224,11 +234,11 @@ public class AuthService {
 
         // Get user and token
         User user = firstUserRepository.getByEmail(resetPasswordRequest.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found", resetPasswordRequest.getEmail(), "email"));
 
         TokenForUserPasswordReset resetToken = tokenForUserPasswordResetRepository
                 .findTokenForUserPasswordResetByToken(token)
-                .orElseThrow(() -> new RuntimeException("Token not found"));
+                .orElseThrow(() -> new InvalidTokenException("Token not found", "RESET_TOKEN"));
 
         // Validate token
         validateResetToken(resetToken, resetPasswordRequest.getEmail());
@@ -247,23 +257,26 @@ public class AuthService {
         publishUserEvent(updatedUser, EventType.UPDATE);
         publishTokenEvent(resetToken, EventType.UPDATE);
 
-        // Sync with coffee service
-        //syncWithCoffeeService(updatedUser, "PUT", "/api/coffee/user/" + updatedUser.getId());
-
         log.info("Password successfully reset for user: {}", resetPasswordRequest.getEmail());
     }
 
     // Helper methods
 
     private void validateResetPasswordRequest(ResetPasswordRequest request, String token) {
+        Map<String, List<String>> fieldErrors = new HashMap<>();
+
         if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
-            throw new RuntimeException("Password cannot be empty");
+            fieldErrors.put("password", List.of("Password cannot be empty"));
         }
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-            throw new RuntimeException("Email cannot be empty");
+            fieldErrors.put("email", List.of("Email cannot be empty"));
         }
         if (token == null || token.trim().isEmpty()) {
-            throw new RuntimeException("Token cannot be empty");
+            fieldErrors.put("token", List.of("Token cannot be empty"));
+        }
+
+        if (!fieldErrors.isEmpty()) {
+            throw new ValidationException("Validation failed for password reset request", fieldErrors);
         }
     }
 
@@ -272,13 +285,13 @@ public class AuthService {
         if (!resetToken.getEmail().equals(email)) {
             log.warn("Token email mismatch. Token email: {}, Request email: {}",
                     resetToken.getEmail(), email);
-            throw new RuntimeException("Invalid token for this email");
+            throw new InvalidTokenException("Invalid token for this email", "RESET_TOKEN");
         }
 
         // Check if token is already used
         if (resetToken.getTokenStatus() == TokenStatus.USED) {
             log.warn("Token already used: {}", resetToken.getToken());
-            throw new RuntimeException("Token has already been used");
+            throw new InvalidTokenException("Token has already been used", "RESET_TOKEN");
         }
 
         // Check if token is expired
@@ -286,7 +299,7 @@ public class AuthService {
             log.warn("Token has expired for email: {}", email);
             resetToken.setTokenStatus(TokenStatus.EXPIRED);
             tokenForUserPasswordResetRepository.save(resetToken);
-            throw new RuntimeException("Token has expired");
+            throw new TokenExpiredException("Token has expired", "RESET_TOKEN");
         }
     }
 
@@ -385,14 +398,6 @@ public class AuthService {
         WebClient.RequestBodySpec requestSpec;
 
         requestSpec = webClient.post().uri(endpoint);
-
-//        if ("POST".equals(method)) {
-//            requestSpec = webClient.post().uri(endpoint);
-//        } else if ("PUT".equals(method)) {
-//            requestSpec = webClient.put().uri(endpoint);
-//        } else {
-//            throw new IllegalArgumentException("Unsupported HTTP method: " + method);
-//        }
 
         requestSpec
                 .contentType(MediaType.APPLICATION_JSON)

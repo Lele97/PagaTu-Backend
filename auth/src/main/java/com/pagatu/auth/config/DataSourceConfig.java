@@ -21,7 +21,6 @@ import javax.sql.DataSource;
 @EnableTransactionManagement
 public class DataSourceConfig {
 
-    // Primary H2 DataSource Configuration
     @Primary
     @Bean
     @ConfigurationProperties("spring.datasource")
@@ -89,7 +88,6 @@ public class DataSourceConfig {
         return new JpaTransactionManager(secondEntityManagerFactory);
     }
 
-    // Repository configuration using include filters
     @Configuration
     @EnableJpaRepositories(
             basePackages = "com.pagatu.auth",
@@ -109,6 +107,7 @@ public class DataSourceConfig {
             entityManagerFactoryRef = "secondEntityManagerFactory",
             transactionManagerRef = "secondTransactionManager"
     )
+
     static class SecondaryJpaRepositoriesConfig {
     }
 }
