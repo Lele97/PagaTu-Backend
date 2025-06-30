@@ -79,17 +79,4 @@ public class RateLimiterConfig {
     public int getBucketCount() {
         return buckets.size();
     }
-
-    // Getters for configuration values
-    public int getMaxAttempts() {
-        return maxAttempts;
-    }
-
-    public int getTimeWindowHours() {
-        return timeWindowHours;
-    }
-
-    public boolean isEnabled() {
-        return enabled;
-    }
 }
