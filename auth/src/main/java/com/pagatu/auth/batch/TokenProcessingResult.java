@@ -1,11 +1,13 @@
 package com.pagatu.auth.batch;
 
-public class TokenProcessingResult {
-    final int processed;
-    final int updated;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-    TokenProcessingResult(int processed, int updated) {
-        this.processed = processed;
-        this.updated = updated;
-    }
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class TokenProcessingResult {
+    int processed;
+    int updated;
 }

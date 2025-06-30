@@ -110,6 +110,7 @@ public class TokenCleanupController {
      */
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> healthCheck() {
+
         try {
             boolean needsCleanup = monitoringService.hasTokensToCleanup();
             TokenStatistics stats = monitoringService.getTokenStatistics();
