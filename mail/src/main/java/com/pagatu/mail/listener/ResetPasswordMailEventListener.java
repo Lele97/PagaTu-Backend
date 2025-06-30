@@ -18,7 +18,7 @@ public class ResetPasswordMailEventListener {
 
     @KafkaListener(topics = "user-service-reset-token", groupId = "email-service", containerFactory = "kafkaListenerContainerFactory_resetPswMail")
     public void listen(ResetPasswordMailEvent event) {
-        log.debug("Ricevuto di reset della password {}", event);
+        log.debug("Ricevuto evento di reset della password {}", event);
         emailService.inviaNotificaResetPassword(event).subscribe();
     }
 }
