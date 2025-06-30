@@ -30,31 +30,15 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
-        try {
-            LoginResponse response = authService.login(loginRequest);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            log.error("Login failed for user: {}", loginRequest.getUsername(), e);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(null);
-        }
+        LoginResponse response = authService.login(loginRequest);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
-        try {
-            authService.register(registerRequest);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body("User registered successfully");
-        } catch (RuntimeException e) {
-            log.error("Registration failed for user: {}", registerRequest.getUsername(), e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error during registration", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Registration failed due to internal error");
-        }
+        authService.register(registerRequest);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body("User registered successfully");
     }
 
     @PostMapping("/forgotPassword")
@@ -74,28 +58,17 @@ public class AuthController {
                     .body("Too many requests. Please try again later.");
         }
 
-        try {
-            authService.sendEmailForResetPassword(email);
-            return ResponseEntity.ok("Password reset email sent successfully");
-        } catch (RuntimeException e) {
-            log.error("Password reset request failed for email: {}", email, e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error during password reset request", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unable to process password reset request");
-        }
+        authService.sendEmailForResetPassword(email);
+        return ResponseEntity.ok("Password reset email sent successfully");
     }
 
     @GetMapping("/reset-password")
     public ResponseEntity<TokenValidationResponse> validateResetTokenFromEmail(@RequestParam("key") String token) {
-        try {
+
             if (token == null || token.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(new TokenValidationResponse(false, null, "Token is required"));
             }
-
             // Validate the token and get associated email
             String email = authService.validateResetTokenAndGetEmail(token);
 
@@ -107,18 +80,13 @@ public class AuthController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(new TokenValidationResponse(false, null, "Invalid or expired token"));
             }
-        } catch (Exception e) {
-            log.error("Error validating reset token", e);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new TokenValidationResponse(false, null, "Invalid or expired token"));
-        }
     }
 
     @PutMapping("/resetPassword")
     public ResponseEntity<String> resetPassword(
             @Valid @RequestBody ResetPasswordRequest resetPasswordRequest,
             @RequestHeader("X-Reset-Token") String token) {
-        try {
+
             if (token == null || token.trim().isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body("Reset token is required");
@@ -126,15 +94,6 @@ public class AuthController {
 
             authService.resetPassword(resetPasswordRequest, token);
             return ResponseEntity.ok("Password reset successfully");
-        } catch (RuntimeException e) {
-            log.error("Password reset failed", e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(e.getMessage());
-        } catch (Exception e) {
-            log.error("Unexpected error during password reset", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unable to process password reset request");
-        }
     }
 
     /**

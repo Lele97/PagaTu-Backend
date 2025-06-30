@@ -10,6 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UtenteDto {
+
     private Long id;
     private Long authId;
     private String username;
