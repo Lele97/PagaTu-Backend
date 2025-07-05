@@ -213,4 +213,15 @@ public class GroupService {
             throw new Exception("has more than one user, or you are not a member.");
         }
     }
+
+    @Transactional
+    public List<GroupDto> getGroupsByUsername(String username) throws Exception {
+        List<Group> groups = groupRepository.getGroupsByUsername(username);
+        if (groups.isEmpty()) {
+            throw new Exception("l'utente non presente in nessun gruppo");
+        }
+        return groups.stream()
+                .map(this::mapToDto)
+                .toList();
+    }
 }

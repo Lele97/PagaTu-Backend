@@ -8,6 +8,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/coffee")
 public class PagamentoController {
@@ -32,5 +34,11 @@ public class PagamentoController {
         Long userId = jwtUtil.getUserIdFromToken(authHeader.substring(7));
         pagamentoService.saltaPagamento(userId,groupNme);
         return ResponseEntity.ok("User: "+ userId+ " ha saltato il pagamento");
+    }
+
+    @GetMapping("/ultimi/pagamenti/{username}")
+    public ResponseEntity<List<PagamentoDto>> ultimiPagamentoDto(@PathVariable("username") String username) {
+        List<PagamentoDto> pagamenti = pagamentoService.getUltimiPagamentiByUsername(username);
+        return ResponseEntity.ok(pagamenti);
     }
 }
