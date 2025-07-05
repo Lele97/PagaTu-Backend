@@ -3,14 +3,12 @@ package com.pagatu.coffee.controller;
 import com.pagatu.coffee.dto.GroupDto;
 import com.pagatu.coffee.dto.InvitationRequest;
 import com.pagatu.coffee.dto.NuovoGruppoRequest;
-import com.pagatu.coffee.jwt.jwtUtil;
 import com.pagatu.coffee.service.GroupService;
+import com.pagatu.coffee.service.JwtService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("api/coffee/group")
