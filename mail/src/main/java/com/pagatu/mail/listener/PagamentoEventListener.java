@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 @Log4j2
 @Component
 public class PagamentoEventListener {
+
     private final EmailService emailService;
 
     public PagamentoEventListener(EmailService emailService) {

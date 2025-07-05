@@ -6,10 +6,8 @@ import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.ProssimoPagamentoEvent;
 import com.pagatu.coffee.event.SaltaPagamentoEvent;
 import com.pagatu.coffee.mapper.PagamentoMapper;
-import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.PagamentoRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
-import com.pagatu.coffee.repository.UtenteRepository;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,12 +32,11 @@ public class PagamentoService {
 
     private static final Random RANDOM = new Random();
     private final PagamentoRepository pagamentoRepository;
-    private final UtenteRepository utenteRepository;
     private final PagamentoMapper pagamentoMapper;
-    private final GroupRepository groupRepository;
     private final UserGroupMembershipRepository userGroupMembershipRepository;
     private final KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate;
     private final KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplate_saltaPagamento;
+    private final BaseUserService baseUserService;
 
     @Value("${spring.kafka.topics.pagamenti-caffe}")
     private String pagamentiTopic;
@@ -47,23 +44,22 @@ public class PagamentoService {
     @Value("saltaPagamento-caffe")
     private String saltaPagamentoTopic;
 
-    public PagamentoService(PagamentoRepository pagamentoRepository, UtenteRepository utenteRepository,
-                            PagamentoMapper pagamentoMapper, GroupRepository groupRepository, UserGroupMembershipRepository userGroupMembershipRepository, KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate, KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento) {
+    public PagamentoService(PagamentoRepository pagamentoRepository,
+                            PagamentoMapper pagamentoMapper, UserGroupMembershipRepository userGroupMembershipRepository, KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate, KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento, BaseUserService baseUserService) {
         this.pagamentoRepository = pagamentoRepository;
-        this.utenteRepository = utenteRepository;
         this.pagamentoMapper = pagamentoMapper;
-        this.groupRepository = groupRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
         this.kafkaTemplate = kafkaTemplate;
         kafkaTemplate_saltaPagamento = kafkaTemplateSaltaPagamento;
+        this.baseUserService = baseUserService;
     }
 
     @Transactional
     public PagamentoDto registraPagamento(Long userId, String groupNme, @Valid NuovoPagamentoRequest request) {
 
-        Utente utente = utenteRepository.findByAuthId(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        Utente utente = baseUserService.findUserByAuthId(userId);
 
-        Group group = groupRepository.getGroupByName(groupNme).orElseThrow(() -> new RuntimeException("Group non trovato"));
+        Group group = baseUserService.findGroupByName(groupNme);
 
         List<UserGroupMembership> userGroupMembership = userGroupMembershipRepository.findByGroup(group);
 
@@ -178,9 +174,9 @@ public class PagamentoService {
     @Transactional
     public void saltaPagamento(Long userId, String groupNme) {
 
-        Utente utente = utenteRepository.findByAuthId(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        Utente utente = baseUserService.findUserByAuthId(userId);
 
-        Group group = groupRepository.getGroupByName(groupNme).orElseThrow(() -> new RuntimeException("Group non trovato"));
+        Group group = baseUserService.findGroupByName(groupNme);
 
         resetUtenteSaltatoinNonPagato(group);
 
