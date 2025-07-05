@@ -8,6 +8,7 @@ import com.pagatu.coffee.event.SaltaPagamentoEvent;
 import com.pagatu.coffee.mapper.PagamentoMapper;
 import com.pagatu.coffee.repository.PagamentoRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
+import com.pagatu.coffee.repository.UtenteRepository;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,7 @@ public class PagamentoService {
     private final PagamentoRepository pagamentoRepository;
     private final PagamentoMapper pagamentoMapper;
     private final UserGroupMembershipRepository userGroupMembershipRepository;
+    private final UtenteRepository utenteRepository;
     private final KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate;
     private final KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplate_saltaPagamento;
     private final BaseUserService baseUserService;
@@ -45,10 +47,11 @@ public class PagamentoService {
     private String saltaPagamentoTopic;
 
     public PagamentoService(PagamentoRepository pagamentoRepository,
-                            PagamentoMapper pagamentoMapper, UserGroupMembershipRepository userGroupMembershipRepository, KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate, KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento, BaseUserService baseUserService) {
+                            PagamentoMapper pagamentoMapper, UserGroupMembershipRepository userGroupMembershipRepository, UtenteRepository utenteRepository, KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate, KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento, BaseUserService baseUserService) {
         this.pagamentoRepository = pagamentoRepository;
         this.pagamentoMapper = pagamentoMapper;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
+        this.utenteRepository = utenteRepository;
         this.kafkaTemplate = kafkaTemplate;
         kafkaTemplate_saltaPagamento = kafkaTemplateSaltaPagamento;
         this.baseUserService = baseUserService;
