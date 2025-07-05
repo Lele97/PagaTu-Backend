@@ -224,6 +224,34 @@ public class PagamentoService {
         }
     }
 
+    public List<PagamentoDto> getUltimiPagamentiByUsername(String username) {
+
+        // First, find the user by username
+        Utente utente = utenteRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        // Get all payments for this user across all groups
+        List<Pagamento> pagamenti = pagamentoRepository.findByUtenteOrderByDataPagamentoDesc(utente);
+
+        // Convert to DTOs
+        return pagamenti.stream()
+                .map(this::convertToPagamentoDto)
+                .toList();
+    }
+
+    private PagamentoDto convertToPagamentoDto(Pagamento pagamento) {
+        PagamentoDto dto = new PagamentoDto();
+        dto.setId(pagamento.getId());
+        dto.setUserId(pagamento.getUserGroupMembership().getUtente().getId());
+        dto.setUsername(pagamento.getUserGroupMembership().getUtente().getUsername());
+        dto.setImporto(pagamento.getImporto());
+        dto.setDescrizione(pagamento.getDescrizione());
+        dto.setDataPagamento(pagamento.getDataPagamento());
+        dto.setGroupId(pagamento.getUserGroupMembership().getGroup().getId());
+        dto.setGroupName(pagamento.getUserGroupMembership().getGroup().getName());
+        return dto;
+    }
+
     // Additional utility methods for group-specific queries
 //    @Transactional(readOnly = true)
 //    public List<UserGroupMembership> getMembersWithStatus(String groupName, Status status) {

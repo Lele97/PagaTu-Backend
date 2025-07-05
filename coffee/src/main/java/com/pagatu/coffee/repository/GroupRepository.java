@@ -6,11 +6,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface GroupRepository  extends JpaRepository<Group, Long> {
     Optional<Group> getGroupByName(String name);
+
+    // Fixed the JPQL query - this should return Group entities, not GroupDto
+    @Query("SELECT DISTINCT g FROM Group g JOIN g.userMemberships m JOIN m.utente u WHERE u.authId = :userId")
+    List<Group> getGroupsByUserId(@Param("userId") Long userId);
+
+    // Alternative query using username if you prefer
+    @Query("SELECT DISTINCT g FROM Group g JOIN g.userMemberships m JOIN m.utente u WHERE u.username = :username")
+    List<Group> getGroupsByUsername(@Param("username") String username);
+
     void deleteGroupByName(String groupName);
     @Query("SELECT g FROM Group g JOIN FETCH g.userMemberships m JOIN FETCH m.utente WHERE g.name = :name")
     Optional<Group> findGroupWithMembershipsByName(@Param("name") String name);

@@ -12,4 +12,6 @@ public class PagamentoDto {
     private Double importo;
     private String descrizione;
     private LocalDateTime dataPagamento;
+    private Long groupId;
+    private String groupName;
 }

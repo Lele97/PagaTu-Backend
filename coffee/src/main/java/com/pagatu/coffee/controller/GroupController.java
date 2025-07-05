@@ -6,8 +6,11 @@ import com.pagatu.coffee.dto.NuovoGruppoRequest;
 import com.pagatu.coffee.jwt.jwtUtil;
 import com.pagatu.coffee.service.GroupService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("api/coffee/group")
@@ -47,5 +50,16 @@ public class GroupController {
         Long user_id = jwtUtil.getUserIdFromToken(authHeader.substring(7));
         groupService.sendInvitationToGroup(user_id, invitationRequest);
         return ResponseEntity.ok("Email sent to the user: " + invitationRequest.getUsername());
+    }
+
+    @GetMapping("/get/{username}")
+    public ResponseEntity<String> getGroupsByUsername(@PathVariable("username") String username) {
+        try{
+            groupService.getGroupsByUsername(username);
+            int size = groupService.getGroupsByUsername(username).size();
+            return ResponseEntity.ok("Successfully retrieved "+ size +" groups by username: "+username);
+        }catch(Exception e){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Unable to retrieve groups by username: "+username);
+        }
     }
 }
