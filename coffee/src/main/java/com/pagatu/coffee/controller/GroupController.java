@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/coffee/group")
 public class GroupController {
@@ -58,13 +60,17 @@ public class GroupController {
     }
 
     @GetMapping("/get/{username}")
-    public ResponseEntity<String> getGroupsByUsername(@PathVariable("username") String username) {
-        try{
-            groupService.getGroupsByUsername(username);
-            int size = groupService.getGroupsByUsername(username).size();
-            return ResponseEntity.ok("Successfully retrieved "+ size +" groups by username: "+username);
-        }catch(Exception e){
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Unable to retrieve groups by username: "+username);
+    public ResponseEntity<Object> getGroupsByUsername(@PathVariable("username") String username) {
+        try {
+            List<GroupDto> groups = groupService.getGroupsByUsername(username);
+            if (groups.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("No groups found for username: " + username);
+            }
+            return ResponseEntity.ok(groups);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Unable to retrieve groups for username: " + username);
         }
     }
 }
