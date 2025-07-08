@@ -6,12 +6,14 @@ import com.pagatu.coffee.dto.NuovoGruppoRequest;
 import com.pagatu.coffee.service.GroupService;
 import com.pagatu.coffee.service.JwtService;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("api/coffee/group")
 public class GroupController {
@@ -59,15 +61,31 @@ public class GroupController {
         return ResponseEntity.ok("Invitation sent to user '" + invitationRequest.getUsername() + "' successfully");
     }
 
-    @GetMapping("/get/{username}")
-    public ResponseEntity<Object> getGroupsByUsername(@PathVariable("username") String username) {
+    @PostMapping("/get/{username}")
+    public ResponseEntity<Object> getGroupsByUsernamePost(
+            @PathVariable("username") String username,
+            @RequestHeader("Authorization") String authHeader) {
         try {
+            // Verify token is valid by extracting user ID (throws exception if invalid)
+            Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+            log.info("Token valid for user: '{}'", userId);
+
+            // Optional: Verify the requested username matches the token's username
+            String tokenUsername = jwtService.extractUsernameFromAuthHeader(authHeader);
+            if (!username.equals(tokenUsername)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("Not authorized to access this user's groups");
+            }
+
             List<GroupDto> groups = groupService.getGroupsByUsername(username);
             if (groups.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body("No groups found for username: " + username);
             }
             return ResponseEntity.ok(groups);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Invalid authorization token");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Unable to retrieve groups for username: " + username);
