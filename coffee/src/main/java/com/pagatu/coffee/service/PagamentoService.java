@@ -1,10 +1,15 @@
 package com.pagatu.coffee.service;
 
+import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoDto;
+import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoRequest;
 import com.pagatu.coffee.dto.PagamentoDto;
 import com.pagatu.coffee.dto.ProssimoPagamentoDto;
 import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.ProssimoPagamentoEvent;
 import com.pagatu.coffee.event.SaltaPagamentoEvent;
+import com.pagatu.coffee.exception.GroupNotFoundException;
+import com.pagatu.coffee.exception.NoContentAvailableException;
+import com.pagatu.coffee.exception.UserNotFoundException;
 import com.pagatu.coffee.mapper.PagamentoMapper;
 import com.pagatu.coffee.repository.PagamentoRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
@@ -223,6 +228,29 @@ public class PagamentoService {
         }
     }
 
+    public List<ClassificaPagamentiPerGruppoDto> getClassificaPagamentiPerGruppo(Long user_id, ClassificaPagamentiPerGruppoRequest classificaPagamentiPerGruppoRequest) {
+
+        Utente utente = baseUserService.findUserByAuthId(user_id);
+
+        if (utente == null) {
+            throw new UserNotFoundException("User not found");
+        }
+
+        Group group = baseUserService.findGroupByName(classificaPagamentiPerGruppoRequest.getGroupName());
+
+        if (group == null) {
+            throw new GroupNotFoundException("Group not found: " + classificaPagamentiPerGruppoRequest.getGroupName());
+        }
+
+        List<ClassificaPagamentiPerGruppoDto> classificaPagamentiPerGruppoDtos = pagamentoRepository.classificaPagamentiPerGruppo(classificaPagamentiPerGruppoRequest.getGroupName());
+
+        if (classificaPagamentiPerGruppoDtos.isEmpty()) {
+            throw new NoContentAvailableException("Non ci sono pagamenti");
+        }
+
+        return classificaPagamentiPerGruppoDtos;
+    }
+
     public List<PagamentoDto> getUltimiPagamentiByUsername(String username) {
 
         // First, find the user by username
@@ -250,34 +278,4 @@ public class PagamentoService {
         dto.setGroupName(pagamento.getUserGroupMembership().getGroup().getName());
         return dto;
     }
-
-    // Additional utility methods for group-specific queries
-//    @Transactional(readOnly = true)
-//    public List<UserGroupMembership> getMembersWithStatus(String groupName, Status status) {
-//        Group group = groupRepository.getGroupByName(groupName)
-//                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
-//
-//        return userGroupMembershipRepository.findByGroupAndStatus(group, status);
-//    }
-
-//    @Transactional(readOnly = true)
-//    public long countMembersWithStatus(String groupName, Status status) {
-//        Group group = groupRepository.getGroupByName(groupName)
-//                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
-//
-//        return userGroupMembershipRepository.countByGroupAndStatus(group, status);
-//    }
-
-//    @Transactional(readOnly = true)
-//    public List<Pagamento> getGroupPaymentHistory(String groupName) {
-//        Group group = groupRepository.getGroupByName(groupName)
-//                .orElseThrow(() -> new RuntimeException("Group not found: " + groupName));
-//
-//        List<UserGroupMembership> groupMemberships = userGroupMembershipRepository.findByGroup(group);
-//
-//        return groupMemberships.stream()
-//                .flatMap(membership -> pagamentoRepository.findByUserGroupMembershipOrderByDataPagamentoDesc(membership).stream())
-//                .sorted((p1, p2) -> p2.getDataPagamento().compareTo(p1.getDataPagamento()))
-//                .toList();
-//    }
 }

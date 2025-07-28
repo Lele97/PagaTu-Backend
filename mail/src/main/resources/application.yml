@@ -12,6 +12,7 @@ app:
     path: /update/addtogroup
     resetPswPath: //reset-password
     company: Paga-Tu
+    domainUrl: http://localhost:8888
 
 spring:
   thymeleaf:

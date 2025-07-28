@@ -28,7 +28,12 @@ public class UtenteController {
     public Optional<UtenteDetailDto> findUserByUsername(@RequestParam("username") String username) {
         return utenteService.findUtenteByUsername(username);
     }
-    
+
+    @PostMapping("/by-username")
+    public ResponseEntity<Optional<UtenteDetailDto>> findUserByUsernamePostParam(@RequestParam String username) {
+        return ResponseEntity.ok(utenteService.findUtenteByUsername(username));
+    }
+
     @GetMapping(params = "email")
     public Utente findUserByEmail(@RequestParam("email") String email) {
         return utenteService.findByEmail(email);

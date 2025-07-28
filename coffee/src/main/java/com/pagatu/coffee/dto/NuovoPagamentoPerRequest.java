@@ -7,12 +7,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class NuovoPagamentoRequest {
+@NoArgsConstructor
+public class NuovoPagamentoPerRequest {
+
+    private Long userId;
 
     @NotNull
     @Positive
     private Double importo;
+
     private String descrizione;
 }
