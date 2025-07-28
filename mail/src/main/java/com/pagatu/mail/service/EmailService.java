@@ -15,10 +15,12 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 import reactor.core.publisher.Mono;
 
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
@@ -37,6 +39,9 @@ public class EmailService {
 
     @Value("${app.frontend.base-url}")
     private String baseUrl;
+
+    @Value("${app.frontend.domainUrl}")
+    private String domainUrl;
 
     @Value("${app.frontend.path}")
     private String requestPath;
@@ -233,8 +238,13 @@ public class EmailService {
         context.setVariable("user", event.getUsername());
         context.setVariable("userWhoSentTheInvitation", event.getUserWhoSentTheInvitation());
         context.setVariable("groupName", event.getGroupName());
-        String invitationLink = String.format("%s%s?username=%s&groupName=%s",
-                baseUrl, requestPath, event.getUsername(), event.getGroupName());
+
+        // Fixed invitation link to match React routing structure
+        String encodedUsername = UriUtils.encode(event.getUsername(), StandardCharsets.UTF_8);
+        String encodedGroupName = UriUtils.encode(event.getGroupName(), StandardCharsets.UTF_8);
+        String invitationLink = String.format("%s/invitation?username=%s&groupName=%s",
+                domainUrl, encodedUsername, encodedGroupName);
+
         context.setVariable("link", invitationLink);
         context.setVariable("companyName", company);
         return context;
@@ -257,12 +267,7 @@ public class EmailService {
         return context;
     }
 
-    private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {
-    }
-
-    private record UserData_SaltaPagamento(ProssimoPagatoreDto prossimoPagatoreDto) {
-    }
-
-    private record UserData_ResetForgotUserPassword(UtenteDto utentedto) {
-    }
+    private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {}
+    private record UserData_SaltaPagamento(ProssimoPagatoreDto prossimoPagatoreDto) {}
+    private record UserData_ResetForgotUserPassword(UtenteDto utentedto) {}
 }

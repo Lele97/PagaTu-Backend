@@ -2,6 +2,7 @@ package com.pagatu.coffee.exception;
 
 import com.pagatu.coffee.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.ws.rs.core.NoContentException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -60,6 +61,23 @@ public class GlobalExceptionHandler {
         errorResponse.setPath(request.getRequestURI());
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+
+    @ExceptionHandler(NoContentAvailableException.class)
+    public ResponseEntity<ErrorResponse> handleNoContentException(
+            NoContentException ex, HttpServletRequest request
+    ){
+        log.error("No Content: ", ex);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "NO_CONTENT",
+                "An unexpected error occurred",
+                HttpStatus.NO_CONTENT.value()
+        );
+        errorResponse.setPath(request.getRequestURI());
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(errorResponse);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -1,5 +1,8 @@
 package com.pagatu.coffee.controller;
 
+import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoDto;
+import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoRequest;
+import com.pagatu.coffee.dto.NuovoPagamentoPerRequest;
 import com.pagatu.coffee.dto.PagamentoDto;
 import com.pagatu.coffee.entity.NuovoPagamentoRequest;
 import com.pagatu.coffee.service.JwtService;
@@ -37,6 +40,17 @@ public class PagamentoController {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         pagamentoService.saltaPagamento(userId, groupNme);
         return ResponseEntity.ok("User: " + userId + " ha saltato il pagamento");
+    }
+
+    @PostMapping("/pagamenti/classifica")
+    public ResponseEntity<List<ClassificaPagamentiPerGruppoDto>> classificaPagamentiPerGruppo(@RequestHeader("Authorization") String authHeader, @RequestBody ClassificaPagamentiPerGruppoRequest classificaPagamentiPerGruppoRequest) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        return ResponseEntity.ok(pagamentoService.getClassificaPagamentiPerGruppo(userId,classificaPagamentiPerGruppoRequest));
+    }
+
+    @PostMapping("/pagamento/pagaPer")
+    public ResponseEntity<PagamentoDto> pagamentoPer(@RequestHeader("Authorization") String authHeader, @RequestBody NuovoPagamentoPerRequest nuovoPagamentoPerRequest, @RequestParam("groupNme") String groupNme) {
+        return null;
     }
 
     @PostMapping("/ultimi/pagamenti/{username}")
