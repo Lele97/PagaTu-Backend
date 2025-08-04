@@ -2,10 +2,12 @@ package com.pagatu.auth.batch;
 
 import com.pagatu.auth.entity.TokenForUserPasswordReset;
 import com.pagatu.auth.entity.TokenStatus;
+import com.pagatu.auth.repository.DevTokenForUserPasswordResetRepository;
 import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
-import com.pagatu.auth.service.TokenCleanupMonitoringService;
+import com.pagatu.auth.service.ProfileAwareTokenCleanupMonitoringService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -24,8 +27,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TokenCleanupBatchJob {
 
+    private final Environment environment;
     private final TokenForUserPasswordResetRepository tokenRepository;
-    private final TokenCleanupMonitoringService monitoringService;
+    private final DevTokenForUserPasswordResetRepository devTokenRepository;
+    private final ProfileAwareTokenCleanupMonitoringService profileAwareTokenCleanupMonitoringService;
 
     /**
      * Scheduled method that runs every 15 minutes (900000 milliseconds).
@@ -38,14 +43,19 @@ public class TokenCleanupBatchJob {
         long startTime = System.currentTimeMillis();
         int processedTokens = 0;
         int updatedTokens = 0;
+        TokenStatistics initialStats;
+        TokenStatistics finalStats;
 
         try {
+
             // Log initial statistics
-            TokenStatistics initialStats = monitoringService.getTokenStatistics();
+            initialStats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
+
             log.info("Initial token statistics: {}", initialStats);
 
             // Skip processing if no tokens need cleanup
-            if (!monitoringService.hasTokensToCleanup()) {
+
+            if (!profileAwareTokenCleanupMonitoringService.hasTokensToCleanup()) {
                 log.info("No expired active tokens found, skipping cleanup");
                 return;
             }
@@ -64,12 +74,15 @@ public class TokenCleanupBatchJob {
             }
 
             // Log final statistics
-            TokenStatistics finalStats = monitoringService.getTokenStatistics();
+            finalStats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
+
+
             long executionTime = System.currentTimeMillis() - startTime;
 
             log.info("Token cleanup batch job completed successfully. " +
                             "Processed: {}, Updated: {}, Execution time: {} ms",
                     processedTokens, updatedTokens, executionTime);
+
             log.info("Final token statistics: {}", finalStats);
 
         } catch (Exception e) {
@@ -85,18 +98,28 @@ public class TokenCleanupBatchJob {
      * Performs batch update of expired tokens using a single query.
      * This is more efficient for large datasets.
      */
-    @Transactional("secondTransactionManager")
+    @Transactional
     @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
     protected int performBatchTokenCleanup() {
         try {
             LocalDateTime currentTime = LocalDateTime.now();
             log.debug("Executing batch update for tokens expired before {}", currentTime);
 
-            int updatedCount = tokenRepository.updateExpiredTokensStatus(
-                    TokenStatus.EXPIRED,
-                    currentTime,
-                    TokenStatus.ACTIVE
-            );
+            int updatedCount;
+
+            if (isDevProfile()) {
+                updatedCount = devTokenRepository.updateExpiredTokensStatus(
+                        TokenStatus.EXPIRED,
+                        currentTime,
+                        TokenStatus.ACTIVE
+                );
+            } else {
+                updatedCount = tokenRepository.updateExpiredTokensStatus(
+                        TokenStatus.EXPIRED,
+                        currentTime,
+                        TokenStatus.ACTIVE
+                );
+            }
 
             log.info("Batch update completed: {} tokens updated from ACTIVE to EXPIRED", updatedCount);
             return updatedCount;
@@ -111,14 +134,21 @@ public class TokenCleanupBatchJob {
      * Fallback method that processes tokens individually.
      * Used when batch update fails or returns unexpected results.
      */
-    @Transactional("secondTransactionManager")
+    @Transactional
     @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
     protected TokenProcessingResult processTokensIndividually() {
         try {
             LocalDateTime currentTime = LocalDateTime.now();
             log.debug("Retrieving active tokens for individual processing at {}", currentTime);
 
-            List<TokenForUserPasswordReset> activeTokens = tokenRepository.findAllByTokenStatus(TokenStatus.ACTIVE);
+            List<TokenForUserPasswordReset> activeTokens;
+
+            if (isDevProfile()) {
+                activeTokens = devTokenRepository.findAllByTokenStatus(TokenStatus.ACTIVE);
+            } else {
+                activeTokens = tokenRepository.findAllByTokenStatus(TokenStatus.ACTIVE);
+            }
+
             log.info("Found {} active tokens to process", activeTokens.size());
 
             int updatedCount = 0;
@@ -161,12 +191,16 @@ public class TokenCleanupBatchJob {
     /**
      * Updates a single token to EXPIRED status with retry mechanism.
      */
-    @Transactional(value = "secondTransactionManager")
+    @Transactional
     @Retryable(value = {Exception.class}, maxAttempts = 3, backoff = @Backoff(delay = 500, multiplier = 1.5))
     protected void updateTokenToExpired(TokenForUserPasswordReset token) {
         try {
             token.setTokenStatus(TokenStatus.EXPIRED);
-            tokenRepository.save(token);
+            if (isDevProfile()) {
+                devTokenRepository.save(token);
+            } else {
+                tokenRepository.save(token);
+            }
             log.debug("Successfully updated token ID {} to EXPIRED status", token.getId());
         } catch (Exception e) {
             log.error("Failed to update token ID {} to EXPIRED status: {}", token.getId(), e.getMessage());
@@ -181,5 +215,10 @@ public class TokenCleanupBatchJob {
     public void manualTrigger() {
         log.info("Manual trigger initiated for token cleanup batch job");
         cleanupExpiredTokens();
+    }
+
+    // Profile detection methods
+    private boolean isDevProfile() {
+        return Arrays.asList(environment.getActiveProfiles()).contains("dev");
     }
 }

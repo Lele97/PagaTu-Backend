@@ -7,6 +7,7 @@ import com.pagatu.auth.dto.RegisterRequest;
 import com.pagatu.auth.dto.TokenValidationResponse;
 import com.pagatu.auth.entity.RateLimiterResult;
 import com.pagatu.auth.service.AuthService;
+import com.pagatu.auth.service.ProfileAwareAuthService;
 import com.pagatu.auth.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -20,23 +21,25 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 public class AuthController {
 
-    private final AuthService authService;
+    private final ProfileAwareAuthService profileAwareAuthService;
+    //private final AuthService authService;
     private final RateLimiterService rateLimiterService;
 
-    public AuthController(AuthService authService, RateLimiterService rateLimiterService) {
-        this.authService = authService;
+    public AuthController(ProfileAwareAuthService profileAwareAuthService, RateLimiterService rateLimiterService) {
+        this.profileAwareAuthService = profileAwareAuthService;
+        //this.authService = authService;
         this.rateLimiterService = rateLimiterService;
     }
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
-        LoginResponse response = authService.login(loginRequest);
+        LoginResponse response = profileAwareAuthService.login(loginRequest);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
-        authService.register(registerRequest);
+        profileAwareAuthService.register(registerRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body("User registered successfully");
     }
@@ -58,28 +61,28 @@ public class AuthController {
                     .body("Too many requests. Please try again later.");
         }
 
-        authService.sendEmailForResetPassword(email);
+        profileAwareAuthService.sendEmailForResetPassword(email);
         return ResponseEntity.ok("Password reset email sent successfully");
     }
 
     @GetMapping("/reset-password")
     public ResponseEntity<TokenValidationResponse> validateResetTokenFromEmail(@RequestParam("key") String token) {
 
-            if (token == null || token.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(new TokenValidationResponse(false, null, "Token is required"));
-            }
-            // Validate the token and get associated email
-            String email = authService.validateResetTokenAndGetEmail(token);
+        if (token == null || token.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new TokenValidationResponse(false, null, "Token is required"));
+        }
+        // Validate the token and get associated email
+        String email = profileAwareAuthService.validateResetTokenAndGetEmail(token);
 
-            if (email != null) {
-                // Return success response with email for the frontend
-                return ResponseEntity.ok()
-                        .body(new TokenValidationResponse(true, email, "Token is valid"));
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new TokenValidationResponse(false, null, "Invalid or expired token"));
-            }
+        if (email != null) {
+            // Return success response with email for the frontend
+            return ResponseEntity.ok()
+                    .body(new TokenValidationResponse(true, email, "Token is valid"));
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new TokenValidationResponse(false, null, "Invalid or expired token"));
+        }
     }
 
     @PutMapping("/resetPassword")
@@ -87,13 +90,13 @@ public class AuthController {
             @Valid @RequestBody ResetPasswordRequest resetPasswordRequest,
             @RequestHeader("X-Reset-Token") String token) {
 
-            if (token == null || token.trim().isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body("Reset token is required");
-            }
+        if (token == null || token.trim().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Reset token is required");
+        }
 
-            authService.resetPassword(resetPasswordRequest, token);
-            return ResponseEntity.ok("Password reset successfully");
+        profileAwareAuthService.resetPassword(resetPasswordRequest, token);
+        return ResponseEntity.ok("Password reset successfully");
     }
 
     /**

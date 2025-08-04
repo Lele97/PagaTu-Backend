@@ -56,6 +56,7 @@ public class GroupService {
 
         Group group = new Group();
         group.setName(nuovoGruppoRequest.getName());
+        group.setDescription(nuovoGruppoRequest.getDescription());
         UserGroupMembership membership = new UserGroupMembership();
         membership.setGroup(group);
         membership.setUtente(utente);

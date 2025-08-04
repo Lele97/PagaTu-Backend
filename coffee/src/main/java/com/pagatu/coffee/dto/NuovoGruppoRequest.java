@@ -12,5 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 public class NuovoGruppoRequest {
     private String name;
+    private String description;
     private List<Utente> users;
 }

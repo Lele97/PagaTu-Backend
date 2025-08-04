@@ -2,6 +2,7 @@ package com.pagatu.auth.controller;
 
 import com.pagatu.auth.batch.TokenCleanupBatchJob;
 import com.pagatu.auth.batch.TokenStatistics;
+import com.pagatu.auth.service.ProfileAwareTokenCleanupMonitoringService;
 import com.pagatu.auth.service.TokenCleanupMonitoringService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,8 @@ import java.util.Map;
 public class TokenCleanupController {
 
     private final TokenCleanupBatchJob batchJob;
-    private final TokenCleanupMonitoringService monitoringService;
+    //private final TokenCleanupMonitoringService monitoringService;
+    private final ProfileAwareTokenCleanupMonitoringService profileAwareTokenCleanupMonitoringService;
 
     /**
      * Get current token statistics.
@@ -33,14 +35,14 @@ public class TokenCleanupController {
     @GetMapping("/statistics")
     public ResponseEntity<Map<String, Object>> getStatistics() {
         try {
-            TokenStatistics stats = monitoringService.getTokenStatistics();
+            TokenStatistics stats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
             
             Map<String, Object> response = new HashMap<>();
             response.put("totalTokens", stats.getTotalTokens());
             response.put("activeTokens", stats.getActiveTokens());
             response.put("expiredTokens", stats.getExpiredTokens());
             response.put("expiredActiveTokens", stats.getExpiredActiveTokens());
-            response.put("needsCleanup", monitoringService.hasTokensToCleanup());
+            response.put("needsCleanup", profileAwareTokenCleanupMonitoringService.hasTokensToCleanup());
             response.put("timestamp", java.time.LocalDateTime.now());
             
             log.info("Token statistics requested: {}", stats);
@@ -65,13 +67,13 @@ public class TokenCleanupController {
             log.info("Manual token cleanup triggered via REST endpoint");
             
             // Get statistics before cleanup
-            TokenStatistics beforeStats = monitoringService.getTokenStatistics();
+            TokenStatistics beforeStats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
             
             // Trigger the cleanup
             batchJob.manualTrigger();
             
             // Get statistics after cleanup
-            TokenStatistics afterStats = monitoringService.getTokenStatistics();
+            TokenStatistics afterStats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -112,8 +114,8 @@ public class TokenCleanupController {
     public ResponseEntity<Map<String, Object>> healthCheck() {
 
         try {
-            boolean needsCleanup = monitoringService.hasTokensToCleanup();
-            TokenStatistics stats = monitoringService.getTokenStatistics();
+            boolean needsCleanup = profileAwareTokenCleanupMonitoringService.hasTokensToCleanup();
+            TokenStatistics stats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
             
             Map<String, Object> response = new HashMap<>();
             response.put("status", "healthy");

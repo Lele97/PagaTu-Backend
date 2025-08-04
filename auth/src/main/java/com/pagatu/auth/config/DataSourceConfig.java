@@ -19,6 +19,7 @@ import javax.sql.DataSource;
 
 @Configuration
 @EnableTransactionManagement
+@Profile("test")
 public class DataSourceConfig {
 
     @Primary
