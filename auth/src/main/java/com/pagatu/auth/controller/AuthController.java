@@ -6,7 +6,6 @@ import com.pagatu.auth.dto.LoginResponse;
 import com.pagatu.auth.dto.RegisterRequest;
 import com.pagatu.auth.dto.TokenValidationResponse;
 import com.pagatu.auth.entity.RateLimiterResult;
-import com.pagatu.auth.service.AuthService;
 import com.pagatu.auth.service.ProfileAwareAuthService;
 import com.pagatu.auth.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,12 +21,10 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final ProfileAwareAuthService profileAwareAuthService;
-    //private final AuthService authService;
     private final RateLimiterService rateLimiterService;
 
     public AuthController(ProfileAwareAuthService profileAwareAuthService, RateLimiterService rateLimiterService) {
         this.profileAwareAuthService = profileAwareAuthService;
-        //this.authService = authService;
         this.rateLimiterService = rateLimiterService;
     }
 

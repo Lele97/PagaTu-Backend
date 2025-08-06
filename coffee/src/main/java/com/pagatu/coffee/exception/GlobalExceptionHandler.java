@@ -66,7 +66,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoContentAvailableException.class)
     public ResponseEntity<ErrorResponse> handleNoContentException(
-            NoContentException ex, HttpServletRequest request
+            NoContentAvailableException  ex, HttpServletRequest request
     ){
         log.error("No Content: ", ex);
 
