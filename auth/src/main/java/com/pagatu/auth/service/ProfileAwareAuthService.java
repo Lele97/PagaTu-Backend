@@ -167,6 +167,7 @@ public class ProfileAwareAuthService {
         user.setUsername(registerRequest.getUsername());
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         user.setEmail(registerRequest.getEmail());
+        user.setDateOfBirth(registerRequest.getDateOfBirth());
         user.setFirstName(registerRequest.getFirstName());
         user.setLastName(registerRequest.getLastName());
         user.setGroups(registerRequest.getGroups());
@@ -187,7 +188,7 @@ public class ProfileAwareAuthService {
 
 
         try {
-            syncWithCoffeeService(savedUser, "/api/coffee/user");
+            syncWithCoffeeService(savedUser);
         } catch (Exception e) {
             log.error("Failed to sync with coffee service", e);
             throw new ServiceUnavailableException("Failed to sync with coffee service", e);
@@ -484,7 +485,7 @@ public class ProfileAwareAuthService {
         }
     }
 
-    private void syncWithCoffeeService(User user, String endpoint) {
+    private void syncWithCoffeeService(User user) {
         UtenteDto utenteDto = new UtenteDto();
         utenteDto.setId(user.getId());
         utenteDto.setAuthId(user.getId());
@@ -495,7 +496,7 @@ public class ProfileAwareAuthService {
         utenteDto.setGroups(user.getGroups());
 
         webClient.post()
-                .uri(endpoint)
+                .uri("/api/coffee/user")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(utenteDto)
                 .retrieve()

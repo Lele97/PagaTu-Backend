@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
 import java.util.List;
 
 @Entity
@@ -27,6 +28,9 @@ public class User {
 
     @Column(unique = true, nullable = false)
     private String email;
+
+    @Column(name = "birthdate", nullable = false)
+    private Date dateOfBirth;
 
     @Column(name = "first_name")
     private String firstName;

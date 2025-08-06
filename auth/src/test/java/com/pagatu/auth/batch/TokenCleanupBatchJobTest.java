@@ -2,8 +2,8 @@ package com.pagatu.auth.batch;
 
 import com.pagatu.auth.entity.TokenForUserPasswordReset;
 import com.pagatu.auth.entity.TokenStatus;
-import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
-import com.pagatu.auth.service.TokenCleanupMonitoringService;
+import com.pagatu.auth.repository.DevTokenForUserPasswordResetRepository;
+import com.pagatu.auth.service.ProfileAwareTokenCleanupMonitoringService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,10 +28,10 @@ import static org.mockito.Mockito.*;
 class TokenCleanupBatchJobTest {
 
     @Mock
-    private TokenForUserPasswordResetRepository tokenRepository;
+    private DevTokenForUserPasswordResetRepository tokenRepository;
 
     @Mock
-    private TokenCleanupMonitoringService monitoringService;
+    private ProfileAwareTokenCleanupMonitoringService monitoringService;
 
     @InjectMocks
     private TokenCleanupBatchJob batchJob;
