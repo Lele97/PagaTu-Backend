@@ -5,12 +5,15 @@ coffee:
   service:
     base-url: http://localhost:8082
 
+auth:
+  service:
+    base-url: http://localhost:8081
+
 # For Email Service
 app:
   frontend:
-    base-url: https://a547-83-225-26-26.ngrok-free.app
-    path: /update/addtogroup
-    resetPswPath: //reset-password
+    path: /invitation
+    resetPswPath: /resetPassword
     company: Paga-Tu
     domainUrl: http://localhost:8888
 
