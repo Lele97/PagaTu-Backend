@@ -197,6 +197,15 @@ public class ProfileAwareAuthService {
         return savedUser;
     }
 
+    public User getUserByEmail(String email) {
+        Optional<User> userOpt = isDevProfile()
+                ? devUserRepository.getByEmail(email)
+                : firstUserRepository.getByEmail(email);
+
+        return userOpt.orElseThrow(() ->
+                new UserNotFoundException("User not found", email, "email"));
+    }
+
     public String validateResetTokenAndGetEmail(String token) {
         try {
             if (token == null || token.trim().isEmpty()) {

@@ -32,19 +32,17 @@ public class EmailService {
     private static final Locale ITALIAN_LOCALE = Locale.ITALIAN;
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
-    private final WebClient webClient;
+    private final WebClient webClientCoffee;
+    private final WebClient webClientAuth;
 
     @Value("${spring.mail.username}")
     private String fromEmail;
-
-    @Value("${app.frontend.base-url}")
-    private String baseUrl;
 
     @Value("${app.frontend.domainUrl}")
     private String domainUrl;
 
     @Value("${app.frontend.path}")
-    private String requestPath;
+    private String invitationUserToGroupPath;
 
     @Value("${app.frontend.resetPswPath}")
     private String resetPswPath;
@@ -55,10 +53,12 @@ public class EmailService {
     public EmailService(JavaMailSender mailSender,
                         TemplateEngine templateEngine,
                         WebClient.Builder webClientBuilder,
-                        @Value("${coffee.service.base-url}") String coffeeServiceBaseUrl) {
+                        @Value("${coffee.service.base-url}") String coffeeServiceBaseUrl,
+                        @Value("${auth.service.base-url}") String authServiceBaseUrl) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
-        this.webClient = webClientBuilder.baseUrl(coffeeServiceBaseUrl).build();
+        this.webClientCoffee = webClientBuilder.baseUrl(coffeeServiceBaseUrl).build();
+        this.webClientAuth = webClientBuilder.baseUrl(authServiceBaseUrl).build();
     }
 
     public Mono<Void> inviaNotificaProssimoPagatore(ProssimoPagamentoEvent event) {
@@ -102,14 +102,14 @@ public class EmailService {
     }
 
     private Mono<UserData> fetchUserData(ProssimoPagamentoEvent event) {
-        Mono<UltimoPagatoreDto> ultimoPagatoreMono = webClient.get()
+        Mono<UltimoPagatoreDto> ultimoPagatoreMono = webClientCoffee.get()
                 .uri("/api/coffee/user?username={username}", event.getUltimoPagatoreUsername())
                 .retrieve()
                 .bodyToMono(UltimoPagatoreDto.class)
                 .doOnSuccess(response -> log.info("Ultimo pagatore recuperato con successo: {}", response))
                 .doOnError(error -> log.error("Errore durante il recupero dell'ultimo pagatore", error));
 
-        Mono<ProssimoPagatoreDto> prossimoPagatoreMono = webClient.get()
+        Mono<ProssimoPagatoreDto> prossimoPagatoreMono = webClientCoffee.get()
                 .uri("/api/coffee/user?username={username}", event.getProssimoUsername())
                 .retrieve()
                 .bodyToMono(ProssimoPagatoreDto.class)
@@ -121,7 +121,7 @@ public class EmailService {
     }
 
     private Mono<UserData_SaltaPagamento> fetchUserData_SaltaPagamento(SaltaPagamentoEvent event) {
-        return webClient.get()
+        return webClientCoffee.get()
                 .uri("/api/coffee/user?username={username}", event.getProssimoUsername())
                 .retrieve()
                 .bodyToFlux(ProssimoPagatoreDto.class)
@@ -132,8 +132,8 @@ public class EmailService {
     }
 
     private Mono<UserData_ResetForgotUserPassword> fetchUserData_ResetPassword(ResetPasswordMailEvent event) {
-        return webClient.get()
-                .uri("/api/coffee/user?email={email}", event.getEmail())
+        return webClientAuth.get()
+                .uri("/api/auth/user/get?email={email}", event.getEmail())
                 .retrieve()
                 .bodyToFlux(UtenteDto.class)
                 .next()
@@ -242,8 +242,8 @@ public class EmailService {
         // Fixed invitation link to match React routing structure
         String encodedUsername = UriUtils.encode(event.getUsername(), StandardCharsets.UTF_8);
         String encodedGroupName = UriUtils.encode(event.getGroupName(), StandardCharsets.UTF_8);
-        String invitationLink = String.format("%s/invitation?username=%s&groupName=%s",
-                domainUrl, encodedUsername, encodedGroupName);
+        String invitationLink = String.format("%s%s?username=%s&groupName=%s",
+                domainUrl,invitationUserToGroupPath, encodedUsername, encodedGroupName);
 
         context.setVariable("link", invitationLink);
         context.setVariable("companyName", company);
@@ -261,13 +261,17 @@ public class EmailService {
     private Context getContextForResetPassword(ResetPasswordMailEvent event, UserData_ResetForgotUserPassword userDataResetForgotUserPassword) {
         Context context = new Context(ITALIAN_LOCALE);
         context.setVariable("user", userDataResetForgotUserPassword.utentedto().getUsername());
-        String resetLink = String.format("%s%s?key=%s", baseUrl, resetPswPath, event.getToken());
+        String resetLink = String.format("%s%s?key=%s", domainUrl, resetPswPath, event.getToken());
         context.setVariable("resetLink", resetLink);
         context.setVariable("companyName", company);
         return context;
     }
 
-    private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {}
-    private record UserData_SaltaPagamento(ProssimoPagatoreDto prossimoPagatoreDto) {}
+    private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {
+    }
+
+    private record UserData_SaltaPagamento(ProssimoPagatoreDto prossimoPagatoreDto) {
+    }
+
     private record UserData_ResetForgotUserPassword(UtenteDto utentedto) {}
 }

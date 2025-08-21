@@ -32,7 +32,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final List<String> openApiEndpoints = List.of(
             "/api/auth/login",
             "/api/auth/register",
-            "/api/auth/resetPassword",
+            "/api/auth/reset-password",
             "/swagger-ui",
             "/v3/api-docs",
             "/api/auth/forgotPassword",
