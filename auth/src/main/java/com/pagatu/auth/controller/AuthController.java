@@ -6,6 +6,8 @@ import com.pagatu.auth.dto.LoginResponse;
 import com.pagatu.auth.dto.RegisterRequest;
 import com.pagatu.auth.dto.TokenValidationResponse;
 import com.pagatu.auth.entity.RateLimiterResult;
+import com.pagatu.auth.entity.User;
+import com.pagatu.auth.exception.UserNotFoundException;
 import com.pagatu.auth.service.ProfileAwareAuthService;
 import com.pagatu.auth.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -94,6 +96,16 @@ public class AuthController {
 
         profileAwareAuthService.resetPassword(resetPasswordRequest, token);
         return ResponseEntity.ok("Password reset successfully");
+    }
+
+    @GetMapping("/user/get")
+    public ResponseEntity<User> getUser(@RequestParam("email") String email) {
+        try {
+            User user = profileAwareAuthService.getUserByEmail(email);
+            return ResponseEntity.ok(user);
+        } catch (UserNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
     /**
