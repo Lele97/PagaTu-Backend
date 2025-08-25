@@ -16,7 +16,9 @@ public class CorsConfig {
 
     private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
             "http://localhost:8888",
-            "https://3565-37-118-134-2.ngrok-free.app"
+            "https://3565-37-118-134-2.ngrok-free.app",
+            "https://lens-drinking-dec-note.trycloudflare.com",
+            "https://9f919b1ef69d.ngrok-free.app"
     );
 
     @Bean
@@ -42,6 +44,8 @@ public class CorsConfig {
         // Explicitly set allowed origins (no wildcards when allowCredentials is true)
         corsConfig.setAllowedOrigins(ALLOWED_ORIGINS);
 
+        corsConfig.setAllowedOriginPatterns(ALLOWED_ORIGINS);
+
         // Set allowed methods
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
 
@@ -51,10 +55,12 @@ public class CorsConfig {
                 "Cache-Control",
                 "Content-Type",
                 "X-Requested-With",
+                "ngrok-skip-browser-warning",
                 "Accept",
                 "Origin",
                 "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
+                "Access-Control-Request-Headers",
+                "X-Reset-Token"
         ));
 
         // Allow credentials
