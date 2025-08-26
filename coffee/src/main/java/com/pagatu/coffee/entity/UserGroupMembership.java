@@ -31,7 +31,9 @@ public class UserGroupMembership {
     @Column(name = "status", nullable = false)
     private Status status;
 
-    // Additional fields for membership metadata
+    @Column(name = "my_turn")
+    private Boolean myTurn;
+
     @Column(name = "joined_at")
     private java.time.LocalDateTime joinedAt;
 
@@ -45,15 +47,8 @@ public class UserGroupMembership {
     protected void onCreate() {
         joinedAt = java.time.LocalDateTime.now();
         if (status == null) {
-            status = Status.NON_PAGATO; // Default status
+            status = Status.NON_PAGATO;
         }
-    }
-
-    // Constructor for easy creation
-    public UserGroupMembership(Utente utente, Group group, Status status) {
-        this.utente = utente;
-        this.group = group;
-        this.status = status;
-        this.isAdmin = false;
+        myTurn = false;
     }
 }

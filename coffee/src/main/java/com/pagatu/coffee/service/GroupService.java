@@ -141,6 +141,7 @@ public class GroupService {
                     membershipDto.setUserId(m.getUtente().getId());
                     membershipDto.setUsername(m.getUtente().getUsername());
                     membershipDto.setStatus(m.getStatus());
+                    membershipDto.setMyTurn(m.getMyTurn());
                     membershipDto.setIsAdmin(m.getIsAdmin());
                     return membershipDto;
                 }).toList();
