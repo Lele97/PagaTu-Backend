@@ -75,6 +75,8 @@ public class PagamentoService {
 
         userGroupMembership1.setStatus(Status.PAGATO);
 
+        userGroupMembership1.setMyTurn(false);
+
         UserGroupMembership savedUserGroupMembership = userGroupMembershipRepository.save(userGroupMembership1);
 
         Pagamento pagamento = new Pagamento();
@@ -126,6 +128,8 @@ public class PagamentoService {
         } else {
             // Choose random user from those who haven't paid
             UserGroupMembership nextPayer = nonPagatoMemberships.get(RANDOM.nextInt(nonPagatoMemberships.size()));
+            nextPayer.setMyTurn(true);
+            userGroupMembershipRepository.save(nextPayer);
             log.info("Next payer in group {}: {}", group.getName(), nextPayer.getUtente().getUsername());
 
             return creaProssimoPagamentoDto(nextPayer.getUtente(), group);
