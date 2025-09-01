@@ -1,5 +1,7 @@
 package com.pagatu.coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,6 +15,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "pagamenti"})
 public class UserGroupMembership {
 
     @Id
@@ -21,10 +24,12 @@ public class UserGroupMembership {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "utente_id", nullable = false)
+    @JsonIgnore
     private Utente utente;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
+    @JsonIgnore
     private Group group;
 
     @Enumerated(EnumType.STRING)
@@ -41,14 +46,32 @@ public class UserGroupMembership {
     private Boolean isAdmin = false;
 
     @OneToMany(mappedBy = "userGroupMembership", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Pagamento> pagamenti = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
-        joinedAt = java.time.LocalDateTime.now();
-        if (status == null) {
-            status = Status.NON_PAGATO;
+        if(Boolean.TRUE.equals(isAdmin)){
+            joinedAt = java.time.LocalDateTime.now();
+            if (status == null) {
+                status = Status.NON_PAGATO;
+            }
+            myTurn = true;
+        }else{
+            joinedAt = java.time.LocalDateTime.now();
+            if (status == null) {
+                status = Status.NON_PAGATO;
+            }
+            myTurn = false;
         }
-        myTurn = false;
+    }
+
+    @Override
+    public String toString() {
+        return "UserGroupMembership{" +
+                "id=" + id +
+                ", status=" + status +
+                ", isAdmin=" + isAdmin +
+                '}';
     }
 }

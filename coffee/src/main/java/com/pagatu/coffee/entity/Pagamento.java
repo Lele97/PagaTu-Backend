@@ -1,5 +1,6 @@
 package com.pagatu.coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -15,6 +16,7 @@ public class Pagamento {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_group_membership", nullable = false)
+    @JsonIgnore
     private UserGroupMembership userGroupMembership;
 
     private Double importo;
