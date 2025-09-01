@@ -62,6 +62,7 @@ public class GroupService {
         membership.setUtente(utente);
         membership.setStatus(Status.NON_PAGATO);
         membership.setIsAdmin(true);
+        membership.setMyTurn(true);
         membership.setJoinedAt(LocalDateTime.now());
         group.getUserMemberships().add(membership);
 

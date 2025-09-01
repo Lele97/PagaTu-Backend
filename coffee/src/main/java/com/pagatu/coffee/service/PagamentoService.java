@@ -1,10 +1,8 @@
 package com.pagatu.coffee.service;
 
-import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoDto;
-import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoRequest;
-import com.pagatu.coffee.dto.PagamentoDto;
-import com.pagatu.coffee.dto.ProssimoPagamentoDto;
+import com.pagatu.coffee.dto.*;
 import com.pagatu.coffee.entity.*;
+import com.pagatu.coffee.entity.NuovoPagamentoRequest;
 import com.pagatu.coffee.event.ProssimoPagamentoEvent;
 import com.pagatu.coffee.event.SaltaPagamentoEvent;
 import com.pagatu.coffee.exception.GroupNotFoundException;
@@ -48,7 +46,7 @@ public class PagamentoService {
     @Value("${spring.kafka.topics.pagamenti-caffe}")
     private String pagamentiTopic;
 
-    @Value("saltaPagamento-caffe")
+    @Value("${spring.kafka.topics.saltaPagamento-caffe}")
     private String saltaPagamentoTopic;
 
     public PagamentoService(PagamentoRepository pagamentoRepository,
@@ -102,10 +100,56 @@ public class PagamentoService {
     }
 
     @Transactional
+    public PagamentoDto pagaPer(Long userId, String groupNme, NuovoPagamentoRequest request) {
+
+        Utente utentePagante = baseUserService.findUserByAuthId(userId);
+
+        Group group = baseUserService.findGroupByName(groupNme);
+
+        List<UserGroupMembership> userGroupMembership = userGroupMembershipRepository.findByGroup(group);
+
+        UserGroupMembership userGroupMembership1 = userGroupMembership.stream().filter(p -> p.getUtente().equals(utentePagante)).toList().get(0);
+
+        userGroupMembership1.setStatus(Status.PAGATO);
+
+        userGroupMembership1.setMyTurn(false);
+
+        UserGroupMembership savedUserGroupMembership = userGroupMembershipRepository.save(userGroupMembership1);
+
+        UserGroupMembership userGroupMembership2 = userGroupMembershipRepository.findUserTurn(group.getName());
+
+        Utente utenteAmico = baseUserService.findUserByAuthId(userGroupMembership2.getUtente().getAuthId());
+
+        userGroupMembership2.setStatus(Status.PAGATO);
+        userGroupMembership2.setMyTurn(false);
+
+        userGroupMembershipRepository.save(userGroupMembership2);
+
+        Pagamento pagamento = new Pagamento();
+        pagamento.setUserGroupMembership(savedUserGroupMembership);
+        pagamento.setImporto(request.getImporto());
+        pagamento.setDescrizione(request.getDescrizione());
+        pagamento.setDataPagamento(LocalDateTime.now());
+
+        Pagamento savedPagamento = pagamentoRepository.save(pagamento);
+
+        resetUtenteSaltatoinNonPagato(group);
+
+        ProssimoPagamentoDto prossimoPagamento = determinaProssimoPagatore(group);
+
+        ProssimoPagamentoEvent event = createPagamentoEvent(savedPagamento, utentePagante, prossimoPagamento);
+
+        kafkaTemplate.send(pagamentiTopic, event);
+
+        log.info("Pagato per: {} - Pagamento registrato: {} - Prossimo pagatore: {}", utenteAmico.getAuthId(), savedPagamento.getId(), prossimoPagamento.getUsername());
+
+        return pagamentoMapper.toDto(savedPagamento);
+    }
+
+    @Transactional
     public ProssimoPagamentoDto determinaProssimoPagatore(Group group) {
         log.info("Determining next payer for group: {}", group.getName());
 
-        // Get all memberships for this group with NON_PAGATO status
         List<UserGroupMembership> nonPagatoMemberships = userGroupMembershipRepository
                 .findByGroupAndStatus(group, Status.NON_PAGATO);
 
@@ -113,7 +157,6 @@ public class PagamentoService {
                 group.getName(), nonPagatoMemberships.size());
 
         if (nonPagatoMemberships.isEmpty()) {
-            // All users in this group have paid, reset the group and start new round
             List<UserGroupMembership> resetMemberships = resetGroupMembersToNonPagato(group);
 
             if (resetMemberships.isEmpty()) {
@@ -121,12 +164,13 @@ public class PagamentoService {
             }
 
             UserGroupMembership nextPayer = resetMemberships.get(RANDOM.nextInt(resetMemberships.size()));
+            nextPayer.setMyTurn(true);
+            userGroupMembershipRepository.save(nextPayer);
             log.info("All members paid in group {}, starting new round. Next payer: {}",
                     group.getName(), nextPayer.getUtente().getUsername());
 
             return creaProssimoPagamentoDto(nextPayer.getUtente(), group);
         } else {
-            // Choose random user from those who haven't paid
             UserGroupMembership nextPayer = nonPagatoMemberships.get(RANDOM.nextInt(nonPagatoMemberships.size()));
             nextPayer.setMyTurn(true);
             userGroupMembershipRepository.save(nextPayer);
@@ -175,7 +219,7 @@ public class PagamentoService {
         return event;
     }
 
-    private SaltaPagamentoEvent saltaPagamentoEvent(Utente pagatore, ProssimoPagamentoDto prossimo) {
+    private SaltaPagamentoEvent saltaPagamentoEvent(ProssimoPagamentoDto prossimo) {
         SaltaPagamentoEvent event = new SaltaPagamentoEvent();
         event.setProssimoUserId(prossimo.getUserId());
         event.setProssimoUsername(prossimo.getUsername());
@@ -201,12 +245,13 @@ public class PagamentoService {
 
         userGroupMembership1.setStatus(Status.SALTATO);
 
+        userGroupMembership1.setMyTurn(false);
+
         userGroupMembershipRepository.save(userGroupMembership1);
 
-        // Determina chi sarà il prossimo a pagare
         ProssimoPagamentoDto prossimoPagamento = self.determinaProssimoPagatore(group);
 
-        SaltaPagamentoEvent event = saltaPagamentoEvent(utente, prossimoPagamento);
+        SaltaPagamentoEvent event = saltaPagamentoEvent(prossimoPagamento);
 
         kafkaTemplate_saltaPagamento.send(saltaPagamentoTopic, event);
 
@@ -232,6 +277,7 @@ public class PagamentoService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ClassificaPagamentiPerGruppoDto> getClassificaPagamentiPerGruppo(Long user_id, ClassificaPagamentiPerGruppoRequest classificaPagamentiPerGruppoRequest) {
 
         Utente utente = baseUserService.findUserByAuthId(user_id);
@@ -257,14 +303,11 @@ public class PagamentoService {
 
     public List<PagamentoDto> getUltimiPagamentiByUsername(String username) {
 
-        // First, find the user by username
         Utente utente = utenteRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
-        // Get all payments for this user across all groups
         List<Pagamento> pagamenti = pagamentoRepository.findByUtenteOrderByDataPagamentoDesc(utente);
 
-        // Convert to DTOs
         return pagamenti.stream()
                 .map(this::convertToPagamentoDto)
                 .toList();

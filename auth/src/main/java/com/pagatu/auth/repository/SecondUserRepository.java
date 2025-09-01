@@ -11,7 +11,6 @@ import java.util.Optional;
 public interface SecondUserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.username = :username")
-    Optional<User> findByUsername(@Param("username") String username);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
 }
