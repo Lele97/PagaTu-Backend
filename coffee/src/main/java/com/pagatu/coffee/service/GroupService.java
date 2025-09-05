@@ -135,6 +135,7 @@ public class GroupService {
         GroupDto groupDto = new GroupDto();
         groupDto.setId(group.getId());
         groupDto.setName(group.getName());
+        groupDto.setDescription(group.getDescription());
 
         List<UserMembershipDto> membershipDtos = group.getUserMemberships().stream()
                 .map(m -> {
