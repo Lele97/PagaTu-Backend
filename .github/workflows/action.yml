@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - develop
+      - feature/clean-code
   delete:
     branches:
       - develop
