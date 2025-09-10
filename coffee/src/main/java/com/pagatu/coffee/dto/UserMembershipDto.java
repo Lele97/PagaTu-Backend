@@ -14,6 +14,7 @@ public class UserMembershipDto {
     private String name;
     private String lastname;
     private Status status;
+    private Boolean myTurn;
     private Boolean isAdmin;
     private java.time.LocalDateTime joinedAt;
 }

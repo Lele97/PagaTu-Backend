@@ -2,7 +2,6 @@ package com.pagatu.coffee.controller;
 
 import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoDto;
 import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoRequest;
-import com.pagatu.coffee.dto.NuovoPagamentoPerRequest;
 import com.pagatu.coffee.dto.PagamentoDto;
 import com.pagatu.coffee.entity.NuovoPagamentoRequest;
 import com.pagatu.coffee.service.JwtService;
@@ -19,6 +18,7 @@ import java.util.List;
 @RequestMapping("/api/coffee")
 @Slf4j
 public class PagamentoController {
+
     private final PagamentoService pagamentoService;
     private final JwtService jwtService;
 
@@ -45,12 +45,13 @@ public class PagamentoController {
     @PostMapping("/pagamenti/classifica")
     public ResponseEntity<List<ClassificaPagamentiPerGruppoDto>> classificaPagamentiPerGruppo(@RequestHeader("Authorization") String authHeader, @RequestBody ClassificaPagamentiPerGruppoRequest classificaPagamentiPerGruppoRequest) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
-        return ResponseEntity.ok(pagamentoService.getClassificaPagamentiPerGruppo(userId,classificaPagamentiPerGruppoRequest));
+        return ResponseEntity.ok(pagamentoService.getClassificaPagamentiPerGruppo(userId, classificaPagamentiPerGruppoRequest));
     }
 
     @PostMapping("/pagamento/pagaPer")
-    public ResponseEntity<PagamentoDto> pagamentoPer(@RequestHeader("Authorization") String authHeader, @RequestBody NuovoPagamentoPerRequest nuovoPagamentoPerRequest, @RequestParam("groupNme") String groupNme) {
-        return null;
+    public ResponseEntity<PagamentoDto> pagamentoPer(@RequestHeader("Authorization") String authHeader, @RequestBody NuovoPagamentoRequest request, @RequestParam("groupNme") String groupNme) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        return ResponseEntity.ok(pagamentoService.pagaPer(userId, groupNme, request));
     }
 
     @PostMapping("/ultimi/pagamenti/{username}")
