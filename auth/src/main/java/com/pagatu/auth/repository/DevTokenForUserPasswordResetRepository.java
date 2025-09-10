@@ -15,8 +15,6 @@ import java.util.Optional;
 @DevRepository
 public interface DevTokenForUserPasswordResetRepository extends JpaRepository<TokenForUserPasswordReset, Long> {
 
-    Optional<TokenForUserPasswordReset> findByToken(String token);
-
     Optional<TokenForUserPasswordReset> findTokenForUserPasswordResetByToken(String token);
 
     @Query("SELECT count(t) FROM TokenForUserPasswordReset t WHERE t.email = :email AND t.createdAt >= :since")
