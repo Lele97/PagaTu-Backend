@@ -13,6 +13,4 @@ public class NuovoPagamentoRequest {
     @Positive(message = "L'importo deve essere positivo")
     private Double importo;
     private String descrizione;
-//    private Group group;
-//    private Utente utente;
 }

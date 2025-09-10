@@ -14,37 +14,32 @@ import java.util.List;
 @Slf4j
 public class CorsConfig {
 
-    private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
+    private static final List<String> ALLOWED_ORIGIN_PATTERNS = Arrays.asList(
             "http://localhost:8888",
-            "https://3565-37-118-134-2.ngrok-free.app",
-            "https://lens-drinking-dec-note.trycloudflare.com",
-            "https://9f919b1ef69d.ngrok-free.app"
+            "https://.*.trycloudflare.com",
+            "https://.*.ngrok-free.app"
     );
 
     @Bean
     public CorsWebFilter corsWebFilter() {
-        log.info("Configuring CORS with allowed origins: {}", ALLOWED_ORIGINS);
+        log.info("Configuring CORS with allowed origin patterns: {}", ALLOWED_ORIGIN_PATTERNS);
 
         CorsConfiguration corsConfig = getCorsConfiguration();
 
-        // DON'T call applyPermitDefaultValues() as it adds wildcards
-        log.info("CORS configuration: allowCredentials={}, allowedOrigins={}",
-                corsConfig.getAllowCredentials(), corsConfig.getAllowedOrigins());
+        log.info("CORS configuration: allowCredentials={}, allowedOriginPatterns={}",
+                corsConfig.getAllowCredentials(), corsConfig.getAllowedOriginPatterns());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
 
-        // Make sure CORS filter has highest precedence
         return new CorsWebFilter(source);
     }
 
     private static CorsConfiguration getCorsConfiguration() {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
-        // Explicitly set allowed origins (no wildcards when allowCredentials is true)
-        corsConfig.setAllowedOrigins(ALLOWED_ORIGINS);
-
-        corsConfig.setAllowedOriginPatterns(ALLOWED_ORIGINS);
+        // Use allowedOriginPatterns to support wildcards with credentials
+        corsConfig.setAllowedOriginPatterns(ALLOWED_ORIGIN_PATTERNS);
 
         // Set allowed methods
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
