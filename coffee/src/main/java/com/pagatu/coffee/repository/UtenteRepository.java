@@ -29,10 +29,4 @@ public interface UtenteRepository extends JpaRepository<Utente, Long> {
     Utente findByEmail(String email);
 
     Optional<Utente> findByAuthId(Long authId);
-
-    boolean existsByUsername(String username);
-
-    boolean existsByEmail(String email);
-
-    boolean existsByAuthId(Long authId);
 }

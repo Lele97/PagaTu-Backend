@@ -62,6 +62,7 @@ public class GroupService {
         membership.setUtente(utente);
         membership.setStatus(Status.NON_PAGATO);
         membership.setIsAdmin(true);
+        membership.setMyTurn(true);
         membership.setJoinedAt(LocalDateTime.now());
         group.getUserMemberships().add(membership);
 
@@ -134,6 +135,7 @@ public class GroupService {
         GroupDto groupDto = new GroupDto();
         groupDto.setId(group.getId());
         groupDto.setName(group.getName());
+        groupDto.setDescription(group.getDescription());
 
         List<UserMembershipDto> membershipDtos = group.getUserMemberships().stream()
                 .map(m -> {
@@ -141,6 +143,7 @@ public class GroupService {
                     membershipDto.setUserId(m.getUtente().getId());
                     membershipDto.setUsername(m.getUtente().getUsername());
                     membershipDto.setStatus(m.getStatus());
+                    membershipDto.setMyTurn(m.getMyTurn());
                     membershipDto.setIsAdmin(m.getIsAdmin());
                     return membershipDto;
                 }).toList();
