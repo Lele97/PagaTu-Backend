@@ -9,10 +9,9 @@ auth:
   service:
     base-url: http://localhost:8081
 
-# For Email Service
 app:
   frontend:
-    path: /invitation
+    invitationPath: /invitation
     resetPswPath: /resetPassword
     company: Paga-Tu
     domainUrl: http://localhost:8888
@@ -53,10 +52,6 @@ spring:
           invitation:com.pagatu.email.event.InvitationEvent,
           saltapagamento:com.pagatu.email.event.SaltaPagamentoEvent
           resetPasswordMail:com.pagatu.email.event.ResetPasswordMailEvent
-
-
-jwt:
-  secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
 
 management:
   endpoints:
