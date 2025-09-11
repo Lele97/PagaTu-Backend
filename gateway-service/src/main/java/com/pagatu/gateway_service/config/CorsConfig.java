@@ -10,16 +10,26 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ *
+ */
 @Configuration
 @Slf4j
 public class CorsConfig {
 
+    /**
+     *
+     */
     private static final List<String> ALLOWED_ORIGIN_PATTERNS = Arrays.asList(
             "http://localhost:8888",
             "https://.*.trycloudflare.com",
             "https://.*.ngrok-free.app"
     );
 
+    /**
+     *
+     * @return
+     */
     @Bean
     public CorsWebFilter corsWebFilter() {
         log.info("Configuring CORS with allowed origin patterns: {}", ALLOWED_ORIGIN_PATTERNS);
@@ -35,6 +45,10 @@ public class CorsConfig {
         return new CorsWebFilter(source);
     }
 
+    /**
+     *
+     * @return
+     */
     private static CorsConfiguration getCorsConfiguration() {
         CorsConfiguration corsConfig = new CorsConfiguration();
 
