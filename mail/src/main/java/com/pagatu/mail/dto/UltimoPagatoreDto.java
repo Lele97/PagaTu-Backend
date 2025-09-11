@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UltimoPagatoreDto {
+
     private Long id;
     private Long authId;
     private String username;
