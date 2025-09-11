@@ -7,7 +7,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- *
+ * Configuration class for defining API gateway routes.
+ * Maps incoming requests to appropriate microservices and configures circuit breakers
+ * for fault tolerance.
  */
 @Configuration
 public class GatewayConfig {
@@ -22,9 +24,11 @@ public class GatewayConfig {
     private String emailServiceUrl;
 
     /**
+     * Configures the route mappings for different microservices.
+     * Sets up path-based routing with circuit breaker fallback mechanisms.
      *
-     * @param builder
-     * @return
+     * @param builder RouteLocatorBuilder for creating route configurations
+     * @return RouteLocator with configured routes and fallback handlers
      */
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {

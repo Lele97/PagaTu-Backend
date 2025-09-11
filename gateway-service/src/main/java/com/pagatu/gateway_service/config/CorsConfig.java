@@ -11,14 +11,17 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- *
+ * Configuration class for Cross-Origin Resource Sharing (CORS) settings.
+ * Defines allowed origins, methods, headers, and other CORS-related configurations
+ * for the API Gateway service.
  */
 @Configuration
 @Slf4j
 public class CorsConfig {
 
     /**
-     *
+     * List of allowed origin patterns for CORS requests.
+     * Includes local development, Cloudflare, and ngrok domains with wildcard support.
      */
     private static final List<String> ALLOWED_ORIGIN_PATTERNS = Arrays.asList(
             "http://localhost:8888",
@@ -27,15 +30,17 @@ public class CorsConfig {
     );
 
     /**
+     * Creates and configures a CORS web filter for reactive environments.
+     * Registers CORS configuration for all endpoints.
      *
-     * @return
+     * @return CorsWebFilter configured with allowed origins, methods, and headers
      */
     @Bean
     public CorsWebFilter corsWebFilter() {
+
         log.info("Configuring CORS with allowed origin patterns: {}", ALLOWED_ORIGIN_PATTERNS);
 
         CorsConfiguration corsConfig = getCorsConfiguration();
-
         log.info("CORS configuration: allowCredentials={}, allowedOriginPatterns={}",
                 corsConfig.getAllowCredentials(), corsConfig.getAllowedOriginPatterns());
 
@@ -46,19 +51,19 @@ public class CorsConfig {
     }
 
     /**
+     * Creates a CORS configuration with predefined settings.
+     * Configures allowed origins, methods, headers, credentials, and max age.
      *
-     * @return
+     * @return CorsConfiguration with predefined security settings
      */
     private static CorsConfiguration getCorsConfiguration() {
+
         CorsConfiguration corsConfig = new CorsConfiguration();
 
-        // Use allowedOriginPatterns to support wildcards with credentials
         corsConfig.setAllowedOriginPatterns(ALLOWED_ORIGIN_PATTERNS);
 
-        // Set allowed methods
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
 
-        // Set allowed headers
         corsConfig.setAllowedHeaders(Arrays.asList(
                 "Authorization",
                 "Cache-Control",
@@ -72,11 +77,10 @@ public class CorsConfig {
                 "X-Reset-Token"
         ));
 
-        // Allow credentials
         corsConfig.setAllowCredentials(true);
 
-        // Set max age for preflight requests
         corsConfig.setMaxAge(3600L);
+
         return corsConfig;
     }
 }
