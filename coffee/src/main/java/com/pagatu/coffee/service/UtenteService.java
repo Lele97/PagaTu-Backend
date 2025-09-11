@@ -75,12 +75,11 @@ public class UtenteService {
 
         List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(utenteDto.getGroups());
 
-        System.out.println(userGroupMemberships);
-
         if (userGroupMemberships != null && !userGroupMemberships.isEmpty())
             createGroupAndAddUserToTheGroup(savedUser, userGroupMemberships);
 
         log.info("New user created: {}", savedUser.getUsername());
+
         return mapToDto(savedUser);
     }
 
