@@ -22,6 +22,9 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ *
+ */
 @Component
 @Slf4j
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
@@ -29,6 +32,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    /**
+     *
+     */
     private final List<String> openApiEndpoints = List.of(
             "/api/auth/login",
             "/api/auth/register",
@@ -41,6 +47,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/fallback"
     );
 
+    /**
+     *
+     * @param exchange
+     * @param chain
+     * @return
+     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
@@ -85,6 +97,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return openApiEndpoints.stream().anyMatch(path::startsWith);
     }
 
+    /**
+     *
+     * @param token
+     * @return
+     */
     private boolean isValidToken(String token) {
         try {
             SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
@@ -101,6 +118,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         }
     }
 
+    /**
+     *
+     * @param exchange
+     * @param status
+     * @param message
+     * @return
+     */
     private Mono<Void> onError(ServerWebExchange exchange, HttpStatus status, String message) {
         ServerHttpResponse response = exchange.getResponse();
 

@@ -9,10 +9,17 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ *
+ */
 @RestController
 @RequestMapping("/fallback")
 public class FallbackController {
 
+    /**
+     *
+     * @return
+     */
     @GetMapping("/default")
     public ResponseEntity<Map<String, Object>> defaultFallback() {
         Map<String, Object> response = new HashMap<>();
@@ -22,6 +29,10 @@ public class FallbackController {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
 
+    /**
+     *
+     * @return
+     */
     @GetMapping("/auth")
     public ResponseEntity<Map<String, Object>> authFallback() {
         Map<String, Object> response = new HashMap<>();
@@ -31,6 +42,10 @@ public class FallbackController {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
 
+    /**
+     *
+     * @return
+     */
     @GetMapping("/coffee")
     public ResponseEntity<Map<String, Object>> coffeeFallback() {
         Map<String, Object> response = new HashMap<>();
@@ -40,6 +55,10 @@ public class FallbackController {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
 
+    /**
+     *
+     * @return
+     */
     @GetMapping("/email")
     public ResponseEntity<Map<String, Object>> emailFallback() {
         Map<String, Object> response = new HashMap<>();
