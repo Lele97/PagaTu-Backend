@@ -8,15 +8,21 @@ public class Constants {
     private Constants() {
     }
 
-    // Kafka Configuration
+    /**
+     * Kafka Configuration constants
+     */
     public static final String KAFKA_GROUP_ID = "email-service";
     public static final String AUTO_OFFSET_RESET_EARLIEST = "earliest";
 
-    // Trusted Packages
+    /**
+     * Trusted Packages constants
+     */
     public static final String TRUSTED_PACKAGE_COFFEE_EVENT = "com.pagatu.coffee.event";
     public static final String TRUSTED_PACKAGE_AUTH_EVENT = "com.pagatu.auth.event";
 
-    // LogMessage
+    /**
+     * Log message constants
+     */
     public static final String LOG_ERROR_NOTIFICA = "Errore nell'invio dell'email di notifica";
     public static final String LOG_ERROR_INVITO = "Errore nell'invio dell'email di invito";
     public static final String LOG_ERROR_PAGATORE = "Errore durante il recupero del prossimo pagatore";
@@ -26,7 +32,9 @@ public class Constants {
     public static final String LOG_INFO_PAGATORE = "Prossimo pagatore recuperato con successo ";
     public static final String LOG_INFO_UTENTE = "Utente recuperato con successo";
 
-    // API Endpoints
+    /**
+     * API Endpoints constants
+     */
     public static final String API_COFFEE_USER = "/api/coffee/user?username={username}";
     public static final String API_AUTH_USER_GET = "/api/auth/user/get?email={email}";
 }
