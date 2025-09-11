@@ -11,12 +11,22 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    /**
+     *
+     */
     private static final String[] ENDPOINTS = {
             "/actuator/**",
             "/health/**",
             "/api/coffee/**"
     };
 
+    /**
+     *
+     * @param http
+     * @return
+     * @throws Exception
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
