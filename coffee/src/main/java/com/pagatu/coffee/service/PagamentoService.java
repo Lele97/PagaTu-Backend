@@ -30,7 +30,6 @@ import java.util.Random;
 @Slf4j
 public class PagamentoService {
 
-    @Autowired
     @Lazy
     private PagamentoService self;
 
@@ -40,7 +39,7 @@ public class PagamentoService {
     private final UserGroupMembershipRepository userGroupMembershipRepository;
     private final UtenteRepository utenteRepository;
     private final KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate;
-    private final KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplate_saltaPagamento;
+    private final KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento;
     private final BaseUserService baseUserService;
 
     @Value("${spring.kafka.topics.pagamenti-caffe}")
@@ -56,7 +55,7 @@ public class PagamentoService {
         this.userGroupMembershipRepository = userGroupMembershipRepository;
         this.utenteRepository = utenteRepository;
         this.kafkaTemplate = kafkaTemplate;
-        kafkaTemplate_saltaPagamento = kafkaTemplateSaltaPagamento;
+        this.kafkaTemplateSaltaPagamento = kafkaTemplateSaltaPagamento;
         this.baseUserService = baseUserService;
     }
 
@@ -253,7 +252,7 @@ public class PagamentoService {
 
         SaltaPagamentoEvent event = saltaPagamentoEvent(prossimoPagamento);
 
-        kafkaTemplate_saltaPagamento.send(saltaPagamentoTopic, event);
+        kafkaTemplateSaltaPagamento.send(saltaPagamentoTopic, event);
 
         log.info("Utente: {} ha saltato il pagamento - Prossimo pagatore: {}", utente.getUsername(), prossimoPagamento.getUsername());
 
@@ -278,9 +277,9 @@ public class PagamentoService {
     }
 
     @Transactional(readOnly = true)
-    public List<ClassificaPagamentiPerGruppoDto> getClassificaPagamentiPerGruppo(Long user_id, ClassificaPagamentiPerGruppoRequest classificaPagamentiPerGruppoRequest) {
+    public List<ClassificaPagamentiPerGruppoDto> getClassificaPagamentiPerGruppo(Long userId, ClassificaPagamentiPerGruppoRequest classificaPagamentiPerGruppoRequest) {
 
-        Utente utente = baseUserService.findUserByAuthId(user_id);
+        Utente utente = baseUserService.findUserByAuthId(userId);
 
         if (utente == null) {
             throw new UserNotFoundException("User not found");
