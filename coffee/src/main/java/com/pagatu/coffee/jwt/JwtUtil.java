@@ -10,7 +10,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 
 @Component
-public class jwtUtil {
+public class JwtUtil {
 
     @Value("${jwt.secret}")
     private String secret;
