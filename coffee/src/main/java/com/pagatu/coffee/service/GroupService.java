@@ -10,6 +10,7 @@ import com.pagatu.coffee.entity.UserGroupMembership;
 import com.pagatu.coffee.entity.Utente;
 import com.pagatu.coffee.event.InvitaionEvent;
 import com.pagatu.coffee.exception.BusinessException;
+import com.pagatu.coffee.exception.UserNotInGroup;
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
 import jakarta.transaction.Transactional;
@@ -169,10 +170,10 @@ public class GroupService {
     }
 
     @Transactional
-    public List<GroupDto> getGroupsByUsername(String username) throws Exception {
+    public List<GroupDto> getGroupsByUsername(String username) {
         List<Group> groups = groupRepository.getGroupsByUsername(username);
         if (groups.isEmpty()) {
-            throw new Exception("l'utente non presente in nessun gruppo");
+            throw new UserNotInGroup("l'utente non presente in nessun gruppo");
         }
         return groups.stream()
                 .map(this::mapToDto)

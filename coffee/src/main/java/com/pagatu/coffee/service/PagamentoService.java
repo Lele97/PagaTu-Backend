@@ -1,8 +1,10 @@
 package com.pagatu.coffee.service;
 
-import com.pagatu.coffee.dto.*;
+import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoDto;
+import com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoRequest;
+import com.pagatu.coffee.dto.PagamentoDto;
+import com.pagatu.coffee.dto.ProssimoPagamentoDto;
 import com.pagatu.coffee.entity.*;
-import com.pagatu.coffee.entity.NuovoPagamentoRequest;
 import com.pagatu.coffee.event.ProssimoPagamentoEvent;
 import com.pagatu.coffee.event.SaltaPagamentoEvent;
 import com.pagatu.coffee.exception.GroupNotFoundException;
@@ -14,7 +16,6 @@ import com.pagatu.coffee.repository.UserGroupMembershipRepository;
 import com.pagatu.coffee.repository.UtenteRepository;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -145,8 +146,7 @@ public class PagamentoService {
         return pagamentoMapper.toDto(savedPagamento);
     }
 
-    @Transactional
-    public ProssimoPagamentoDto determinaProssimoPagatore(Group group) {
+    private ProssimoPagamentoDto determinaProssimoPagatore(Group group) {
         log.info("Determining next payer for group: {}", group.getName());
 
         List<UserGroupMembership> nonPagatoMemberships = userGroupMembershipRepository

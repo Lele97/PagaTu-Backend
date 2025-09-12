@@ -52,7 +52,7 @@ public class KafkaProducerConfig {
      * @return
      */
     @Bean
-    public ProducerFactory<String, InvitaionEvent> producerFactory_invitation() {
+    public ProducerFactory<String, InvitaionEvent> producerFactoryInvitation() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -65,8 +65,8 @@ public class KafkaProducerConfig {
      * @return
      */
     @Bean
-    public KafkaTemplate<String, InvitaionEvent> kafkaTemplate_invitation(){
-        return new KafkaTemplate<>(producerFactory_invitation());
+    public KafkaTemplate<String, InvitaionEvent> kafkaTemplateInvitation(){
+        return new KafkaTemplate<>(producerFactoryInvitation());
     }
 
     /**
@@ -74,7 +74,7 @@ public class KafkaProducerConfig {
      * @return
      */
     @Bean
-    public ProducerFactory<String, SaltaPagamentoEvent> producerFactory_salta_pagamenti() {
+    public ProducerFactory<String, SaltaPagamentoEvent> producerFactorySaltaPagamenti() {
         Map<String, Object> configProps = new HashMap<>();
         configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -87,7 +87,7 @@ public class KafkaProducerConfig {
      * @return
      */
     @Bean
-    public KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplate_salta_pagamenti() {
-        return new KafkaTemplate<>(producerFactory_salta_pagamenti());
+    public KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamenti() {
+        return new KafkaTemplate<>(producerFactorySaltaPagamenti());
     }
 }

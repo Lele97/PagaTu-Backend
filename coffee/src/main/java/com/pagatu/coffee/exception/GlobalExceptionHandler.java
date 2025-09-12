@@ -33,6 +33,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
+    @ExceptionHandler(UserNotInGroup.class)
+    public ResponseEntity<ErrorResponse> handleUserNotInGroup(
+            UserNotInGroup ex, HttpServletRequest request){
+        log.error("User not in group: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                "USER_NOT_IN_GROUP",
+                ex.getMessage(),
+                HttpStatus.NOT_FOUND.value()
+        );
+        errorResponse.setPath(request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
     @ExceptionHandler(GroupNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleGroupNotFoundException(
             GroupNotFoundException ex, HttpServletRequest request) {

@@ -1,6 +1,6 @@
 package com.pagatu.coffee.service;
 
-import com.pagatu.coffee.jwt.jwtUtil;
+import com.pagatu.coffee.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class JwtService {
     
-    private final jwtUtil jwtUtil;
+    private final JwtUtil jwtUtil;
     
     private static final String BEARER_PREFIX = "Bearer ";
     private static final int BEARER_PREFIX_LENGTH = 7;
