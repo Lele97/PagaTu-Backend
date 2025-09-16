@@ -12,11 +12,10 @@ spring:
   profiles:
     active: dev
 
-  # Main datasource configuration for dev profile
-  dev-datasource: # Fixed: removed 's' from 'dev-datasources'
+  datasource:
     url: ${SECOND_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/auth?allowPublicKeyRetrieval=true&useSSL=false}
     username: ${SECOND_DATASOURCE_USERNAME:root}
-    password: ${SECOND_DATASOURCE_PASSWORD:PswRoot97Mysql!}
+    password: ${SECOND_DATASOURCE_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -70,15 +69,9 @@ spring:
 spring:
   config:
     activate:
-      on-profile: test
+      on-profile: prod
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./auth/data/authdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL}
-    username: ${SPRING_DATASOURCE_USERNAME:sa}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
-    driver-class-name: org.h2.Driver
-
-  second-datasource:
     url: ${SECOND_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/auth?allowPublicKeyRetrieval=true&useSSL=false}
     username: ${SECOND_DATASOURCE_USERNAME:root}
     password: ${SECOND_DATASOURCE_PASSWORD:root}
@@ -90,14 +83,14 @@ spring:
       hibernate:
         globally_quoted_identifiers: true
         dialect: org.hibernate.dialect.MySQLDialect
-        hbm2ddl.auto: create
-        show_sql: true
-        format_sql: true
+        hbm2ddl.auto: update
+        show_sql: false
+        format_sql: false
         metadata_builder.contributor: none
 
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
     settings:
       web-allow-others: true

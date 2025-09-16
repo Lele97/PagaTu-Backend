@@ -9,14 +9,14 @@ import com.pagatu.auth.event.ResetPasswordMailEvent;
 import com.pagatu.auth.event.TokenForgotPswUserEvent;
 import com.pagatu.auth.event.UserEvent;
 import com.pagatu.auth.exception.*;
-import com.pagatu.auth.repository.*;
+import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
+import com.pagatu.auth.repository.UserRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -36,7 +36,7 @@ import java.util.*;
 
 @Service
 @Slf4j
-public class ProfileAwareAuthService {
+public class AuthService {
 
     @Value("${spring.kafka.topics.user-service}")
     private String USER_TOPIC;
@@ -59,70 +59,37 @@ public class ProfileAwareAuthService {
     private static final int LIMITER = 10;
     private static final int TOKEN_EXPIRY_MINUTES = 30;
 
-    private final Environment environment;
     private final PasswordEncoder passwordEncoder;
     private final WebClient webClient;
 
-    // Production repositories (for test profile) - now optional
-    private final FirstUserRepository firstUserRepository;
+    private final UserRepository userRepository;
     private final TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository;
 
-    // Dev repositories (for dev profile)
-    private final DevUserRepository devUserRepository;
-    private final DevTokenForUserPasswordResetRepository devTokenForUserPasswordResetRepository;
-
-    // Kafka templates (only used in non-dev profiles) - now optional
     private final KafkaTemplate<String, UserEvent> kafkaTemplate;
     private final KafkaTemplate<String, ResetPasswordMailEvent> kafkaTemplateResetPasswordMail;
     private final KafkaTemplate<String, TokenForgotPswUserEvent> kafkaTemplateTokenForUserPasswordReset;
 
-    public ProfileAwareAuthService(
-            Environment environment,
-            @Autowired(required = false) FirstUserRepository firstUserRepository,
-            @Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
-            @Autowired(required = false) DevUserRepository devUserRepository,
-            @Autowired(required = false) DevTokenForUserPasswordResetRepository devTokenForUserPasswordResetRepository,
-            PasswordEncoder passwordEncoder,
-            WebClient.Builder webClientBuilder,
-            @Autowired(required = false) @Qualifier("userEventKafkaTemplate") KafkaTemplate<String, UserEvent> kafkaTemplate,
-            @Autowired(required = false) @Qualifier("resetPasswordMailKafkaTemplate") KafkaTemplate<String, ResetPasswordMailEvent> kafkaTemplateResetPasswordMail,
-            @Autowired(required = false) @Qualifier("tokenForgotUserPasswordTemplate") KafkaTemplate<String, TokenForgotPswUserEvent> kafkaTemplateTokenForUserPasswordReset) {
-
-        this.environment = environment;
+    public ProfileAwareAuthService(@Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
+                                   UserRepository userRepository,
+                                   PasswordEncoder passwordEncoder,
+                                   WebClient.Builder webClientBuilder,
+                                   @Autowired(required = false) @Qualifier("userEventKafkaTemplate") KafkaTemplate<String, UserEvent> kafkaTemplate,
+                                   @Autowired(required = false) @Qualifier("resetPasswordMailKafkaTemplate") KafkaTemplate<String, ResetPasswordMailEvent> kafkaTemplateResetPasswordMail,
+                                   @Autowired(required = false) @Qualifier("tokenForgotUserPasswordTemplate") KafkaTemplate<String, TokenForgotPswUserEvent> kafkaTemplateTokenForUserPasswordReset) {
         this.passwordEncoder = passwordEncoder;
         this.webClient = webClientBuilder.baseUrl("http://localhost:8082").build();
-
-        // Assign all repositories (they'll be null if not available for the profile)
-        this.firstUserRepository = firstUserRepository;
         this.tokenForUserPasswordResetRepository = tokenForUserPasswordResetRepository;
-        this.devUserRepository = devUserRepository;
-        this.devTokenForUserPasswordResetRepository = devTokenForUserPasswordResetRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.userRepository = userRepository;
         this.kafkaTemplateResetPasswordMail = kafkaTemplateResetPasswordMail;
         this.kafkaTemplateTokenForUserPasswordReset = kafkaTemplateTokenForUserPasswordReset;
-
-        log.info("Initialized ProfileAwareAuthService with profile: {}", getActiveProfile());
-
-        // Validate that we have the required repositories for the active profile
-        if (isDevProfile()) {
-            if (devUserRepository == null || devTokenForUserPasswordResetRepository == null) {
-                throw new IllegalStateException("Dev profile requires dev repositories but they were not found");
-            }
-            log.info("Using dev repositories for dev profile");
-        } else {
-            if (firstUserRepository == null || tokenForUserPasswordResetRepository == null) {
-                throw new IllegalStateException("Test profile requires first repositories but they were not found");
-            }
-            log.info("Using first repositories for test profile");
-        }
     }
 
     public LoginResponse login(LoginRequest loginRequest) {
-        log.debug("Attempting login for user: {} (Profile: {})", loginRequest.getUsername(), getActiveProfile());
 
-        Optional<User> userOpt = isDevProfile()
-                ? devUserRepository.findByUsername(loginRequest.getUsername())
-                : firstUserRepository.findByUsername(loginRequest.getUsername());
+        log.debug("Attempting login for user: {}", loginRequest.getUsername());
+
+        Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername()):
 
         if (userOpt.isEmpty()) {
             log.warn("Failed login attempt - user not found: {}", loginRequest.getUsername());
@@ -138,6 +105,7 @@ public class ProfileAwareAuthService {
         String token = generateToken(user);
 
         log.info("Successful login for user: {} (Profile: {})", user.getUsername(), getActiveProfile());
+
         return new LoginResponse(token, user.getUsername(), user.getEmail());
     }
 
@@ -149,6 +117,8 @@ public class ProfileAwareAuthService {
         boolean usernameExists = isDevProfile()
                 ? devUserRepository.existsByUsername(registerRequest.getUsername())
                 : firstUserRepository.existsByUsername(registerRequest.getUsername());
+
+        boolean usernameExists = userRepository.existsByUsername(registerRequest.getUsername());
 
         if (usernameExists) {
             throw new UserAlreadyExistsException("Username already exists", "username", registerRequest.getUsername());
