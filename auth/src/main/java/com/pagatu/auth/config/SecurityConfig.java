@@ -26,15 +26,9 @@ public class SecurityConfig {
             "/h2-console/**",
     };
 
-    private static final String[] CSRF_WHITELIST = {
-            "/h2-console/**",
-            "/api/auth/**"
-    };
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(c -> c.ignoringRequestMatchers(CSRF_WHITELIST))
                 .cors(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(authorize -> authorize

@@ -6,13 +6,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-@SecondRepository
+@Repository
 public interface TokenForUserPasswordResetRepository extends JpaRepository<TokenForUserPasswordReset, Long> {
 
     Optional<TokenForUserPasswordReset> findTokenForUserPasswordResetByToken(String token);
@@ -40,5 +41,7 @@ public interface TokenForUserPasswordResetRepository extends JpaRepository<Token
     @Transactional(value = "secondTransactionManager")
     @Query("UPDATE TokenForUserPasswordReset t SET t.tokenStatus = :newStatus WHERE t.expiredDate < :currentTime AND t.tokenStatus = :currentStatus")
     int
-    updateExpiredTokensStatus(@Param("newStatus") TokenStatus newStatus, @Param("currentTime") LocalDateTime currentTime, @Param("currentStatus")TokenStatus currentStatus);
+    updateExpiredTokensStatus(@Param("newStatus") TokenStatus newStatus, @Param("currentTime") LocalDateTime currentTime, @Param("currentStatus") TokenStatus currentStatus);
+
+    Optional<TokenForUserPasswordReset> findByToken(String token);
 }
