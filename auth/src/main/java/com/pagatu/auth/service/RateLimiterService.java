@@ -13,10 +13,6 @@ import java.time.Duration;
  * Service class for handling rate limiting operations.
  * Provides functionality to check and enforce rate limits using token bucket algorithm.
  * Integrates with RateLimiterConfig to manage rate limiting buckets for different clients.
- *
- * @author PagaTu Auth Team
- * @version 1.0
- * @since 2025
  */
 @Service
 @Log4j2
