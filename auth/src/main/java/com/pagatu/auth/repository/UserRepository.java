@@ -8,16 +8,19 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/**
+ * Repository interface for User entity operations.
+ */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT u FROM User u WHERE u.username = :username")
     Optional<User> findByUsername(@Param("username") String username);
 
-    Optional<User> getByEmail(String email);
-
     @Query("SELECT u FROM User u WHERE u.username = :username")
     boolean existsByUsername(String username);
+
+    Optional<User> getByEmail(String email);
 
     boolean existsByEmail(String email);
 }

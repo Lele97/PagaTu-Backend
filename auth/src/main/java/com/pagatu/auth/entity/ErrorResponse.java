@@ -13,6 +13,7 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ErrorResponse {
+
     private int status;
     private String error;
     private String message;
@@ -21,45 +22,11 @@ public class ErrorResponse {
     private String path;
     private Map<String, List<String>> fieldErrors;
 
-    // Constructor for basic error response
     public ErrorResponse(HttpStatus httpStatus, String message, String details, LocalDateTime timestamp) {
         this.status = httpStatus.value();
         this.error = httpStatus.getReasonPhrase();
         this.message = message;
         this.details = details;
         this.timestamp = timestamp;
-    }
-
-    // Constructor with path
-    public ErrorResponse(HttpStatus httpStatus, String message, String details, LocalDateTime timestamp, String path) {
-        this.status = httpStatus.value();
-        this.error = httpStatus.getReasonPhrase();
-        this.message = message;
-        this.details = details;
-        this.timestamp = timestamp;
-        this.path = path;
-    }
-
-    // Constructor with field errors
-    public ErrorResponse(HttpStatus httpStatus, String message, String details, LocalDateTime timestamp,
-                         Map<String, List<String>> fieldErrors) {
-        this.status = httpStatus.value();
-        this.error = httpStatus.getReasonPhrase();
-        this.message = message;
-        this.details = details;
-        this.timestamp = timestamp;
-        this.fieldErrors = fieldErrors;
-    }
-
-    // Full constructor
-    public ErrorResponse(HttpStatus httpStatus, String message, String details, LocalDateTime timestamp,
-                         String path, Map<String, List<String>> fieldErrors) {
-        this.status = httpStatus.value();
-        this.error = httpStatus.getReasonPhrase();
-        this.message = message;
-        this.details = details;
-        this.timestamp = timestamp;
-        this.path = path;
-        this.fieldErrors = fieldErrors;
     }
 }

@@ -2,6 +2,34 @@ server:
   port: 8081
 
 spring:
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: >
+          userEvent:com.pagatu.auth.event.UserEvent,
+          eventType:com.pagatu.auth.entity.EventType,
+          resetPasswordMail:com.pagatu.auth.event.ResetPasswordMailEvent
+
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.pagatu.auth.event
+        spring.json.use.type.headers: true
+        spring.json.type.mapping: >
+          userEvent:com.pagatu.auth.event.UserEvent,
+          eventType:com.pagatu.auth.entity.EventType,
+          resetPasswordMail:com.pagatu.auth.event.ResetPasswordMailEvent
+
+    topics:
+      user-service: user-service
+      resetPasswordMail: reset-password-mail
+      user-service-reset-token: user-service-reset-token
+
   application:
     name: auth
 
@@ -14,8 +42,8 @@ spring:
 
   datasource:
     url: ${SECOND_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/auth?allowPublicKeyRetrieval=true&useSSL=false}
-    username: ${SECOND_DATASOURCE_USERNAME:root}
-    password: ${SECOND_DATASOURCE_PASSWORD:root}
+    username: ${SPRING_DATASOURCE_DEV_USERNAME}
+    password: ${SPRING_DATASOURCE_DEV_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -46,33 +74,7 @@ logging:
     org.springframework.transaction: DEBUG
     root: INFO
 
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.type.mapping: >
-          userEvent:com.pagatu.auth.event.UserEvent,
-          eventType:com.pagatu.auth.entity.EventType,
-          resetPasswordMail:com.pagatu.auth.event.ResetPasswordMailEvent
-
-    consumer:
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: com.pagatu.auth.event
-        spring.json.use.type.headers: true
-        spring.json.type.mapping: >
-          userEvent:com.pagatu.auth.event.UserEvent,
-          eventType:com.pagatu.auth.entity.EventType,
-          resetPasswordMail:com.pagatu.auth.event.ResetPasswordMailEvent
-
-    topics:
-      user-service: user-service
-      resetPasswordMail: reset-password-mail
-      user-service-reset-token: user-service-reset-token
 
 ---
 spring:
@@ -81,21 +83,19 @@ spring:
       on-profile: prod
 
   datasource:
-    url: ${SECOND_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/auth?allowPublicKeyRetrieval=true&useSSL=false}
-    username: ${SECOND_DATASOURCE_USERNAME:root}
-    password: ${SECOND_DATASOURCE_PASSWORD:root}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/auth}
+    username: ${SPRING_DATASOURCE_PROD_USERNAME}
+    password: ${SPRING_DATASOURCE_PROD_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create
+    show-sql: false
     properties:
       hibernate:
-        globally_quoted_identifiers: true
-        dialect: org.hibernate.dialect.MySQLDialect
-        hbm2ddl.auto: update
-        show_sql: false
         format_sql: false
-        metadata_builder.contributor: none
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
 
   h2:
     console:
