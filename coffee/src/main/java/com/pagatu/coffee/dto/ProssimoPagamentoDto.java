@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProssimoPagamentoDto {
+
     private Long userId;
     private String username;
     private String email;

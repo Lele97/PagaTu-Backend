@@ -1,3 +1,4 @@
+
 server:
   port: 8082
 
@@ -54,6 +55,16 @@ spring:
     console:
       enabled: false
       path: /h2-console
+
+logging:
+  level:
+    com.pagatu.coffee: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.kafka: DEBUG
+    org.springframework.transaction: DEBUG
+    root: INFO
+
 ---
 spring:
   config:
@@ -79,6 +90,13 @@ spring:
       enabled: true
       path: /h2-console
 
+logging:
+  level:
+    com.pagatu.coffee: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.kafka: WARN
+    org.springframework.transaction: WARN
+    root: WARN
 ---
 jwt:
   secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}

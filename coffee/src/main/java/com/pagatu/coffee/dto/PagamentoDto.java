@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class PagamentoDto {
+
     private Long id;
     private Long userId;
     private String username;

@@ -10,18 +10,18 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Repository interface for UserGroupMembership entity operations.
+ */
 @Repository
 public interface UserGroupMembershipRepository extends JpaRepository<UserGroupMembership, Long> {
-
-    // Find all memberships for a group
-    List<UserGroupMembership> findByGroup(Group group);
-
-    // Find memberships by group and status
-    List<UserGroupMembership> findByGroupAndStatus(Group group, Status status);
 
     @Query("select ugm from UserGroupMembership ugm join ugm.group ug where ug.name= :group and ugm.myTurn=true")
     UserGroupMembership findUserTurn(String group);
 
-    // Check if user exists in group
+    List<UserGroupMembership> findByGroup(Group group);
+
+    List<UserGroupMembership> findByGroupAndStatus(Group group, Status status);
+
     boolean existsByUtenteAndGroup(Utente utente, Group group);
 }
