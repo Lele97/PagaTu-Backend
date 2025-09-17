@@ -69,21 +69,6 @@ public class EmailService {
     @Value("${app.frontend.company}")
     private String company;
 
-    /**
-     * Constructs a new EmailService with the specified dependencies.
-     * <p>
-     * This constructor initializes the email service with all necessary
-     * dependencies including mail sender, template engine, and web clients
-     * for communicating with coffee and authentication services.
-     * </p>
-     *
-     * @param mailSender           the JavaMail sender for sending emails
-     * @param templateEngine       the Thymeleaf template engine for processing templates
-     * @param webClientBuilder     the WebClient builder for creating HTTP clients
-     * @param coffeeServiceBaseUrl the base URL for the coffee service
-     * @param authServiceBaseUrl   the base URL for the authentication service
-     * @throws IllegalArgumentException if any parameter is null
-     */
     public EmailService(JavaMailSender mailSender,
                         TemplateEngine templateEngine,
                         WebClient.Builder webClientBuilder,

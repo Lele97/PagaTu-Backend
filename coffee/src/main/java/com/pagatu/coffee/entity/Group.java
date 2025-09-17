@@ -33,7 +33,6 @@ public class Group {
     @Column(name = "description")
     private String description;
 
-    // Replace direct many-to-many with membership relationship
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserGroupMembership> userMemberships = new ArrayList<>();

@@ -9,6 +9,9 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Repository interface for Group entity operations.
+ */
 @Repository
 public interface GroupRepository  extends JpaRepository<Group, Long> {
 
@@ -18,8 +21,8 @@ public interface GroupRepository  extends JpaRepository<Group, Long> {
     @Query("SELECT DISTINCT g FROM Group g JOIN g.userMemberships m JOIN m.utente u WHERE u.username = :username")
     List<Group> getGroupsByUsername(@Param("username") String username);
 
-    void deleteGroupByName(String groupName);
-
     @Query("SELECT g FROM Group g JOIN FETCH g.userMemberships m JOIN FETCH m.utente WHERE g.name = :name")
     Optional<Group> findGroupWithMembershipsByName(@Param("name") String name);
+
+    void deleteGroupByName(String groupName);
 }

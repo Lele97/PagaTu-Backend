@@ -37,6 +37,15 @@ spring:
       web-allow-others: true
       trace: false
 
+logging:
+  level:
+    com.pagatu.coffee: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.kafka: DEBUG
+    org.springframework.transaction: DEBUG
+    root: INFO
+
   kafka:
     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
