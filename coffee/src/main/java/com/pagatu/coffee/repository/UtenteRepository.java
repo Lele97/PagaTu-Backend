@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 /**
- * Repository interface for Utente (User) entity operations.
+ * Repository interface for User entity operations.
  */
 @Repository
 public interface UtenteRepository extends JpaRepository<Utente, Long> {
