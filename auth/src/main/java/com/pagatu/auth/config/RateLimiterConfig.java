@@ -6,14 +6,18 @@ import io.github.bucket4j.Refill;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Configuration component for rate limiting functionality.
+ * Provides bucket-based rate limiting using Bucket4j library with configurable
+ * limits for password reset operations. Maintains separate buckets for different
+ * keys (typically IP addresses or user identifiers).
+ */
 @Component
 @Slf4j
 public class RateLimiterConfig {
-
 
     @Value("${rate-limiter.reset-password.max-attempts:3}")
     private int maxAttempts;
@@ -27,21 +31,26 @@ public class RateLimiterConfig {
     private final ConcurrentHashMap<String, Bucket> buckets = new ConcurrentHashMap<>();
 
     /**
-     * Get or create a bucket for the given key (typically IP address)
+     * Retrieves or creates a rate limiting bucket for the specified key.
+     * If rate limiting is disabled, returns a bucket with unlimited capacity.
+     *
+     * @param key the identifier for the rate limit bucket (typically IP address)
+     * @return configured Bucket instance for rate limiting
      */
     public Bucket getBucket(String key) {
         if (!enabled) {
-            // If rate limiting is disabled, return a bucket that always allows requests
             return Bucket.builder()
                     .addLimit(Bandwidth.classic(Integer.MAX_VALUE, Refill.intervally(Integer.MAX_VALUE, Duration.ofHours(1))))
                     .build();
         }
-
         return buckets.computeIfAbsent(key, this::createBucket);
     }
 
     /**
-     * Create a new bucket with the configured limits
+     * Creates a new rate limit bucket with configured limits.
+     *
+     * @param key the identifier for the rate limit bucket
+     * @return newly created Bucket with configured limits
      */
     private Bucket createBucket(String key) {
         log.debug("Creating new rate limit bucket for key: {} with {} attempts per {} hours",
@@ -58,7 +67,9 @@ public class RateLimiterConfig {
     }
 
     /**
-     * Remove bucket for a key (useful for cleanup)
+     * Removes the rate limit bucket for the specified key.
+     *
+     * @param key the identifier for the bucket to remove
      */
     public void removeBucket(String key) {
         buckets.remove(key);
@@ -66,7 +77,8 @@ public class RateLimiterConfig {
     }
 
     /**
-     * Clear all buckets (useful for testing or admin operations)
+     * Clears all rate limit buckets from the cache.
+     * Useful for testing or administrative operations.
      */
     public void clearAllBuckets() {
         buckets.clear();
@@ -74,7 +86,9 @@ public class RateLimiterConfig {
     }
 
     /**
-     * Get current bucket count (useful for monitoring)
+     * Returns the current number of active rate limit buckets.
+     *
+     * @return count of currently active buckets
      */
     public int getBucketCount() {
         return buckets.size();

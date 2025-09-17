@@ -40,12 +40,10 @@ public class BatchJobConfig {
     public RetryTemplate batchRetryTemplate() {
         RetryTemplate retryTemplate = new RetryTemplate();
         
-        // Retry policy: max 3 attempts
         SimpleRetryPolicy retryPolicy = new SimpleRetryPolicy();
         retryPolicy.setMaxAttempts(3);
         retryTemplate.setRetryPolicy(retryPolicy);
-        
-        // Exponential backoff: start with 1 second, multiply by 2 each time
+
         ExponentialBackOffPolicy backOffPolicy = new ExponentialBackOffPolicy();
         backOffPolicy.setInitialInterval(1000);
         backOffPolicy.setMultiplier(2.0);
