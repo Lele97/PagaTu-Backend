@@ -79,16 +79,16 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
-    show-sql: true
+      ddl-auto: update
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
 
 logging:
