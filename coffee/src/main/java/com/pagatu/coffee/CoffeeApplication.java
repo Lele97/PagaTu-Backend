@@ -16,6 +16,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
  * <ul>
  *   <li>Spring Cloud Discovery Client for service registration</li>
  *   <li>Apache Kafka for event-driven communication</li>
+ *   <li>API Gateway for routing and security</li>
  *   <li>JWT for authentication and authorization</li>
  *   <li>JPA/Hibernate for data persistence</li>
  * </ul>
