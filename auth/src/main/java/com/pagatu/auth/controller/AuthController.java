@@ -1,10 +1,6 @@
 package com.pagatu.auth.controller;
 
-import com.pagatu.auth.dto.ResetPasswordRequest;
-import com.pagatu.auth.dto.LoginRequest;
-import com.pagatu.auth.dto.LoginResponse;
-import com.pagatu.auth.dto.RegisterRequest;
-import com.pagatu.auth.dto.TokenValidationResponse;
+import com.pagatu.auth.dto.*;
 import com.pagatu.auth.entity.RateLimiterResult;
 import com.pagatu.auth.entity.User;
 import com.pagatu.auth.exception.UserNotFoundException;
@@ -48,7 +44,6 @@ public class AuthController {
             @RequestParam("email") String email,
             HttpServletRequest request) {
 
-        // Apply rate limiting based on IP address
         String clientIp = getClientIpAddress(request);
         RateLimiterResult rateLimitResult = rateLimiterService.checkRateLimit(clientIp);
 
@@ -130,7 +125,6 @@ public class AuthController {
         for (String header : headerNames) {
             String ip = request.getHeader(header);
             if (ip != null && !ip.isEmpty() && !"unknown".equalsIgnoreCase(ip)) {
-                // Handle multiple IPs in X-Forwarded-For
                 if (ip.contains(",")) {
                     ip = ip.split(",")[0].trim();
                 }
