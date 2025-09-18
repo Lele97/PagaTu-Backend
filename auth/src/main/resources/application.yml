@@ -47,15 +47,13 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
     properties:
       hibernate:
-        globally_quoted_identifiers: true
-        dialect: org.hibernate.dialect.MySQLDialect
-        hbm2ddl.auto: update
-        show_sql: true
-        format_sql: true
-        metadata_builder.contributor: none
+        format_sql: false
+    database-platform: org.hibernate.dialect.MySQLDialect
 
   h2:
     console:
@@ -90,7 +88,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
