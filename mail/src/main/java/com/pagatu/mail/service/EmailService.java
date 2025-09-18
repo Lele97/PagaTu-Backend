@@ -8,6 +8,7 @@ import com.pagatu.mail.event.ProssimoPagamentoEvent;
 import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SaltaPagamentoEvent;
 import com.pagatu.mail.exception.CustomExceptionEmailSend;
+import com.pagatu.mail.util.Constants;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.log4j.Log4j2;
@@ -131,7 +132,7 @@ public class EmailService {
     public Mono<Void> inviaNotificaSaltaPagamento(SaltaPagamentoEvent event) {
         return fetchUserDataSaltaPagamento(event)
                 .flatMap(userDataSaltaPagamento -> sendEmailSaltaPagamento(event, userDataSaltaPagamento))
-                .doOnSuccess(success -> log.info(LOG_INFO_NOTIFICA + " a {}", event.getProssimoEmail()))
+                .doOnSuccess(success -> log.info("{} a {}", LOG_INFO_NOTIFICA, event.getProssimoEmail()))
                 .doOnError(error ->
                         log.error(LOG_ERROR_NOTIFICA, error)
                 )
@@ -159,7 +160,7 @@ public class EmailService {
     public Mono<Void> inviaNotificaResetPassword(ResetPasswordMailEvent event) {
         return fetchUserDataResetPassword(event)
                 .flatMap(userDataResetForgotUserPassword -> sendResetPasswordMail(event, userDataResetForgotUserPassword))
-                .doOnSuccess(success -> log.info(LOG_INFO_NOTIFICA + " a {}", event.getEmail()))
+                .doOnSuccess(success -> log.info("{} a {}", LOG_INFO_NOTIFICA, event.getEmail()))
                 .doOnError(error ->
                         log.error(LOG_ERROR_NOTIFICA, error)
                 )
@@ -187,7 +188,7 @@ public class EmailService {
      */
     public Mono<Void> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
         return sendEmailInvitation(event)
-                .doOnSuccess(success -> log.info(LOG_INFO_INVITO + " a {}", event.getEmail()))
+                .doOnSuccess(success -> log.info("{} a {}", LOG_INFO_INVITO, event.getEmail()))
                 .doOnError(error -> log.error(LOG_ERROR_INVITO, error))
                 .then();
     }
@@ -449,14 +450,14 @@ public class EmailService {
      */
     private Context getContext(ProssimoPagamentoEvent event, UserData userData) {
         Context context = new Context(ITALIAN_LOCALE);
-        context.setVariable("ultimoPagatore",
+        context.setVariable(Constants.TEMPLATE_VAR_ULTIMO_PAGATORE,
                 userData.ultimoPagatore().getName() + " " + userData.ultimoPagatore().getLastname());
-        context.setVariable("prossimoPagatore",
+        context.setVariable(Constants.TEMPLATE_VAR_PROSSIMO_PAGATORE,
                 userData.prossimoPagatore().getName() + " " + userData.prossimoPagatore().getLastname());
-        context.setVariable("dataUltimoPagamento",
+        context.setVariable(Constants.TEMPLATE_VAR_DATA_ULTIMO_PAGAMENTO,
                 event.getDataUltimoPagamento().format(DATE_FORMATTER));
-        context.setVariable("importo", String.format("%.2f€", event.getImporto()));
-        context.setVariable("companyName", company);
+        context.setVariable(Constants.TEMPLATE_VAR_IMPORTO, String.format("%.2f€", event.getImporto()));
+        context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
         return context;
     }
 
@@ -476,18 +477,17 @@ public class EmailService {
      */
     private Context getContextForInvitation(InvitationEvent event) {
         Context context = new Context(ITALIAN_LOCALE);
-        context.setVariable("user", event.getUsername());
-        context.setVariable("userWhoSentTheInvitation", event.getUserWhoSentTheInvitation());
-        context.setVariable("groupName", event.getGroupName());
+        context.setVariable(Constants.TEMPLATE_VAR_USER, event.getUsername());
+        context.setVariable(Constants.TEMPLATE_VAR_USER_WHO_SENT_INVITATION, event.getUserWhoSentTheInvitation());
+        context.setVariable(Constants.TEMPLATE_VAR_GROUP_NAME, event.getGroupName());
 
-        // Fixed invitation link to match React routing structure
         String encodedUsername = UriUtils.encode(event.getUsername(), StandardCharsets.UTF_8);
         String encodedGroupName = UriUtils.encode(event.getGroupName(), StandardCharsets.UTF_8);
         String invitationLink = String.format("%s%s?username=%s&groupName=%s",
                 domainUrl, invitationUserToGroupPath, encodedUsername, encodedGroupName);
 
-        context.setVariable("link", invitationLink);
-        context.setVariable("companyName", company);
+        context.setVariable(Constants.TEMPLATE_VAR_LINK, invitationLink);
+        context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
         return context;
     }
 
@@ -506,9 +506,9 @@ public class EmailService {
      */
     private Context getContextForSaltaPagamento(UserDataSaltaPagamento userDataSaltaPagamento) {
         Context context = new Context(ITALIAN_LOCALE);
-        context.setVariable("prossimoPagatore",
+        context.setVariable(Constants.TEMPLATE_VAR_PROSSIMO_PAGATORE,
                 userDataSaltaPagamento.prossimoPagatoreDto().getName() + " " + userDataSaltaPagamento.prossimoPagatoreDto().getLastname());
-        context.setVariable("companyName", company);
+        context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
         return context;
     }
 
@@ -529,10 +529,10 @@ public class EmailService {
      */
     private Context getContextForResetPassword(ResetPasswordMailEvent event, UserDataResetForgotUserPassword userDataResetForgotUserPassword) {
         Context context = new Context(ITALIAN_LOCALE);
-        context.setVariable("user", userDataResetForgotUserPassword.utentedto().getUsername());
+        context.setVariable(Constants.TEMPLATE_VAR_USER, userDataResetForgotUserPassword.utentedto().getUsername());
         String resetLink = String.format("%s%s?key=%s", domainUrl, resetPswPath, event.getToken());
-        context.setVariable("resetLink", resetLink);
-        context.setVariable("companyName", company);
+        context.setVariable(Constants.TEMPLATE_VAR_RESET_LINK, resetLink);
+        context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
         return context;
     }
 

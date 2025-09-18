@@ -9,6 +9,20 @@ public class Constants {
     }
 
     /**
+     * Thymeleaf Template Context Keys
+     */
+    public static final String TEMPLATE_VAR_ULTIMO_PAGATORE = "ultimoPagatore";
+    public static final String TEMPLATE_VAR_PROSSIMO_PAGATORE = "prossimoPagatore";
+    public static final String TEMPLATE_VAR_DATA_ULTIMO_PAGAMENTO = "dataUltimoPagamento";
+    public static final String TEMPLATE_VAR_IMPORTO = "importo";
+    public static final String TEMPLATE_VAR_COMPANY_NAME = "companyName";
+    public static final String TEMPLATE_VAR_USER = "user";
+    public static final String TEMPLATE_VAR_USER_WHO_SENT_INVITATION = "userWhoSentTheInvitation";
+    public static final String TEMPLATE_VAR_GROUP_NAME = "groupName";
+    public static final String TEMPLATE_VAR_LINK = "link";
+    public static final String TEMPLATE_VAR_RESET_LINK = "resetLink";
+
+    /**
      * Kafka Configuration constants
      */
     public static final String KAFKA_GROUP_ID = "email-service";
