@@ -72,10 +72,10 @@ public class GroupService {
      * </p>
      *
      * @param nuovoGruppoRequest the request containing group name and description
-     * @param userId the ID of the user creating the group
+     * @param userId             the ID of the user creating the group
      * @return GroupDto containing the created group information
      * @throws com.pagatu.coffee.exception.UserNotFoundException if the user is not found
-     * @throws com.pagatu.coffee.exception.BusinessException if group name already exists
+     * @throws com.pagatu.coffee.exception.BusinessException     if group name already exists
      */
     @Transactional
     public GroupDto createGroup(NuovoGruppoRequest nuovoGruppoRequest, Long userId) {
@@ -122,10 +122,10 @@ public class GroupService {
      * </p>
      *
      * @param groupName the name of the group to which the user will be added
-     * @param username the username of the user to be added to the group
+     * @param username  the username of the user to be added to the group
      * @throws BusinessException if the user is already a member of the group
      *                           or if a data integrity violation occurs
-     * @throws RuntimeException if any other unexpected error occurs during the operation
+     * @throws RuntimeException  if any other unexpected error occurs during the operation
      */
     @Transactional
     public void addUserToGroup(String groupName, String username) {
@@ -135,7 +135,6 @@ public class GroupService {
 
         if (userGroupMembershipRepository.existsByUtenteAndGroup(user, group))
             throw new BusinessException("User '" + username + "' is already a member of group '" + groupName + "'");
-
 
         try {
             UserGroupMembership membership = new UserGroupMembership();
@@ -167,7 +166,7 @@ public class GroupService {
      * the invited user, and the user who sent the invitation.
      * </p>
      *
-     * @param userId the ID of the user sending the invitation
+     * @param userId            the ID of the user sending the invitation
      * @param invitationRequest contains the group name and username to invite
      * @throws BusinessException if the user is not an admin of the specified group
      */
@@ -234,7 +233,7 @@ public class GroupService {
      * </p>
      *
      * @param groupName the name of the group to delete
-     * @param userId the ID of the user requesting deletion
+     * @param userId    the ID of the user requesting deletion
      * @throws BusinessException if group has multiple members or user is not a member
      */
     @Transactional
@@ -263,9 +262,6 @@ public class GroupService {
     @Transactional
     public List<GroupDto> getGroupsByUsername(String username) {
         List<Group> groups = groupRepository.getGroupsByUsername(username);
-        if (groups.isEmpty()) {
-            throw new UserNotInGroup("l'utente non presente in nessun gruppo");
-        }
         return groups.stream()
                 .map(this::mapToDto)
                 .toList();

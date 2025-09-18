@@ -3,6 +3,7 @@ package com.pagatu.coffee.controller;
 import com.pagatu.coffee.dto.GroupDto;
 import com.pagatu.coffee.dto.InvitationRequest;
 import com.pagatu.coffee.dto.NuovoGruppoRequest;
+import com.pagatu.coffee.exception.UserNotInGroup;
 import com.pagatu.coffee.service.GroupService;
 import com.pagatu.coffee.service.JwtService;
 import jakarta.validation.Valid;
@@ -132,7 +133,22 @@ public class GroupController {
     }
 
     /**
+     * Retrieves all groups that a user is member of.
+     * <p>
+     * This endpoint requires a valid JWT token in the Authorization header and validates that
+     * the requested username matches the username in the token. If the user is not a member
+     * of any groups, a UserNotInGroup exception is thrown which returns a 404 NOT_FOUND response.
+     * </p>
      *
+     * @param username the username of the user whose groups are being retrieved
+     * @param authHeader the JWT authorization header containing the bearer token
+     * @return ResponseEntity containing either:
+     *         - List of GroupDto objects (200 OK) if groups are found
+     *         - FORBIDDEN (403) if the requested username doesn't match the token username
+     *         - UNAUTHORIZED (401) if the authorization token is invalid
+     *         - NOT_FOUND (404) if the user is not a member of any groups (handled by GlobalExceptionHandler)
+     * @throws UserNotInGroup if the user is not a member of any groups
+     * @throws IllegalArgumentException if the authorization token is invalid or malformed
      */
     @PostMapping("/get/{username}")
     public ResponseEntity<Object> getGroupsByUsernamePost(
@@ -151,17 +167,15 @@ public class GroupController {
             }
 
             List<GroupDto> groups = groupService.getGroupsByUsername(username);
+
             if (groups.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("No groups found for username: " + username);
+                throw new UserNotInGroup("l'utente non è presente in nessun gruppo");
             }
             return ResponseEntity.ok(groups);
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body("Invalid authorization token");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unable to retrieve groups for username: " + username);
         }
     }
 }
