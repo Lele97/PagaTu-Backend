@@ -106,6 +106,24 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles error for token statistics exceptions.
+     *
+     * @param e the TokenStatisticsException containing details about error for token statistics
+     * @return ResponseEntity with NO_CONTENT status and error details
+     */
+    @ExceptionHandler(TokenStatisticsException.class)
+    public ResponseEntity<ErrorResponse> handleTokenStatisticsException(TokenStatisticsException e) {
+        log.warn("Error for token statistics: {}", e.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NO_CONTENT,
+                e.getMessage(),
+                "Error for token statistics",
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NO_CONTENT);
+    }
+
+    /**
      * Handles invalid or malformed token exceptions.
      *
      * @param e the InvalidTokenException containing details about the invalid token

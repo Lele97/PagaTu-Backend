@@ -40,5 +40,6 @@ public class User {
 
     @Lob
     @Convert(converter = ListToStringConverter.class)
+    @Column(name = "user_groups")
     private List<String> groups;
 }

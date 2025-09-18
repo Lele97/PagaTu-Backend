@@ -2,6 +2,7 @@ package com.pagatu.auth.service;
 
 import com.pagatu.auth.batch.TokenStatistics;
 import com.pagatu.auth.entity.TokenStatus;
+import com.pagatu.auth.exception.TokenStatisticsException;
 import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,7 @@ public class TokenCleanupMonitoringService {
 
         } catch (Exception e) {
             log.error("Error retrieving token statistics {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to retrieve token statistics", e);
+            throw new TokenStatisticsException(e.getMessage());
         }
     }
 

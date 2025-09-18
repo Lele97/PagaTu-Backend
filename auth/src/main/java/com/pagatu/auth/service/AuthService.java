@@ -8,6 +8,7 @@ import com.pagatu.auth.event.ResetPasswordMailEvent;
 import com.pagatu.auth.exception.*;
 import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
 import com.pagatu.auth.repository.UserRepository;
+import com.pagatu.auth.util.Constants;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -41,7 +42,7 @@ import java.util.*;
 public class AuthService {
 
     @Value("${spring.kafka.topics.resetPasswordMail}")
-    private String RESET_PASSWORD_TOPIC;
+    private String resetPasswordTopic;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -107,12 +108,12 @@ public class AuthService {
      * Synchronizes the user with external services after successful registration.
      *
      * @param registerRequest the user registration information
-     * @return the created User entity
-     * @throws UserAlreadyExistsException if username or email already exists in the system
+     * @throws UserAlreadyExistsException  if username or email already exists in the system
      * @throws ServiceUnavailableException if synchronization with external services fails
      */
     @Transactional
-    public User register(RegisterRequest registerRequest) {
+    public void register(RegisterRequest registerRequest) {
+
         log.debug("Starting registration for user: {}", registerRequest.getUsername());
 
         boolean usernameExists = userRepository.existsByUsername(registerRequest.getUsername());
@@ -124,7 +125,7 @@ public class AuthService {
         boolean emailExists = userRepository.existsByEmail(registerRequest.getEmail());
 
         if (emailExists) {
-            throw new UserAlreadyExistsException("Email already exists", "email", registerRequest.getEmail());
+            throw new UserAlreadyExistsException("Email already exists", Constants.EMAIL_EXCEPRION_VALUE, registerRequest.getEmail());
         }
 
         User user = new User();
@@ -146,7 +147,6 @@ public class AuthService {
             throw new ServiceUnavailableException("Failed to sync with coffee service", e);
         }
 
-        return savedUser;
     }
 
     /**
@@ -161,7 +161,7 @@ public class AuthService {
         Optional<User> userOpt = userRepository.getByEmail(email);
 
         return userOpt.orElseThrow(() ->
-                new UserNotFoundException("User not found", email, "email"));
+                new UserNotFoundException("User not found", email, Constants.EMAIL_EXCEPRION_VALUE));
     }
 
     /**
@@ -228,7 +228,7 @@ public class AuthService {
 
         if (!emailExists) {
             log.warn("Password reset requested for non-existent email: {}", email);
-            throw new UserNotFoundException("Email not found", email, "email");
+            throw new UserNotFoundException("Email not found", email, Constants.EMAIL_EXCEPRION_VALUE);
         }
 
         LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusHours(24);
@@ -269,7 +269,7 @@ public class AuthService {
         Optional<User> userOpt = userRepository.getByEmail(resetPasswordRequest.getEmail());
 
         User user = userOpt.orElseThrow(() ->
-                new UserNotFoundException("User not found", resetPasswordRequest.getEmail(), "email"));
+                new UserNotFoundException("User not found", resetPasswordRequest.getEmail(), Constants.EMAIL_EXCEPRION_VALUE));
 
         Optional<TokenForUserPasswordReset> tokenOpt = tokenForUserPasswordResetRepository.findTokenForUserPasswordResetByToken(token);
 
@@ -306,7 +306,7 @@ public class AuthService {
             fieldErrors.put("password", List.of("Password cannot be empty"));
         }
         if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
-            fieldErrors.put("email", List.of("Email cannot be empty"));
+            fieldErrors.put(Constants.EMAIL_EXCEPRION_VALUE, List.of("Email cannot be empty"));
         }
         if (token == null || token.trim().isEmpty()) {
             fieldErrors.put("token", List.of("Token cannot be empty"));
@@ -383,7 +383,7 @@ public class AuthService {
 
         return Jwts.builder()
                 .setSubject(user.getUsername())
-                .claim("email", user.getEmail())
+                .claim(Constants.EMAIL_EXCEPRION_VALUE, user.getEmail())
                 .claim("id", user.getId())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
@@ -403,7 +403,7 @@ public class AuthService {
             event.setEmail(email);
             event.setToken(token);
 
-            kafkaTemplateResetPasswordMail.send(RESET_PASSWORD_TOPIC, event);
+            kafkaTemplateResetPasswordMail.send(resetPasswordTopic, event);
             log.debug("Published reset password mail event for email: {}", email);
         } catch (Exception e) {
             log.error("Failed to publish reset password mail event", e);

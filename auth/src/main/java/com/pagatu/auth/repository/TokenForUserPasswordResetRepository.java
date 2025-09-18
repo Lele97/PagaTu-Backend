@@ -33,7 +33,5 @@ public interface TokenForUserPasswordResetRepository extends JpaRepository<Token
     @Query("UPDATE TokenForUserPasswordReset t SET t.tokenStatus = :newStatus WHERE t.expiredDate < :currentTime AND t.tokenStatus = :currentStatus")
     int updateExpiredTokensStatus(@Param("newStatus") TokenStatus newStatus, @Param("currentTime") LocalDateTime currentTime, @Param("currentStatus") TokenStatus currentStatus);
 
-    Optional<TokenForUserPasswordReset> findByToken(String token);
-
     Optional<TokenForUserPasswordReset> findTokenForUserPasswordResetByToken(String token);
 }

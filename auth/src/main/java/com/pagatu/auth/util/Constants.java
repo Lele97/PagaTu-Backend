@@ -26,6 +26,7 @@ public final class Constants {
     public static final String NEEDS_CLEANUP = "needsCleanup";
     public static final String TIMESTAMP = "timestamp";
     public static final String STATUS = "status";
+    public static final String EMAIL_EXCEPRION_VALUE = "email";
     public static final String SUCCESS = "success";
     public static final String MESSAGE = "message";
     public static final String ERROR = "error";
