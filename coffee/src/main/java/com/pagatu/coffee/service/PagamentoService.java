@@ -69,8 +69,9 @@ public class PagamentoService {
     private final KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento;
     private final BaseUserService baseUserService;
 
-    public PagamentoService(PagamentoRepository pagamentoRepository,
+    public PagamentoService(PagamentoService self, PagamentoRepository pagamentoRepository,
                             PagamentoMapper pagamentoMapper, UserGroupMembershipRepository userGroupMembershipRepository, UtenteRepository utenteRepository, KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate, KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento, BaseUserService baseUserService) {
+        this.self = self;
         this.pagamentoRepository = pagamentoRepository;
         this.pagamentoMapper = pagamentoMapper;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
