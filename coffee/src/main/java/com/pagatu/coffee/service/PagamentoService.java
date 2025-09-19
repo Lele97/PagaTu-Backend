@@ -17,6 +17,7 @@ import com.pagatu.coffee.repository.UserGroupMembershipRepository;
 import com.pagatu.coffee.repository.UtenteRepository;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -58,6 +59,7 @@ public class PagamentoService {
     private String saltaPagamentoTopic;
 
     @Lazy
+    @Autowired
     private PagamentoService self;
 
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -69,9 +71,8 @@ public class PagamentoService {
     private final KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento;
     private final BaseUserService baseUserService;
 
-    public PagamentoService(PagamentoService self, PagamentoRepository pagamentoRepository,
+    public PagamentoService(PagamentoRepository pagamentoRepository,
                             PagamentoMapper pagamentoMapper, UserGroupMembershipRepository userGroupMembershipRepository, UtenteRepository utenteRepository, KafkaTemplate<String, ProssimoPagamentoEvent> kafkaTemplate, KafkaTemplate<String, SaltaPagamentoEvent> kafkaTemplateSaltaPagamento, BaseUserService baseUserService) {
-        this.self = self;
         this.pagamentoRepository = pagamentoRepository;
         this.pagamentoMapper = pagamentoMapper;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
