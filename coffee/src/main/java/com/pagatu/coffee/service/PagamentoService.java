@@ -58,10 +58,6 @@ public class PagamentoService {
     @Value("${spring.kafka.topics.saltaPagamento-caffe}")
     private String saltaPagamentoTopic;
 
-    @Lazy
-    @Autowired
-    private PagamentoService self;
-
     private static final SecureRandom RANDOM = new SecureRandom();
     private final PagamentoRepository pagamentoRepository;
     private final PagamentoMapper pagamentoMapper;
@@ -130,7 +126,7 @@ public class PagamentoService {
         resetUtenteSaltatoinNonPagato(group);
 
         // Determina chi sarà il prossimo a pagare
-        ProssimoPagamentoDto prossimoPagamento = self.determinaProssimoPagatore(group);
+        ProssimoPagamentoDto prossimoPagamento = determinaProssimoPagatore(group);
 
         ProssimoPagamentoEvent event = createPagamentoEvent(savedPagamento, utente, prossimoPagamento);
 
@@ -220,7 +216,8 @@ public class PagamentoService {
      * @return ProssimoPagamentoDto containing details of the next payer
      * @throws com.pagatu.coffee.exception.ActiveUserMemberNotInGroup if no active members found in the group
      */
-    private ProssimoPagamentoDto determinaProssimoPagatore(Group group) {
+    @Transactional
+    public ProssimoPagamentoDto determinaProssimoPagatore(Group group) {
         log.info("Determining next payer for group: {}", group.getName());
 
         List<UserGroupMembership> nonPagatoMemberships = userGroupMembershipRepository
@@ -366,7 +363,7 @@ public class PagamentoService {
 
         userGroupMembershipRepository.save(userGroupMembership1);
 
-        ProssimoPagamentoDto prossimoPagamento = self.determinaProssimoPagatore(group);
+        ProssimoPagamentoDto prossimoPagamento = determinaProssimoPagatore(group);
 
         SaltaPagamentoEvent event = saltaPagamentoEvent(prossimoPagamento);
 
