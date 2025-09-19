@@ -25,8 +25,8 @@ public class CorsConfig {
      */
     private static final List<String> ALLOWED_ORIGIN_PATTERNS = Arrays.asList(
             "http://localhost:8888",
-            "https://.*.trycloudflare.com",
-            "https://.*.ngrok-free.app"
+            "https://*.trycloudflare.com",
+            "https://*.ngrok-free.app"
     );
 
     /**
@@ -74,6 +74,7 @@ public class CorsConfig {
                 "Origin",
                 "Access-Control-Request-Method",
                 "Access-Control-Request-Headers",
+                "Access-Control-Allow-Origin",
                 "X-Reset-Token"
         ));
 
