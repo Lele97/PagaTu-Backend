@@ -6,6 +6,7 @@ import io.github.bucket4j.Refill;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
 import java.time.Duration;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -64,33 +65,5 @@ public class RateLimiterConfig {
         return Bucket.builder()
                 .addLimit(limit)
                 .build();
-    }
-
-    /**
-     * Removes the rate limit bucket for the specified key.
-     *
-     * @param key the identifier for the bucket to remove
-     */
-    public void removeBucket(String key) {
-        buckets.remove(key);
-        log.debug("Removed rate limit bucket for key: {}", key);
-    }
-
-    /**
-     * Clears all rate limit buckets from the cache.
-     * Useful for testing or administrative operations.
-     */
-    public void clearAllBuckets() {
-        buckets.clear();
-        log.info("Cleared all rate limit buckets");
-    }
-
-    /**
-     * Returns the current number of active rate limit buckets.
-     *
-     * @return count of currently active buckets
-     */
-    public int getBucketCount() {
-        return buckets.size();
     }
 }

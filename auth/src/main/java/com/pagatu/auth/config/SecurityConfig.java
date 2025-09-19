@@ -23,6 +23,12 @@ import org.springframework.security.web.SecurityFilterChain;
 @Log4j2
 public class SecurityConfig {
 
+    /**
+     * List of whitelisted paths that are excluded from authentication.
+     * <p>
+     * Includes authentication endpoints, API documentation (Swagger), and
+     * development tools (e.g., H2 console).
+     */
     private static final String[] AUTH_WHITELIST = {
             "/api/auth/**",
             "/v3/api-docs/*",
