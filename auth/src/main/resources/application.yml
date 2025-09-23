@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: ${SERVER_PORT:8081}
 
 spring:
   kafka:
@@ -72,7 +72,10 @@ logging:
     org.springframework.transaction: DEBUG
     root: INFO
 
-
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka:8761/eureka/}
 
 ---
 spring:
@@ -82,8 +85,8 @@ spring:
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/auth}
-    username: ${SPRING_DATASOURCE_PROD_USERNAME}
-    password: ${SPRING_DATASOURCE_PROD_PASSWORD}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:

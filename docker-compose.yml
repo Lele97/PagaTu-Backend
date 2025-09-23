@@ -1,13 +1,18 @@
 services:
-  gateway-service:
+  gateway:
     build: ./gateway-service
     ports:
       - "8080:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - AUTH_SERVICE_URL=http://auth:8081
-      - CAFFE_SERVICE_URL=http://coffee:8082
-      - EMAIL_SERVICE_URL=http://mail:8083
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - AUTH_SERVICE_URL=http://auth:8080
+      - CAFFE_SERVICE_URL=http://coffee:8080
+      - EMAIL_SERVICE_URL=http://mail:8080
+      - EUREKA_URL=http://eureka:8761/eureka/
+      - CORS_ALLOWED_ORIGINS=http://localhost:8888,https://*.trycloudflare.com,https://*.ngrok-free.app
+      - CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
+      - CORS_ALLOWED_HEADERS=Authorization,Content-Type,Accept-Language,Cache-Control,X-Requested-With,ngrok-skip-browser-warning,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,Access-Control-Allow-Origin,X-Reset-Token
     depends_on:
       - auth
       - coffee
@@ -18,29 +23,33 @@ services:
   auth:
     build: ./auth
     ports:
-      - "8081:8081"
+      - "8081:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SERVER_PORT=8081
-      - SPRING_DATASOURCE_URL=jdbc:h2:mem:authdb
-      - SPRING_DATASOURCE_USERNAME=sa
-      - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-pagatu:5432/auth
+      - SPRING_DATASOURCE_USERNAME=pagatu
+      - SPRING_DATASOURCE_PASSWORD=pagatu_root
       - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
       - JWT_EXPIRATION=86400000
+      - CAFFE_SERVICE_URL=http://coffee:8080
+      - EUREKA_URL=http://eureka:8761/eureka/
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     networks:
       - pagatu-network
 
   coffee:
     build: ./coffee
     ports:
-      - "8082:8082"
+      - "8082:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SERVER_PORT=8082
-      - SPRING_DATASOURCE_URL=jdbc:h2:mem:caffedb
-      - SPRING_DATASOURCE_USERNAME=sa
-      - SPRING_DATASOURCE_PASSWORD=password
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-pagatu:5432/coffee
+      - SPRING_DATASOURCE_USERNAME=pagatu
+      - SPRING_DATASOURCE_PASSWORD=pagatu_root
       - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
+      - EUREKA_URL=http://eureka:8761/eureka/
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       - kafka
@@ -50,10 +59,10 @@ services:
   mail:
     build: ./mail
     ports:
-      - "8083:8083"
+      - "8083:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SERVER_PORT=8083
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
       - SPRING_MAIL_HOST=smtp.gmail.com
       - SPRING_MAIL_PORT=587
       - SPRING_MAIL_USERNAME=grandinetti.gabriele.mail@gmail.com
@@ -62,8 +71,21 @@ services:
       - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
+      - EUREKA_URL=http://eureka:8761/eureka/
+      - CAFFE_SERVICE_URL=http://coffee:8080
+      - AUTH_SERVICE_URL=http://auth:8080
     depends_on:
       - kafka
+    networks:
+      - pagatu-network
+
+  eureka:
+    build: ./eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8761
     networks:
       - pagatu-network
 
@@ -86,6 +108,23 @@ services:
     networks:
       - pagatu-network
 
+  pg-pagatu:
+    image: postgres:15
+    container_name: pg-pagatu
+    environment:
+      POSTGRES_USER: pagatu
+      POSTGRES_PASSWORD: pagatu_root
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - pagatu-network
+
 networks:
   pagatu-network:
     driver: bridge
+
+volumes:
+  pg_data:
