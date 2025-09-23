@@ -139,7 +139,6 @@ public class AuthService {
         user.setDateOfBirth(registerRequest.getDateOfBirth());
         user.setFirstName(registerRequest.getFirstName());
         user.setLastName(registerRequest.getLastName());
-        user.setGroups(registerRequest.getGroups());
 
         User savedUser = userRepository.save(user);
 

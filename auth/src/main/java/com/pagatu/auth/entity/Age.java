@@ -10,6 +10,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = AgeValidator.class)
 public @interface Age {
+
     String message() default "Invalid age";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};

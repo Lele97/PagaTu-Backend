@@ -24,10 +24,6 @@ import java.util.Map;
  * This class provides centralized exception handling across all controllers,
  * ensuring consistent error responses and appropriate HTTP status codes.
  * It handles both custom application exceptions and standard Spring exceptions.
- *
- * @author PagaTu Auth Team
- * @version 1.0
- * @since 2025
  */
 @ControllerAdvice
 @Slf4j

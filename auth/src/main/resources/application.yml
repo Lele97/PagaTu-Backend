@@ -33,35 +33,43 @@ spring:
   application:
     name: auth
 
-  cloud:
-    config:
-      enabled: false
-
   profiles:
     active: dev
 
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=35s
+
+  cloud:
+    config:
+      enabled: false
+    loadbalancer:
+      cache:
+        enabled: true
+        ttl: 35s
+        capacity: 1000
+
   datasource:
-    url: ${SECOND_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3306/auth?allowPublicKeyRetrieval=true&useSSL=false}
-    username: ${SPRING_DATASOURCE_DEV_USERNAME}
-    password: ${SPRING_DATASOURCE_DEV_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/auth}
+    username: ${SPRING_DATASOURCE_PROD_USERNAME}
+    password: ${SPRING_DATASOURCE_PROD_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: false
+    show-sql: true
     properties:
       hibernate:
-        format_sql: false
-    database-platform: org.hibernate.dialect.MySQLDialect
+        jdbc.lob.non_contextual_creation: true
+        format_sql: true
+    open-in-view: true
 
   h2:
     console:
       enabled: false
       path: /h2-console
-    settings:
-      web-allow-others: true
-      trace: false
 
 logging:
   level:
@@ -83,6 +91,23 @@ spring:
     activate:
       on-profile: prod
 
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=35s
+
+  cloud:
+    loadbalancer:
+      cache:
+        enabled: true
+        ttl: 35s
+        capacity: 1000
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/auth}
     username: ${SPRING_DATASOURCE_USERNAME}
@@ -95,17 +120,22 @@ spring:
     show-sql: false
     properties:
       hibernate:
+        jdbc.lob.non_contextual_creation: true
         format_sql: false
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
 
   h2:
     console:
       enabled: false
       path: /h2-console
-    settings:
-      web-allow-others: true
-      trace: false
 
+logging:
+  level:
+    com.pagatu.auth: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.kafka: WARN
+    org.springframework.transaction: WARN
+    root: WARN
 ---
 
 rate-limiter:
@@ -124,9 +154,9 @@ management:
       exposure:
         include: health,info,metrics
 
-caffe:
+coffee:
   service:
-    url: ${CAFFE_SERVICE_URL:http://coffee:8082}
+    url: ${COFFEE_SERVICE_URL:http://coffee:8082}
 
 springdoc:
   api-docs:
