@@ -1,6 +1,5 @@
-
 server:
-  port: 8082
+  port: ${SERVER_PORT:8081}
 
 spring:
   config:
@@ -31,6 +30,11 @@ spring:
 
   profiles:
     active: dev
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka:8761/eureka/}
 
 ---
 spring:
@@ -73,8 +77,8 @@ spring:
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/coffee}
-    username: ${SPRING_DATASOURCE_PROD_USERNAME}
-    password: ${SPRING_DATASOURCE_PROD_PASSWORD}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:

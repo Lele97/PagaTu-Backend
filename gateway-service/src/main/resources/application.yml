@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
@@ -95,3 +95,13 @@ email:
 
 jwt:
   secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://eureka:8761/eureka/}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8888,https://*.trycloudflare.com,https://*.ngrok-free.app}
+  allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD}
+  allowed-headers: ${CORS_ALLOWED_HEADERS:Authorization,Content-Type,Accept-Language,Cache-Control,X-Requested-With,ngrok-skip-browser-warning,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,Access-Control-Allow-Origin,X-Reset-Token}
