@@ -2,13 +2,13 @@ server:
   port: ${SERVER_PORT:8081}
 
 spring:
+
   config:
     import: "optional:configserver:"
+
   cloud:
     config:
       enabled: false
-      import-check:
-        enabled: false
 
   application:
     name: coffee
@@ -41,11 +41,13 @@ spring:
   config:
     activate:
       on-profile: dev
+
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/coffee}
-    username: ${SPRING_DATASOURCE_DEV_USERNAME}
-    password: ${SPRING_DATASOURCE_DEV_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/coffee}
+    username: ${SPRING_DATASOURCE_PROD_USERNAME}
+    password: ${SPRING_DATASOURCE_PROD_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -53,7 +55,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
-    database-platform: org.hibernate.dialect.MySQLDialect
+    open-in-view: true
 
   h2:
     console:
@@ -88,7 +90,7 @@ spring:
     properties:
       hibernate:
         format_sql: false
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
 
   h2:
     console:
@@ -103,6 +105,7 @@ logging:
     org.springframework.transaction: WARN
     root: WARN
 ---
+
 jwt:
   secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
 

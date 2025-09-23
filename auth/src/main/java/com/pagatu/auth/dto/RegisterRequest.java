@@ -7,7 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -43,7 +42,4 @@ public class RegisterRequest {
     @Size(max = 50, message = "Last name cannot exceed 50 characters")
     @Pattern(regexp = "^[A-Za-zÀ-ÖØ-öø-ÿ' -]*$", message = "Last name contains invalid characters")
     private String lastName;
-
-    @NotEmpty(message = "At least one group must be specified")
-    private List<@NotBlank(message = "Group names cannot be blank") String> groups; // Validate each element
 }

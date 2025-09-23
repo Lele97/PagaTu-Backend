@@ -38,8 +38,7 @@ public class User {
     @Column(name = "last_name")
     private String lastName;
 
-    @Lob
     @Convert(converter = ListToStringConverter.class)
-    @Column(name = "user_groups")
+    @Column(name = "user_groups", columnDefinition = "TEXT")
     private List<String> groups;
 }
