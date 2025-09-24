@@ -50,7 +50,7 @@ public class AuthService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    @Value("${caffe.service.url}")
+    @Value("${coffee.service.url}")
     private String caffeServiceUrl;
 
 
