@@ -17,8 +17,8 @@ public class GatewayConfig {
     @Value("${auth.service.url}")
     private String authServiceUrl;
 
-    @Value("${caffe.service.url}")
-    private String caffeServiceUrl;
+    @Value("${coffee.service.url}")
+    private String coffeeServiceUrl;
 
     @Value("${email.service.url}")
     private String emailServiceUrl;
@@ -38,11 +38,11 @@ public class GatewayConfig {
                                 .setName("authCircuitBreaker")
                                 .setFallbackUri("http://localhost:8080/fallback/auth")))
                         .uri(authServiceUrl))
-                .route("caffe-service", r -> r.path("/api/coffee/**")
+                .route("coffee-service", r -> r.path("/api/coffee/**")
                         .filters(f -> f.circuitBreaker(config -> config
-                                .setName("caffeCircuitBreaker")
+                                .setName("coffeeCircuitBreaker")
                                 .setFallbackUri("http://localhost:8080/fallback/coffee")))
-                        .uri(caffeServiceUrl))
+                        .uri(coffeeServiceUrl))
                 .route("email-service", r -> r.path("/api/email/**")
                         .filters(f -> f.circuitBreaker(config -> config
                                 .setName("emailCircuitBreaker")
