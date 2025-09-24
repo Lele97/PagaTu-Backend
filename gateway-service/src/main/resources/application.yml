@@ -23,14 +23,14 @@ spring:
               args:
                 name: authCircuitBreaker
                 fallback-uri: forward:/fallback/auth
-        - id: caffe-service
-          uri: ${caffe.service.url:http://localhost:8082}
+        - id: coffee-service
+          uri: ${coffee.service.url:http://localhost:8082}
           predicates:
             - Path=/api/coffee/**
           filters:
             - name: CircuitBreaker
               args:
-                name: caffeCircuitBreaker
+                name: coffeeCircuitBreaker
                 fallback-uri: forward:/fallback/coffee
         - id: email-service
           uri: ${email.service.url:http://localhost:8083}
@@ -53,7 +53,7 @@ resilience4j:
         failureRateThreshold: 50
         waitDurationInOpenState: 10000
         permittedNumberOfCallsInHalfOpenState: 3
-      caffeCircuitBreaker:
+      coffeeCircuitBreaker:
         slidingWindowSize: 10
         failureRateThreshold: 50
         waitDurationInOpenState: 10000
@@ -85,9 +85,9 @@ auth:
   service:
     url: ${AUTH_SERVICE_URL:http://localhost:8081}
 
-caffe:
+coffee:
   service:
-    url: ${CAFFE_SERVICE_URL:http://localhost:8082}
+    url: ${COFFEE_SERVICE_URL:http://localhost:8082}
 
 email:
   service:

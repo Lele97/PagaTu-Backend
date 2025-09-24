@@ -3,7 +3,7 @@ server:
 
 coffee:
   service:
-    base-url: ${CAFFE_SERVICE_URL:http://coffee:8082}
+    base-url: ${COFFEE_SERVICE_URL:http://coffee:8082}
 
 auth:
   service:
