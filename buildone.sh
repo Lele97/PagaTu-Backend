@@ -4,7 +4,6 @@ set -e
 
 SUCCESS_MSG="Successfully built:"
 ERROR_MSG="admitted values: 'auth', 'coffee', 'eureka', 'gateway', 'mail' or 'all' to build everything"
-REGISTRY="registry.pagatu.app"
 
 if [ $# -lt 1 ]; then echo "At least one param required: $ERROR_MSG"; return 0; fi;
 
@@ -32,14 +31,14 @@ export DOCKER_CLI_EXPERIMENTAL=enabled
 #docker buildx create --use --name multi-builder
 #docker buildx inspect --bootstrap
 
-docker login "$REGISTRY" -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+docker login "$REGISTRY_URL" -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 for var in "$@"
 do
     if [ "$var" = "auth" ] || [ "$var" = "all" ]
 	  then
 	    cd auth
 	    mvn clean install -DskipTests
-	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY"/pagatu-auth:latest --push .
+	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-auth:latest --push .
 	    SUCCESS_MSG="$SUCCESS_MSG auth "
 	    cd ..
     fi
@@ -48,7 +47,7 @@ do
 	  then
       cd coffee
       mvn clean install -DskipTests
-	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY"/pagatu-coffee:latest --push .
+	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-coffee:latest --push .
 	    SUCCESS_MSG="$SUCCESS_MSG coffee "
 	    cd ..
     fi
@@ -57,7 +56,7 @@ do
 	  then
       cd eureka-server
       mvn clean install -DskipTests
-	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY"/pagatu-eureka:latest --push .
+	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-eureka:latest --push .
 	    SUCCESS_MSG="$SUCCESS_MSG eureka "
 	    cd ..
     fi
@@ -66,7 +65,7 @@ do
 	  then
 	    cd gateway-service
 	    mvn clean install -DskipTests
-	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY"/pagatu-gateway:latest --push .
+	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-gateway:latest --push .
 	    SUCCESS_MSG="$SUCCESS_MSG gateway "
 	    cd ..
     fi
@@ -75,7 +74,7 @@ do
 	  then
 	    cd mail
 	    mvn clean install -DskipTests
-		  docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY"/pagatu-mail:latest --push .
+		  docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-mail:latest --push .
 	    SUCCESS_MSG="$SUCCESS_MSG mail "
 	    cd ..
     fi
