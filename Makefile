@@ -11,4 +11,4 @@ build-gateway:
 build-mail:
 	bash buildone.sh mail
 build-all:
-	bash buildone.sh mail
+	bash buildone.sh all
