@@ -1,6 +1,7 @@
 package com.pagatu.gateway_service.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -8,23 +9,40 @@ import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
+/**
+ * Configuration class for Cross-Origin Resource Sharing (CORS) settings.
+ * Defines allowed origins, methods, headers, and other CORS-related configurations
+ * for the API Gateway service.
+ */
 @Configuration
 @Slf4j
 public class CorsConfig {
 
-    private static final List<String> ALLOWED_ORIGIN_PATTERNS = Arrays.asList(
-            "http://localhost:8888",
-            "https://.*.trycloudflare.com",
-            "https://.*.ngrok-free.app"
-    );
+    @Value("${cors.allowed-origins}")
+    private String[] allowedOrigins;
 
+    @Value("${cors.allowed-methods}")
+    private String[] allowedMethods;
+
+    @Value("${cors.allowed-headers}")
+    private String[] allowedHeaders;
+
+    /**
+     * Creates and configures a CORS web filter for reactive environments.
+     * Registers CORS configuration for all endpoints.
+     *
+     * @return CorsWebFilter configured with allowed origins, methods, and headers
+     */
     @Bean
     public CorsWebFilter corsWebFilter() {
-        log.info("Configuring CORS with allowed origin patterns: {}", ALLOWED_ORIGIN_PATTERNS);
 
-        CorsConfiguration corsConfig = getCorsConfiguration();
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        corsConfig.setAllowedMethods(Arrays.asList(allowedMethods));
+        corsConfig.setAllowedHeaders(Arrays.asList(allowedHeaders));
+        corsConfig.setAllowCredentials(true);
+        corsConfig.setMaxAge(3600L);
 
         log.info("CORS configuration: allowCredentials={}, allowedOriginPatterns={}",
                 corsConfig.getAllowCredentials(), corsConfig.getAllowedOriginPatterns());
@@ -33,36 +51,5 @@ public class CorsConfig {
         source.registerCorsConfiguration("/**", corsConfig);
 
         return new CorsWebFilter(source);
-    }
-
-    private static CorsConfiguration getCorsConfiguration() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
-
-        // Use allowedOriginPatterns to support wildcards with credentials
-        corsConfig.setAllowedOriginPatterns(ALLOWED_ORIGIN_PATTERNS);
-
-        // Set allowed methods
-        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
-
-        // Set allowed headers
-        corsConfig.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Cache-Control",
-                "Content-Type",
-                "X-Requested-With",
-                "ngrok-skip-browser-warning",
-                "Accept",
-                "Origin",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers",
-                "X-Reset-Token"
-        ));
-
-        // Allow credentials
-        corsConfig.setAllowCredentials(true);
-
-        // Set max age for preflight requests
-        corsConfig.setMaxAge(3600L);
-        return corsConfig;
     }
 }

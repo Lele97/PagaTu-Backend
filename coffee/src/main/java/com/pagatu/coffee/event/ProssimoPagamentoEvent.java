@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProssimoPagamentoEvent {
+
     private Long ultimoPagamentoId;
     private String ultimoPagatoreUsername;
     private String ultimoPagatoreEmail;

@@ -34,7 +34,6 @@ public class Utente {
     @Column(name = "lastname")
     private String lastname;
 
-    // Replace direct many-to-many with membership relationship
     @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserGroupMembership> groupMemberships;
