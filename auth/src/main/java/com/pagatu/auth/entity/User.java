@@ -38,7 +38,7 @@ public class User {
     @Column(name = "last_name")
     private String lastName;
 
-    @Lob // Questo dice a Hibernate: "Crea un tipo lungo (CLOB) per gruppi"
     @Convert(converter = ListToStringConverter.class)
+    @Column(name = "user_groups", columnDefinition = "TEXT")
     private List<String> groups;
 }

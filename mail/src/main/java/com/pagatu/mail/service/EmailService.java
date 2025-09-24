@@ -7,6 +7,8 @@ import com.pagatu.mail.event.InvitationEvent;
 import com.pagatu.mail.event.ProssimoPagamentoEvent;
 import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SaltaPagamentoEvent;
+import com.pagatu.mail.exception.CustomExceptionEmailSend;
+import com.pagatu.mail.util.Constants;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.log4j.Log4j2;
@@ -24,6 +26,24 @@ import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+import static com.pagatu.mail.util.Constants.*;
+
+/**
+ * Service class responsible for sending various types of email notifications.
+ * This service handles email delivery for the Paga-Tu application, including:
+ * <ul>
+ *   <li>Payment notifications for coffee payment rotations</li>
+ *   <li>User invitations to groups</li>
+ *   <li>Password reset notifications</li>
+ *   <li>Payment skip notifications</li>
+ * </ul>
+ * The service integrates with external microservices to fetch user data and
+ * uses Thymeleaf templates for generating HTML email content. All operations
+ * are performed reactively using Spring WebFlux to ensure non-blocking
+ * execution.
+ * Email templates are processed with Italian locale settings and include
+ * proper formatting for dates and currency amounts.
+ */
 @Service
 @Log4j2
 public class EmailService {
@@ -41,7 +61,7 @@ public class EmailService {
     @Value("${app.frontend.domainUrl}")
     private String domainUrl;
 
-    @Value("${app.frontend.path}")
+    @Value("${app.frontend.invitationPath}")
     private String invitationUserToGroupPath;
 
     @Value("${app.frontend.resetPswPath}")
@@ -61,56 +81,141 @@ public class EmailService {
         this.webClientAuth = webClientBuilder.baseUrl(authServiceBaseUrl).build();
     }
 
+    /**
+     * Sends a payment notification email to the next payer in the rotation.
+     * <p>
+     * This method fetches user data for both the last payer and next payer,
+     * then sends a notification email informing the next payer that it's
+     * their turn to pay for coffee. The email includes details about the
+     * previous payment and the amount due.
+     * </p>
+     * <p>
+     * The operation is performed reactively, fetching user data from the
+     * coffee service and sending the email asynchronously to ensure
+     * non-blocking execution.
+     * </p>
+     *
+     * @param event the payment event containing payer information and payment details
+     * @return a Mono that completes when the email has been sent successfully
+     * @throws IllegalArgumentException if event is null
+     * @see ProssimoPagamentoEvent
+     */
     public Mono<Void> inviaNotificaProssimoPagatore(ProssimoPagamentoEvent event) {
         return fetchUserData(event)
                 .flatMap(userData -> sendEmail(event, userData))
-                .doOnSuccess(__ -> log.info("Email di notifica inviata con successo a {} e {}",
+                .doOnSuccess(success -> log.info("Email di notifica inviata con successo a {} e {}",
                         event.getProssimoEmail(), event.getUltimoPagatoreEmail()))
                 .doOnError(error ->
-                        log.error("Errore nell'invio dell'email di notifica", error)
+                        log.error(LOG_ERROR_NOTIFICA, error)
                 )
                 .then();
     }
 
+    /**
+     * Sends a notification email when a payment is skipped.
+     * <p>
+     * This method notifies the next person in the payment rotation that
+     * it's now their turn to pay after someone has skipped their payment.
+     * The email is personalized with the recipient's name and includes
+     * company branding information.
+     * </p>
+     * <p>
+     * User data is fetched reactively from the coffee service before
+     * sending the notification email to ensure accurate recipient information.
+     * </p>
+     *
+     * @param event the skip payment event containing next payer information
+     * @return a Mono that completes when the email has been sent successfully
+     * @throws IllegalArgumentException if event is null
+     * @see SaltaPagamentoEvent
+     */
     public Mono<Void> inviaNotificaSaltaPagamento(SaltaPagamentoEvent event) {
-        return fetchUserData_SaltaPagamento(event)
+        return fetchUserDataSaltaPagamento(event)
                 .flatMap(userDataSaltaPagamento -> sendEmailSaltaPagamento(event, userDataSaltaPagamento))
-                .doOnSuccess(__ -> log.info("Email di notifica inviata con successo a {}",
-                        event.getProssimoEmail()))
+                .doOnSuccess(success -> log.info("{} a {}", LOG_INFO_NOTIFICA, event.getProssimoEmail()))
                 .doOnError(error ->
-                        log.error("Errore nell'invio dell'email di notifica", error)
+                        log.error(LOG_ERROR_NOTIFICA, error)
                 )
                 .then();
     }
 
+    /**
+     * Sends a password reset notification email to the user.
+     * <p>
+     * This method handles the password reset workflow by fetching user data
+     * from the authentication service and sending a secure email containing
+     * a reset link with a unique token. The email is personalized with the
+     * user's information and provides a secure way to reset their password.
+     * </p>
+     * <p>
+     * The reset link includes a unique token for security and directs users
+     * to the frontend application's password reset page.
+     * </p>
+     *
+     * @param event the reset password event containing user email and security token
+     * @return a Mono that completes when the email has been sent successfully
+     * @throws IllegalArgumentException if event is null
+     * @see ResetPasswordMailEvent
+     */
     public Mono<Void> inviaNotificaResetPassword(ResetPasswordMailEvent event) {
-        return fetchUserData_ResetPassword(event)
+        return fetchUserDataResetPassword(event)
                 .flatMap(userDataResetForgotUserPassword -> sendResetPasswordMail(event, userDataResetForgotUserPassword))
-                .doOnSuccess(__ -> log.info("Email di notifica inviata con successo a {}",
-                        event.getEmail()))
+                .doOnSuccess(success -> log.info("{} a {}", LOG_INFO_NOTIFICA, event.getEmail()))
                 .doOnError(error ->
-                        log.error("Errore nell'invio dell'email di notifica", error)
+                        log.error(LOG_ERROR_NOTIFICA, error)
                 )
                 .then();
     }
 
+    /**
+     * Sends an invitation email to a user being invited to join a group.
+     * <p>
+     * This method sends an email invitation containing a direct link that
+     * allows the user to accept the invitation and join the specified group.
+     * The invitation link includes encoded parameters for the username and
+     * group name to ensure secure and accurate invitation processing.
+     * </p>
+     * <p>
+     * This method operates without fetching additional user data since
+     * the invitation event contains all necessary information for generating
+     * the invitation email.
+     * </p>
+     *
+     * @param event the invitation event containing user and group information
+     * @return a Mono that completes when the email has been sent successfully
+     * @throws IllegalArgumentException if event is null
+     * @see InvitationEvent
+     */
     public Mono<Void> inviaInvitoUtenteNelGruppo(InvitationEvent event) {
         return sendEmailInvitation(event)
-                .doOnSuccess(__ -> log.info("Email di invito inviata con successo a {}", event.getEmail()))
-                .doOnError(error -> log.error("Errore nell'invio dell'email di invito", error))
+                .doOnSuccess(success -> log.info("{} a {}", LOG_INFO_INVITO, event.getEmail()))
+                .doOnError(error -> log.error(LOG_ERROR_INVITO, error))
                 .then();
     }
 
+    /**
+     * Fetches user data for both the last payer and next payer from the coffee service.
+     * <p>
+     * This method makes parallel HTTP requests to retrieve user information
+     * for both users involved in the payment notification. The requests are
+     * executed concurrently to improve performance and the results are combined
+     * into a single UserData record.
+     * </p>
+     *
+     * @param event the payment event containing usernames for both payers
+     * @return a Mono containing UserData with both user information
+     * @throws IllegalArgumentException if event is null
+     */
     private Mono<UserData> fetchUserData(ProssimoPagamentoEvent event) {
         Mono<UltimoPagatoreDto> ultimoPagatoreMono = webClientCoffee.get()
-                .uri("/api/coffee/user?username={username}", event.getUltimoPagatoreUsername())
+                .uri(API_COFFEE_USER, event.getUltimoPagatoreUsername())
                 .retrieve()
                 .bodyToMono(UltimoPagatoreDto.class)
                 .doOnSuccess(response -> log.info("Ultimo pagatore recuperato con successo: {}", response))
                 .doOnError(error -> log.error("Errore durante il recupero dell'ultimo pagatore", error));
 
         Mono<ProssimoPagatoreDto> prossimoPagatoreMono = webClientCoffee.get()
-                .uri("/api/coffee/user?username={username}", event.getProssimoUsername())
+                .uri(API_COFFEE_USER, event.getProssimoUsername())
                 .retrieve()
                 .bodyToMono(ProssimoPagatoreDto.class)
                 .doOnSuccess(response -> log.info("Prossimo pagatore recuperato con successo: {}", response))
@@ -120,29 +225,70 @@ public class EmailService {
                 .map(tuple -> new UserData(tuple.getT1(), tuple.getT2()));
     }
 
-    private Mono<UserData_SaltaPagamento> fetchUserData_SaltaPagamento(SaltaPagamentoEvent event) {
+    /**
+     * Fetches user data for the next payer when a payment is skipped.
+     * <p>
+     * This method retrieves user information from the coffee service
+     * for the person who will be the next payer after someone has
+     * skipped their payment turn. The data is used to personalize
+     * the skip payment notification email.
+     * </p>
+     *
+     * @param event the skip payment event containing the next payer's username
+     * @return a Mono containing UserDataSaltaPagamento with the next payer's information
+     * @throws IllegalArgumentException if event is null
+     */
+    private Mono<UserDataSaltaPagamento> fetchUserDataSaltaPagamento(SaltaPagamentoEvent event) {
         return webClientCoffee.get()
-                .uri("/api/coffee/user?username={username}", event.getProssimoUsername())
+                .uri(API_COFFEE_USER, event.getProssimoUsername())
                 .retrieve()
                 .bodyToFlux(ProssimoPagatoreDto.class)
                 .next()
-                .doOnSuccess(response -> log.info("Prossimo pagatore recuperato con successo: {}", response))
-                .doOnError(error -> log.error("Errore durante il recupero del prossimo pagatore", error))
-                .map(UserData_SaltaPagamento::new);
+                .doOnSuccess(response -> log.info(LOG_INFO_PAGATORE + ": {}", response))
+                .doOnError(error -> log.error(LOG_ERROR_PAGATORE, error))
+                .map(UserDataSaltaPagamento::new);
     }
 
-    private Mono<UserData_ResetForgotUserPassword> fetchUserData_ResetPassword(ResetPasswordMailEvent event) {
+    /**
+     * Fetches user data for password reset functionality.
+     * <p>
+     * This method retrieves user information from the authentication service
+     * using the user's email address. This data is used to personalize
+     * the password reset email with the user's details and ensure the
+     * reset request is legitimate.
+     * </p>
+     *
+     * @param event the reset password event containing the user's email
+     * @return a Mono containing UserDataResetForgotUserPassword with user information
+     * @throws IllegalArgumentException if event is null
+     */
+    private Mono<UserDataResetForgotUserPassword> fetchUserDataResetPassword(ResetPasswordMailEvent event) {
         return webClientAuth.get()
-                .uri("/api/auth/user/get?email={email}", event.getEmail())
+                .uri(API_AUTH_USER_GET, event.getEmail())
                 .retrieve()
                 .bodyToFlux(UtenteDto.class)
                 .next()
-                .doOnSuccess(response -> log.info("Utente recuperato con successo: {}", response))
-                .doOnError(error -> log.error("Errore durante il recupero dell'utente", error))
-                .map(UserData_ResetForgotUserPassword::new);
+                .doOnSuccess(response -> log.info(LOG_INFO_UTENTE + ": {}", response))
+                .doOnError(error -> log.error(LOG_ERROR_UTENTE, error))
+                .map(UserDataResetForgotUserPassword::new);
     }
 
-    private Mono<Void> sendResetPasswordMail(ResetPasswordMailEvent event, UserData_ResetForgotUserPassword userDataResetForgotUserPassword) {
+    /**
+     * Sends a password reset email to the user.
+     * <p>
+     * This method constructs and sends an email containing a secure link
+     * that allows the user to reset their forgotten password. The email
+     * is personalized with the user's information and includes a unique
+     * token for security purposes. The reset link is constructed to match
+     * the frontend application's routing structure.
+     * </p>
+     *
+     * @param event                           the reset password event containing token and email information
+     * @param userDataResetForgotUserPassword the user data retrieved from the auth service
+     * @return a Mono that completes when the email has been sent successfully
+     * @throws CustomExceptionEmailSend if there's an error sending the email
+     */
+    private Mono<Void> sendResetPasswordMail(ResetPasswordMailEvent event, UserDataResetForgotUserPassword userDataResetForgotUserPassword) {
         return Mono.fromRunnable(() -> {
             Context context = getContextForResetPassword(event, userDataResetForgotUserPassword);
             buildAndSendEmail(
@@ -155,6 +301,21 @@ public class EmailService {
         });
     }
 
+    /**
+     * Sends a payment notification email to the next payer.
+     * <p>
+     * This method constructs and sends an email notifying the next person
+     * in the rotation that it's their turn to pay for coffee. The email
+     * includes information about the previous payer, payment date, amount,
+     * and is sent to both the next payer and includes the last payer in BCC
+     * for transparency.
+     * </p>
+     *
+     * @param event    the payment event containing payment details
+     * @param userData the combined user data for both last and next payers
+     * @return a Mono that completes when the email has been sent successfully
+     * @throws CustomExceptionEmailSend if there's an error sending the email
+     */
     private Mono<Void> sendEmail(ProssimoPagamentoEvent event, UserData userData) {
         return Mono.fromRunnable(() -> {
             Context context = getContext(event, userData);
@@ -168,6 +329,20 @@ public class EmailService {
         });
     }
 
+    /**
+     * Sends an invitation email to invite a user to join a group.
+     * <p>
+     * This method constructs and sends an email invitation containing
+     * a direct link that allows the recipient to accept the invitation
+     * and join the specified group. The link includes encoded parameters
+     * for secure invitation processing and follows the React routing
+     * structure of the frontend application.
+     * </p>
+     *
+     * @param event the invitation event containing user and group details
+     * @return a Mono that completes when the email has been sent successfully
+     * @throws CustomExceptionEmailSend if there's an error sending the email
+     */
     private Mono<Void> sendEmailInvitation(InvitationEvent event) {
         return Mono.fromRunnable(() -> {
             Context context = getContextForInvitation(event);
@@ -181,7 +356,21 @@ public class EmailService {
         });
     }
 
-    private Mono<Void> sendEmailSaltaPagamento(SaltaPagamentoEvent event, UserData_SaltaPagamento userDataSaltaPagamento) {
+    /**
+     * Sends a notification email when a payment has been skipped.
+     * <p>
+     * This method constructs and sends an email to notify the next person
+     * that it's now their turn to pay after someone has skipped their payment.
+     * The email is personalized with the recipient's name and company information
+     * to maintain a professional and friendly tone.
+     * </p>
+     *
+     * @param event                  the skip payment event containing next payer information
+     * @param userDataSaltaPagamento the user data for the next payer
+     * @return a Mono that completes when the email has been sent successfully
+     * @throws CustomExceptionEmailSend if there's an error sending the email
+     */
+    private Mono<Void> sendEmailSaltaPagamento(SaltaPagamentoEvent event, UserDataSaltaPagamento userDataSaltaPagamento) {
         return Mono.fromRunnable(() -> {
             Context context = getContextForSaltaPagamento(userDataSaltaPagamento);
             buildAndSendEmail(
@@ -194,6 +383,31 @@ public class EmailService {
         });
     }
 
+    /**
+     * Builds and sends an email using the specified parameters.
+     * <p>
+     * This method creates a MIME message with proper headers, processes
+     * the Thymeleaf template with the provided context, and sends the email
+     * through the configured mail sender. It supports both TO and BCC recipients
+     * and includes custom headers for better email delivery and management.
+     * </p>
+     * <p>
+     * The method sets appropriate email headers including:
+     * <ul>
+     *   <li>X-Mailer for identification</li>
+     *   <li>X-Priority for message priority</li>
+     *   <li>List-Unsubscribe for compliance</li>
+     *   <li>X-Auto-Response-Suppress to prevent auto-replies</li>
+     * </ul>
+     * </p>
+     *
+     * @param to           the primary recipient's email address
+     * @param bcc          the blind carbon copy recipient's email address (can be null)
+     * @param subject      the email subject line
+     * @param templateName the name of the Thymeleaf template to process
+     * @param context      the Thymeleaf context containing template variables
+     * @throws CustomExceptionEmailSend if there's an error creating or sending the email
+     */
     private void buildAndSendEmail(String to, String bcc, String subject, String templateName, Context context) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -216,62 +430,149 @@ public class EmailService {
 
             mailSender.send(message);
         } catch (MessagingException e) {
-            throw new RuntimeException("Errore nell'invio dell'email", e);
+            throw new CustomExceptionEmailSend(e.getMessage());
         }
     }
 
+    /**
+     * Creates a Thymeleaf context for payment notification emails.
+     * <p>
+     * This method prepares template variables including payer names,
+     * payment date, amount, and company information. All data is
+     * formatted appropriately for display in Italian locale with
+     * proper date formatting and currency representation.
+     * </p>
+     *
+     * @param event    the payment event containing payment details
+     * @param userData the user data for both last and next payers
+     * @return a Thymeleaf Context object populated with template variables
+     * @throws IllegalArgumentException if event or userData is null
+     */
     private Context getContext(ProssimoPagamentoEvent event, UserData userData) {
         Context context = new Context(ITALIAN_LOCALE);
-        context.setVariable("ultimoPagatore",
+        context.setVariable(Constants.TEMPLATE_VAR_ULTIMO_PAGATORE,
                 userData.ultimoPagatore().getName() + " " + userData.ultimoPagatore().getLastname());
-        context.setVariable("prossimoPagatore",
+        context.setVariable(Constants.TEMPLATE_VAR_PROSSIMO_PAGATORE,
                 userData.prossimoPagatore().getName() + " " + userData.prossimoPagatore().getLastname());
-        context.setVariable("dataUltimoPagamento",
+        context.setVariable(Constants.TEMPLATE_VAR_DATA_ULTIMO_PAGAMENTO,
                 event.getDataUltimoPagamento().format(DATE_FORMATTER));
-        context.setVariable("importo", String.format("%.2f€", event.getImporto()));
-        context.setVariable("companyName", company);
+        context.setVariable(Constants.TEMPLATE_VAR_IMPORTO, String.format("%.2f€", event.getImporto()));
+        context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
         return context;
     }
 
+    /**
+     * Creates a Thymeleaf context for group invitation emails.
+     * <p>
+     * This method prepares template variables including user information,
+     * group details, invitation sender, and generates a secure invitation
+     * link with properly encoded parameters. The link follows React routing
+     * structure for frontend compatibility and ensures proper URL encoding
+     * to handle special characters in usernames and group names.
+     * </p>
+     *
+     * @param event the invitation event containing user and group information
+     * @return a Thymeleaf Context object populated with invitation template variables
+     * @throws IllegalArgumentException if event is null
+     */
     private Context getContextForInvitation(InvitationEvent event) {
         Context context = new Context(ITALIAN_LOCALE);
-        context.setVariable("user", event.getUsername());
-        context.setVariable("userWhoSentTheInvitation", event.getUserWhoSentTheInvitation());
-        context.setVariable("groupName", event.getGroupName());
+        context.setVariable(Constants.TEMPLATE_VAR_USER, event.getUsername());
+        context.setVariable(Constants.TEMPLATE_VAR_USER_WHO_SENT_INVITATION, event.getUserWhoSentTheInvitation());
+        context.setVariable(Constants.TEMPLATE_VAR_GROUP_NAME, event.getGroupName());
 
-        // Fixed invitation link to match React routing structure
         String encodedUsername = UriUtils.encode(event.getUsername(), StandardCharsets.UTF_8);
         String encodedGroupName = UriUtils.encode(event.getGroupName(), StandardCharsets.UTF_8);
         String invitationLink = String.format("%s%s?username=%s&groupName=%s",
-                domainUrl,invitationUserToGroupPath, encodedUsername, encodedGroupName);
+                domainUrl, invitationUserToGroupPath, encodedUsername, encodedGroupName);
 
-        context.setVariable("link", invitationLink);
-        context.setVariable("companyName", company);
+        context.setVariable(Constants.TEMPLATE_VAR_LINK, invitationLink);
+        context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
         return context;
     }
 
-    private Context getContextForSaltaPagamento(UserData_SaltaPagamento userDataSaltaPagamento) {
+    /**
+     * Creates a Thymeleaf context for skip payment notification emails.
+     * <p>
+     * This method prepares template variables for notifying the next payer
+     * when someone has skipped their payment turn. It includes the next
+     * payer's full name and company information to create a personalized
+     * and professional notification.
+     * </p>
+     *
+     * @param userDataSaltaPagamento the user data for the next payer
+     * @return a Thymeleaf Context object populated with skip payment template variables
+     * @throws IllegalArgumentException if userDataSaltaPagamento is null
+     */
+    private Context getContextForSaltaPagamento(UserDataSaltaPagamento userDataSaltaPagamento) {
         Context context = new Context(ITALIAN_LOCALE);
-        context.setVariable("prossimoPagatore",
+        context.setVariable(Constants.TEMPLATE_VAR_PROSSIMO_PAGATORE,
                 userDataSaltaPagamento.prossimoPagatoreDto().getName() + " " + userDataSaltaPagamento.prossimoPagatoreDto().getLastname());
-        context.setVariable("companyName", company);
+        context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
         return context;
     }
 
-    private Context getContextForResetPassword(ResetPasswordMailEvent event, UserData_ResetForgotUserPassword userDataResetForgotUserPassword) {
+    /**
+     * Creates a Thymeleaf context for password reset emails.
+     * <p>
+     * This method prepares template variables for password reset emails,
+     * including the user's username and a secure reset link containing
+     * the unique token. The reset link is constructed to match the
+     * frontend routing structure and includes the security token as a
+     * query parameter for verification purposes.
+     * </p>
+     *
+     * @param event                           the reset password event containing the security token
+     * @param userDataResetForgotUserPassword the user data from the auth service
+     * @return a Thymeleaf Context object populated with reset password template variables
+     * @throws IllegalArgumentException if event or userDataResetForgotUserPassword is null
+     */
+    private Context getContextForResetPassword(ResetPasswordMailEvent event, UserDataResetForgotUserPassword userDataResetForgotUserPassword) {
         Context context = new Context(ITALIAN_LOCALE);
-        context.setVariable("user", userDataResetForgotUserPassword.utentedto().getUsername());
+        context.setVariable(Constants.TEMPLATE_VAR_USER, userDataResetForgotUserPassword.utentedto().getUsername());
         String resetLink = String.format("%s%s?key=%s", domainUrl, resetPswPath, event.getToken());
-        context.setVariable("resetLink", resetLink);
-        context.setVariable("companyName", company);
+        context.setVariable(Constants.TEMPLATE_VAR_RESET_LINK, resetLink);
+        context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
         return context;
     }
 
+    /**
+     * Record representing user data for payment notifications.
+     * <p>
+     * This record holds both the last payer and next payer information
+     * required for generating payment notification emails. It serves as
+     * a data container to combine information from multiple service calls.
+     * </p>
+     *
+     * @param ultimoPagatore   the DTO containing last payer information
+     * @param prossimoPagatore the DTO containing next payer information
+     */
     private record UserData(UltimoPagatoreDto ultimoPagatore, ProssimoPagatoreDto prossimoPagatore) {
     }
 
-    private record UserData_SaltaPagamento(ProssimoPagatoreDto prossimoPagatoreDto) {
+    /**
+     * Record representing user data for skip payment notifications.
+     * <p>
+     * This record holds the next payer information required for
+     * generating skip payment notification emails. It encapsulates
+     * the user data retrieved from the coffee service.
+     * </p>
+     *
+     * @param prossimoPagatoreDto the DTO containing next payer information
+     */
+    private record UserDataSaltaPagamento(ProssimoPagatoreDto prossimoPagatoreDto) {
     }
 
-    private record UserData_ResetForgotUserPassword(UtenteDto utentedto) {}
+    /**
+     * Record representing user data for password reset functionality.
+     * <p>
+     * This record holds user information retrieved from the authentication
+     * service for generating personalized password reset emails. It ensures
+     * type safety and immutability for user data handling.
+     * </p>
+     *
+     * @param utentedto the DTO containing user information from auth service
+     */
+    private record UserDataResetForgotUserPassword(UtenteDto utentedto) {
+    }
 }
