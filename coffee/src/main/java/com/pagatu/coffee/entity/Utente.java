@@ -2,9 +2,7 @@ package com.pagatu.coffee.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
@@ -13,6 +11,8 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "groupMemberships")
+@EqualsAndHashCode(exclude = "groupMemberships")
 public class Utente {
 
     @Id
@@ -37,14 +37,4 @@ public class Utente {
     @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserGroupMembership> groupMemberships;
-
-    @Override
-    public String toString() {
-        return "Utente{" +
-                "id=" + id +
-                ", username='" + username + '\'' +
-                ", email='" + email + '\'' +
-                ", groupMembershipsCount=" + (groupMemberships != null ? groupMemberships.size() : 0) +
-                '}';
-    }
 }

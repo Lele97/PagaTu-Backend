@@ -50,10 +50,6 @@ public class AuthService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
-    @Value("${coffee.service.url}")
-    private String caffeServiceUrl;
-
-
     private static final int LIMITER = 10;
     private static final int TOKEN_EXPIRY_MINUTES = 30;
     private final PasswordEncoder passwordEncoder;
@@ -66,9 +62,10 @@ public class AuthService {
                        UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        WebClient.Builder webClientBuilder,
+                       @Value("${coffee.service.url}") String coffeeServiceUrl,
                        @Autowired(required = false) @Qualifier("resetPasswordMailKafkaTemplate") KafkaTemplate<String, ResetPasswordMailEvent> kafkaTemplateResetPasswordMail) {
         this.passwordEncoder = passwordEncoder;
-        this.webClient = webClientBuilder.baseUrl(caffeServiceUrl).build();
+        this.webClient = webClientBuilder.baseUrl(coffeeServiceUrl).build();
         this.tokenForUserPasswordResetRepository = tokenForUserPasswordResetRepository;
         this.userRepository = userRepository;
         this.kafkaTemplateResetPasswordMail = kafkaTemplateResetPasswordMail;
