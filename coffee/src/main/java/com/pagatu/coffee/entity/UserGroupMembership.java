@@ -3,9 +3,7 @@ package com.pagatu.coffee.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +14,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "pagamenti"})
+@ToString(exclude = {"utente", "group", "pagamenti"})
+@EqualsAndHashCode(exclude = {"utente", "group", "pagamenti"})
 public class UserGroupMembership {
 
     @Id
@@ -64,14 +64,5 @@ public class UserGroupMembership {
             }
             myTurn = false;
         }
-    }
-
-    @Override
-    public String toString() {
-        return "UserGroupMembership{" +
-                "id=" + id +
-                ", status=" + status +
-                ", isAdmin=" + isAdmin +
-                '}';
     }
 }
