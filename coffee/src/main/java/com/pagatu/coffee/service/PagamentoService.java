@@ -437,11 +437,10 @@ public class PagamentoService {
      * @return List of PagamentoDto with payment history
      */
     public List<PagamentoDto> getUltimiPagamentiByUsername(String username) {
-
         Utente utente = utenteRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
 
-        List<Pagamento> pagamenti = pagamentoRepository.findByUtenteOrderByDataPagamentoDesc(utente);
+        List<Pagamento> pagamenti = pagamentoRepository.findWithUserGroupMembershipByUtenteOrderByDataPagamentoDesc(utente);
 
         return pagamenti.stream()
                 .map(this::convertToPagamentoDto)
