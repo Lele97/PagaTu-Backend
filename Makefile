@@ -1,14 +1,14 @@
 #!/usr/bin/make
 
 build-auth:
-	bash buildone.sh auth
+	bash script/buildone.sh auth
 build-coffee:
-	bash buildone.sh coffee
+	bash script/buildone.sh coffee
 build-eureka:
-	bash buildone.sh eureka
+	bash script/buildone.sh eureka
 build-gateway:
-	bash buildone.sh gateway
+	bash script/buildone.sh gateway
 build-mail:
-	bash buildone.sh mail
+	bash script/buildone.sh mail
 build-all:
-	bash buildone.sh all
+	bash script/buildone.sh all

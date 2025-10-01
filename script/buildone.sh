@@ -24,6 +24,7 @@ fi
 
 echo "INFO - You can pass the 'all' argument to build and push all the applications"
 
+cd ..
 
 #git pull origin develop
 
@@ -39,6 +40,7 @@ do
 	    cd auth
 	    mvn clean install -DskipTests
 	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-auth:latest --push .
+	    kubectl rollout restart deploy pagatu-auth -n pagatu
 	    SUCCESS_MSG="$SUCCESS_MSG auth "
 	    cd ..
     fi
@@ -48,6 +50,7 @@ do
       cd coffee
       mvn clean install -DskipTests
 	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-coffee:latest --push .
+	    kubectl rollout restart deploy pagatu-coffee -n pagatu
 	    SUCCESS_MSG="$SUCCESS_MSG coffee "
 	    cd ..
     fi
@@ -57,6 +60,7 @@ do
       cd eureka-server
       mvn clean install -DskipTests
 	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-eureka:latest --push .
+	    kubectl rollout restart deploy pagatu-eureka -n pagatu
 	    SUCCESS_MSG="$SUCCESS_MSG eureka "
 	    cd ..
     fi
@@ -66,6 +70,7 @@ do
 	    cd gateway-service
 	    mvn clean install -DskipTests
 	    docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-gateway:latest --push .
+	    kubectl rollout restart deploy pagatu-gateway -n pagatu
 	    SUCCESS_MSG="$SUCCESS_MSG gateway "
 	    cd ..
     fi
@@ -75,6 +80,7 @@ do
 	    cd mail
 	    mvn clean install -DskipTests
 		  docker buildx build --platform linux/amd64,linux/arm64 -t "$REGISTRY_URL"/pagatu-mail:latest --push .
+		  kubectl rollout restart deploy pagatu-mail -n pagatu
 	    SUCCESS_MSG="$SUCCESS_MSG mail "
 	    cd ..
     fi
