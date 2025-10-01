@@ -3,6 +3,7 @@
 set -e
 
 cd "$(dirname "$0")"
+cd ..
 
 cd auth
 mvn clean install -DskipTests

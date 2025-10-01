@@ -34,4 +34,4 @@ build/
 
 ### Project ###
 auth/auth
-.env.buildone
+script/.env.buildone
