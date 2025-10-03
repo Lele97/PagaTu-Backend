@@ -14,15 +14,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class GatewayConfig {
 
-    @Value("${auth.service.url}")
-    private String authServiceUrl;
-
-    @Value("${coffee.service.url}")
-    private String coffeeServiceUrl;
-
-    @Value("${email.service.url}")
-    private String emailServiceUrl;
-
     /**
      * Configures the route mappings for different microservices.
      * Sets up path-based routing with circuit breaker fallback mechanisms.
@@ -36,18 +27,18 @@ public class GatewayConfig {
                 .route("auth-service", r -> r.path("/api/auth/**")
                         .filters(f -> f.circuitBreaker(config -> config
                                 .setName("authCircuitBreaker")
-                                .setFallbackUri("http://localhost:8080/fallback/auth")))
-                        .uri(authServiceUrl))
+                                .setFallbackUri("forward:/fallback/auth")))
+                        .uri("lb://auth"))
                 .route("coffee-service", r -> r.path("/api/coffee/**")
                         .filters(f -> f.circuitBreaker(config -> config
                                 .setName("coffeeCircuitBreaker")
-                                .setFallbackUri("http://localhost:8080/fallback/coffee")))
-                        .uri(coffeeServiceUrl))
+                                .setFallbackUri("forward:/fallback/coffee")))
+                        .uri("lb://coffee"))
                 .route("email-service", r -> r.path("/api/email/**")
                         .filters(f -> f.circuitBreaker(config -> config
                                 .setName("emailCircuitBreaker")
-                                .setFallbackUri("http://localhost:8080/fallback/email")))
-                        .uri(emailServiceUrl))
+                                .setFallbackUri("forward:/fallback/mail")))
+                        .uri("lb://mail"))
                 .build();
     }
 }
