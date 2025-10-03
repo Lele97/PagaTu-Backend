@@ -15,7 +15,7 @@ spring:
             fallback-uri: forward:/fallback/default
       routes:
         - id: auth-service
-          uri: ${auth.service.url:http://localhost:8081}
+          uri: lb://auth
           predicates:
             - Path=/api/auth/**
           filters:
@@ -24,7 +24,7 @@ spring:
                 name: authCircuitBreaker
                 fallback-uri: forward:/fallback/auth
         - id: coffee-service
-          uri: ${coffee.service.url:http://localhost:8082}
+          uri: lb://coffe
           predicates:
             - Path=/api/coffee/**
           filters:
@@ -33,7 +33,7 @@ spring:
                 name: coffeeCircuitBreaker
                 fallback-uri: forward:/fallback/coffee
         - id: email-service
-          uri: ${email.service.url:http://localhost:8083}
+          uri: lb://mail
           predicates:
             - Path=/api/email/**
           filters:
@@ -84,18 +84,6 @@ logging:
     org.springframework.cloud.gateway: DEBUG
     org.springframework.web.reactive.function.client: DEBUG
     com.pagatu.gateway_service.filter: DEBUG
-
-auth:
-  service:
-    url: ${AUTH_SERVICE_URL:http://localhost:8081}
-
-coffee:
-  service:
-    url: ${COFFEE_SERVICE_URL:http://localhost:8082}
-
-email:
-  service:
-    url: ${EMAIL_SERVICE_URL:http://localhost:8083}
 
 jwt:
   secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
