@@ -28,6 +28,12 @@ public class CorsConfig {
     @Value("${cors.allowed-headers}")
     private String[] allowedHeaders;
 
+    @Value("${cors.exposed-headers:Authorization,Content-Type}")
+    private String[] exposedHeaders;
+
+    @Value("${cors.max-age:3600}")
+    private Long maxAge;
+
     /**
      * Creates and configures a CORS web filter for reactive environments.
      * Registers CORS configuration for all endpoints.
@@ -36,16 +42,19 @@ public class CorsConfig {
      */
     @Bean
     public CorsWebFilter corsWebFilter() {
-
         CorsConfiguration corsConfig = new CorsConfiguration();
         corsConfig.setAllowedOrigins(Arrays.asList(allowedOrigins));
         corsConfig.setAllowedMethods(Arrays.asList(allowedMethods));
         corsConfig.setAllowedHeaders(Arrays.asList(allowedHeaders));
+        corsConfig.setExposedHeaders(Arrays.asList(exposedHeaders));
         corsConfig.setAllowCredentials(true);
-        corsConfig.setMaxAge(3600L);
+        corsConfig.setMaxAge(maxAge);
 
-        log.info("CORS configuration: allowCredentials={}, allowedOriginPatterns={}",
-                corsConfig.getAllowCredentials(), corsConfig.getAllowedOriginPatterns());
+        log.info("CORS Configuration initialized:");
+        log.info("  Allowed Origins: {}", Arrays.toString(allowedOrigins));
+        log.info("  Allowed Methods: {}", Arrays.toString(allowedMethods));
+        log.info("  Allowed Headers: {}", Arrays.toString(allowedHeaders));
+        log.info("  Allow Credentials: {}", corsConfig.getAllowCredentials());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);

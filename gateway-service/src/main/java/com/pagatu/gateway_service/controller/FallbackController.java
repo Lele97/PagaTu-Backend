@@ -2,9 +2,7 @@ package com.pagatu.gateway_service.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,6 +10,7 @@ import java.util.Map;
 /**
  * Controller handling fallback responses for circuit breaker patterns.
  * Provides graceful degradation when microservices are unavailable.
+ * Supports all HTTP methods to prevent 405 errors.
  */
 @RestController
 @RequestMapping("/fallback")
@@ -23,10 +22,11 @@ public class FallbackController {
 
     /**
      * Generic fallback endpoint for unspecified services.
+     * Supports all HTTP methods.
      *
      * @return ResponseEntity with service unavailable status and error message
      */
-    @GetMapping("/default")
+    @RequestMapping(value = "/default", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
     public ResponseEntity<Map<String, Object>> defaultFallback() {
         Map<String, Object> response = new HashMap<>();
         response.put(KEY_ERROR, "Service Temporarily Unavailable");
@@ -37,10 +37,11 @@ public class FallbackController {
 
     /**
      * Fallback endpoint for authentication service failures.
+     * Supports all HTTP methods.
      *
      * @return ResponseEntity with service unavailable status and authentication-specific error message
      */
-    @GetMapping("/auth")
+    @RequestMapping(value = "/auth", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
     public ResponseEntity<Map<String, Object>> authFallback() {
         Map<String, Object> response = new HashMap<>();
         response.put(KEY_ERROR, "Authentication Service Unavailable");
@@ -51,10 +52,11 @@ public class FallbackController {
 
     /**
      * Fallback endpoint for coffee service failures.
+     * Supports all HTTP methods.
      *
      * @return ResponseEntity with service unavailable status and coffee-specific error message
      */
-    @GetMapping("/coffee")
+    @RequestMapping(value = "/coffee", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
     public ResponseEntity<Map<String, Object>> coffeeFallback() {
         Map<String, Object> response = new HashMap<>();
         response.put(KEY_ERROR, "Coffee Service Unavailable");
@@ -65,10 +67,12 @@ public class FallbackController {
 
     /**
      * Fallback endpoint for email service failures.
+     * Supports all HTTP methods.
+     * NOTE: Endpoint is /email (not /mail) to match GatewayConfig.
      *
      * @return ResponseEntity with service unavailable status and email-specific error message
      */
-    @GetMapping("/email")
+    @RequestMapping(value = "/mail", method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH})
     public ResponseEntity<Map<String, Object>> emailFallback() {
         Map<String, Object> response = new HashMap<>();
         response.put(KEY_ERROR, "Email Service Unavailable");
