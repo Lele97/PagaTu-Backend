@@ -4,43 +4,13 @@ server:
 spring:
   application:
     name: gateway-service
+
   cloud:
-    config:
-      enabled: false
     gateway:
-      default-filters:
-        - name: CircuitBreaker
-          args:
-            name: defaultCircuitBreaker
-            fallback-uri: forward:/fallback/default
-      routes:
-        - id: auth-service
-          uri: lb://auth
-          predicates:
-            - Path=/api/auth/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: authCircuitBreaker
-                fallback-uri: forward:/fallback/auth
-        - id: coffee-service
-          uri: lb://coffe
-          predicates:
-            - Path=/api/coffee/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: coffeeCircuitBreaker
-                fallback-uri: forward:/fallback/coffee
-        - id: email-service
-          uri: lb://mail
-          predicates:
-            - Path=/api/email/**
-          filters:
-            - name: CircuitBreaker
-              args:
-                name: emailCircuitBreaker
-                fallback-uri: forward:/fallback/email
+      # Increase timeouts to prevent premature 503s
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 30s
 
   main:
     web-application-type: reactive
@@ -85,15 +55,32 @@ logging:
     org.springframework.web.reactive.function.client: DEBUG
     com.pagatu.gateway_service.filter: DEBUG
 
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:lb://auth}
+
+coffee:
+  service:
+    url: ${COFFEE_SERVICE_URL:lb://coffee}
+email:
+  service:
+    url: ${EMAIL_SERVICE_URL:lb://mail}
+
 jwt:
   secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
 
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
+    enabled: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:8888,https://*.trycloudflare.com,https://*.ngrok-free.app}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://pagatu.app,http://localhost:8888}
   allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD}
-  allowed-headers: ${CORS_ALLOWED_HEADERS:Authorization,Content-Type,Accept-Language,Cache-Control,X-Requested-With,ngrok-skip-browser-warning,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,Access-Control-Allow-Origin,X-Reset-Token}
+  allowed-headers: ${CORS_ALLOWED_HEADERS:Authorization,Content-Type,Accept-Language,Cache-Control,X-Requested-With,ngrok-skip-browser-warning,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,Access-Control-Allow-Origin,X-Reset-Token,X-Forwarded-For,X-Forwarded-Proto,X-Forwarded-Port}
+  exposed-headers: ${CORS_EXPOSED_HEADERS:Authorization,Content-Type}
+  max-age: 3600

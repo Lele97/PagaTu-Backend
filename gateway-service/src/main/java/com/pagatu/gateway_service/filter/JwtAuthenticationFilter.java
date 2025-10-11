@@ -67,8 +67,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         log.debug("Processing request: {} {}", method, path);
 
         if (method == HttpMethod.OPTIONS) {
-            exchange.getResponse().setStatusCode(HttpStatus.OK);
-            return exchange.getResponse().setComplete();
+            log.debug("Allowing OPTIONS preflight request for path: {}", path);
+            return chain.filter(exchange);
         }
 
         if (isOpenApiRequest(path)) {
