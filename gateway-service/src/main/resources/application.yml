@@ -7,7 +7,6 @@ spring:
 
   cloud:
     gateway:
-      # Increase timeouts to prevent premature 503s
       httpclient:
         connect-timeout: 5000
         response-timeout: 30s
@@ -62,6 +61,7 @@ auth:
 coffee:
   service:
     url: ${COFFEE_SERVICE_URL:lb://coffee}
+
 email:
   service:
     url: ${EMAIL_SERVICE_URL:lb://mail}
@@ -72,7 +72,7 @@ jwt:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
     enabled: true
     fetch-registry: true
   instance:
