@@ -11,3 +11,5 @@ eureka:
     register-with-eureka: false
     service-url:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+  environment: ${EUREKA_ENVIRONMENT:dev}
+  datacenter: ${EUREKA_DATACENTER:PagaTu-local}
