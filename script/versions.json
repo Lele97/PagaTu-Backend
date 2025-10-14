@@ -1,0 +1,35 @@
+{
+  "project": {
+    "name": "pagatu",
+    "version": "1.0.0",
+    "description": "PagaTu Coffee Management Platform",
+    "tagPrefix": "pagatu-v"
+  },
+  "services": {
+    "auth": {
+      "description": "Authentication microservice",
+      "path": "./auth"
+    },
+    "coffee": {
+      "description": "Coffee management microservice",
+      "path": "./coffee"
+    },
+    "mail": {
+      "description": "Email notification microservice",
+      "path": "./mail"
+    },
+    "gateway-service": {
+      "description": "API Gateway service",
+      "path": "./gateway-service"
+    },
+    "eureka-server": {
+      "description": "Eureka service discovery server",
+      "path": "./eureka-server"
+    }
+  },
+  "metadata": {
+    "lastUpdated": "2025-10-14T21:54:19Z",
+    "versioningScheme": "semantic",
+    "versioningType": "unified"
+  }
+}
