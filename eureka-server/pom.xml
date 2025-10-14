@@ -6,12 +6,12 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.4.5</version>
+		<version>1.0.4</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.pagatu</groupId>
 	<artifactId>eureka-server</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.4</version>
 	<name>eureka-server</name>
 	<description>eureka service discovery </description>
 
@@ -37,7 +37,7 @@
 			<dependency>
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-dependencies</artifactId>
-				<version>${spring-cloud.version}</version>
+				<version>1.0.4</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
