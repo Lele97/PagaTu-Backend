@@ -107,7 +107,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Project | PagaTu (all services) |"
+          echo "| Project | PagaTu (all services) |" >> $GITHUB_STEP_SUMMARY
           echo "| New Version | ${{ steps.version.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Version Branch | ${{ steps.version.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Bump Type | ${{ inputs.bump_type }} |" >> $GITHUB_STEP_SUMMARY
