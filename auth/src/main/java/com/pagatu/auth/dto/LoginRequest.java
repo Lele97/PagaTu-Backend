@@ -1,19 +1,16 @@
 package com.pagatu.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class LoginRequest {
-
-    @NotBlank(message = "Username is required")
-    private String username;
-
-    @NotBlank(message = "Password is required")
-    private String password;
-}
+/**
+ * Record for login request containing username and password.
+ * Java 17 record providing immutability and built-in equals, hashCode, toString.
+ */
+public record LoginRequest(
+        @NotBlank(message = "Username is required")
+        String username,
+        
+        @NotBlank(message = "Password is required")
+        String password
+) {}
 

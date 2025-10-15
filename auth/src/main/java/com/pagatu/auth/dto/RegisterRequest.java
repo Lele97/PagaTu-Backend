@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -33,7 +33,7 @@ public class RegisterRequest {
     @NotNull(message = "Date of birth is required")
     @Past(message = "Date of birth must be in the past")
     @Age(min = 13, message = "Must be at least 13 years old") // Custom validation annotation
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @Size(max = 50, message = "First name cannot exceed 50 characters")
     @Pattern(regexp = "^[A-Za-zÀ-ÖØ-öø-ÿ' -]*$", message = "First name contains invalid characters")

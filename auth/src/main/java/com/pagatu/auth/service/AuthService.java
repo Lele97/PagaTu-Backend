@@ -28,6 +28,7 @@ import reactor.core.publisher.Mono;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -81,17 +82,17 @@ public class AuthService {
      */
     public LoginResponse login(LoginRequest loginRequest) {
 
-        log.debug("Attempting login for user: {}", loginRequest.getUsername());
+        log.debug("Attempting login for user: {}", loginRequest.username());
 
-        Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername());
+        Optional<User> userOpt = userRepository.findByUsername(loginRequest.username());
 
         if (userOpt.isEmpty()) {
-            log.warn("Failed login attempt - user not found: {}", loginRequest.getUsername());
-            throw new UserNotFoundException("User not found", loginRequest.getUsername(), "username");
+            log.warn("Failed login attempt - user not found: {}", loginRequest.username());
+            throw new UserNotFoundException("User not found", loginRequest.username(), "username");
         }
 
-        if (!passwordEncoder.matches(loginRequest.getPassword(), userOpt.get().getPassword())) {
-            log.warn("Failed login attempt - invalid password for user: {}", loginRequest.getUsername());
+        if (!passwordEncoder.matches(loginRequest.password(), userOpt.get().getPassword())) {
+            log.warn("Failed login attempt - invalid password for user: {}", loginRequest.username());
             throw new AuthenticationException("Invalid username or password");
         }
 
@@ -381,12 +382,13 @@ public class AuthService {
     private String generateToken(User user) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
 
+        Instant now = Instant.now();
         return Jwts.builder()
                 .setSubject(user.getUsername())
                 .claim(Constants.EMAIL_EXCEPRION_VALUE, user.getEmail())
                 .claim("id", user.getId())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(now.plusMillis(jwtExpiration)))
                 .signWith(key)
                 .compact();
     }
