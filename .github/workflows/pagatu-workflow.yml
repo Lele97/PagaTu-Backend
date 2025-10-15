@@ -1,23 +1,40 @@
-name: Version and Branch
+name: PagaTu Workflow
 
 on:
   workflow_dispatch:
     inputs:
-      bump_type:
-        description: 'Version bump type (affects ALL services)'
+      action_type:
+        description: 'Action to perform'
         required: true
+        type: choice
+        options:
+          - version-and-sync
+          - version-only
+          - sync-only
+        default: version-and-sync
+      bump_type:
+        description: 'Version bump type (for versioning actions)'
+        required: false
         type: choice
         options:
           - patch
           - minor
           - major
         default: patch
+      sync_reason:
+        description: 'Reason for GitLab sync (for sync actions)'
+        required: false
+        default: 'Manual sync'
 
 jobs:
   version-and-branch:
+    if: ${{ inputs.action_type == 'version-and-sync' || inputs.action_type == 'version-only' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      branch_name: ${{ steps.version.outputs.branch_name }}
       
     steps:
       - name: Checkout repository
@@ -100,8 +117,7 @@ jobs:
           git push origin ${{ steps.version.outputs.branch_name }}
           echo "✅ Pushed version branch: ${{ steps.version.outputs.branch_name }}"
 
-
-      - name: Summary
+      - name: Version Summary
         run: |
           echo "## 🎉 Version Branch Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -129,10 +145,18 @@ jobs:
           echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
 
   sync-to-gitlab:
-    needs: version-and-branch
-    if: success()
+    if: ${{ always() && (inputs.action_type == 'version-and-sync' || inputs.action_type == 'sync-only') && (needs.version-and-branch.result == 'success' || needs.version-and-branch.result == 'skipped') }}
+    needs: [version-and-branch]
     runs-on: ubuntu-latest
     steps:
+      - name: Show sync reason
+        run: |
+          if [ "${{ inputs.action_type }}" = "version-and-sync" ]; then
+            echo "🔄 GitLab Sync triggered: After version ${{ needs.version-and-branch.outputs.new_version || 'N/A' }}"
+          else
+            echo "🔄 GitLab Sync triggered: ${{ inputs.sync_reason }}"
+          fi
+          
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -144,3 +168,18 @@ jobs:
           gitlab_url: ${{ secrets.GIT_LAB_URI }}
           username: ${{ secrets.GIT_LAB_USERNAME }}
           gitlab_pat: ${{ secrets.GIT_LAB_TOKEN }}
+
+      - name: Sync Summary
+        run: |
+          echo "## 🔄 GitLab Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Action Type | ${{ inputs.action_type }} |" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.action_type }}" = "version-and-sync" ]; then
+            echo "| Synced After | Version ${{ needs.version-and-branch.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| Branch | ${{ needs.version-and-branch.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Sync Reason | ${{ inputs.sync_reason }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| Status | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
