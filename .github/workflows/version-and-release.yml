@@ -1,0 +1,146 @@
+name: Version and Branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type (affects ALL services)'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+jobs:
+  version-and-branch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.MY_GH_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Make scripts executable
+        run: |
+          chmod +x ./script/simple-version-manager.sh
+
+      - name: Show current versions
+        run: |
+          echo "📦 Current service versions:"
+          ./script/simple-version-manager.sh list
+
+      - name: Bump project version and create branch
+        id: version
+        run: |
+          echo "🔄 Bumping project version (${{ inputs.bump_type }})"
+          ./script/simple-version-manager.sh bump ${{ inputs.bump_type }}
+          
+          # Get the new version for later steps
+          NEW_VERSION=$(jq -r ".project.version" versions.json)
+          BRANCH_PREFIX=$(jq -r ".project.branchPrefix" versions.json)
+          BRANCH_NAME="${BRANCH_PREFIX}${NEW_VERSION}"
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          echo "✅ New project version: $NEW_VERSION"
+          echo "✅ New branch: $BRANCH_NAME"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build and test all services
+        run: |
+          echo "🏗️ Building all services..."
+          for service in auth coffee mail gateway-service eureka-server; do
+            if [ -d "$service" ] && [ -f "$service/mvnw" ]; then
+              echo "Building $service..."
+              cd "$service"
+              ./mvnw clean compile test-compile -DskipTests
+              echo "✅ Built $service service successfully"
+              cd ..
+            else
+              echo "⚠️ Service $service not found or no Maven wrapper, skipping"
+            fi
+          done
+
+      - name: Create version branch
+        run: |
+          git checkout -b ${{ steps.version.outputs.branch_name }}
+          git add versions.json
+          # Add all updated pom.xml files
+          for service in auth coffee mail gateway-service eureka-server; do
+            if [ -f "$service/pom.xml" ]; then
+              git add "$service/pom.xml"
+            fi
+          done
+          git commit -m "feat(project): release version ${{ steps.version.outputs.new_version }}"
+
+      - name: Push version branch
+        run: |
+          git push origin ${{ steps.version.outputs.branch_name }}
+          echo "✅ Pushed version branch: ${{ steps.version.outputs.branch_name }}"
+
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Version Branch Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | PagaTu (all services) |"
+          echo "| New Version | ${{ steps.version.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Branch | ${{ steps.version.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bump Type | ${{ inputs.bump_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Switch to version branch:**" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   git fetch origin" >> $GITHUB_STEP_SUMMARY
+          echo "   git checkout ${{ steps.version.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Build All Services:**" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   # Build all services" >> $GITHUB_STEP_SUMMARY
+          echo "   for service in auth coffee mail gateway-service eureka-server; do" >> $GITHUB_STEP_SUMMARY
+          echo "     cd \$service && ./mvnw clean package && cd .." >> $GITHUB_STEP_SUMMARY
+          echo "   done" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  sync-to-gitlab:
+    needs: version-and-branch
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync to GitLab
+        uses: keninkujovic/gitlab-sync@2.0.0
+        with:
+          gitlab_url: ${{ secrets.GIT_LAB_URI }}
+          username: ${{ secrets.GIT_LAB_USERNAME }}
+          gitlab_pat: ${{ secrets.GIT_LAB_TOKEN }}
