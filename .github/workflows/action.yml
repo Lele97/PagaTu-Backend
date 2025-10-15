@@ -1,19 +1,21 @@
 name: GitLab Sync
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-  pull_request:
-    branches:
-      - develop
-      - main
+  workflow_dispatch:
+    inputs:
+      sync_reason:
+        description: 'Reason for GitLab sync'
+        required: false
+        default: 'Manual sync'
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
+      - name: Show sync reason
+        run: |
+          echo "🔄 GitLab Sync triggered: ${{ inputs.sync_reason || 'Manual sync' }}"
+          
       - name: Checkout repo
         uses: actions/checkout@v4
 
