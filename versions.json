@@ -1,9 +1,9 @@
 {
   "project": {
     "name": "pagatu",
-    "version": "1.0.2",
+    "version": "1.0.0",
     "description": "PagaTu Coffee Management Platform",
-    "tagPrefix": "pagatu-v"
+    "branchPrefix": "release/pagatu-v"
   },
   "services": {
     "auth": {
@@ -28,7 +28,7 @@
     }
   },
   "metadata": {
-    "lastUpdated": "2025-10-14T22:33:02Z",
+    "lastUpdated": "2025-10-15T16:47:48Z",
     "versioningScheme": "semantic",
     "versioningType": "unified"
   }
