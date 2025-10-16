@@ -1,9 +1,9 @@
 package com.pagatu.coffee.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +13,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "pagamenti"})
+@ToString(exclude = {"utente", "group", "pagamenti"})
+@EqualsAndHashCode(exclude = {"utente", "group", "pagamenti"})
 public class UserGroupMembership {
 
     @Id
@@ -21,17 +24,21 @@ public class UserGroupMembership {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "utente_id", nullable = false)
+    @JsonIgnore
     private Utente utente;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
+    @JsonIgnore
     private Group group;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private Status status;
 
-    // Additional fields for membership metadata
+    @Column(name = "my_turn")
+    private Boolean myTurn;
+
     @Column(name = "joined_at")
     private java.time.LocalDateTime joinedAt;
 
@@ -39,21 +46,23 @@ public class UserGroupMembership {
     private Boolean isAdmin = false;
 
     @OneToMany(mappedBy = "userGroupMembership", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Pagamento> pagamenti = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
-        joinedAt = java.time.LocalDateTime.now();
-        if (status == null) {
-            status = Status.NON_PAGATO; // Default status
+        if(Boolean.TRUE.equals(isAdmin)){
+            joinedAt = java.time.LocalDateTime.now();
+            if (status == null) {
+                status = Status.NON_PAGATO;
+            }
+            myTurn = true;
+        }else{
+            joinedAt = java.time.LocalDateTime.now();
+            if (status == null) {
+                status = Status.NON_PAGATO;
+            }
+            myTurn = false;
         }
-    }
-
-    // Constructor for easy creation
-    public UserGroupMembership(Utente utente, Group group, Status status) {
-        this.utente = utente;
-        this.group = group;
-        this.status = status;
-        this.isAdmin = false;
     }
 }

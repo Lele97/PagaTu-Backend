@@ -10,14 +10,23 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/**
+ * Repository interface for Payment entity operations.
+ */
 @Repository
 public interface PagamentoRepository extends JpaRepository<Pagamento, Long> {
 
-    // Find payments by user (across all groups)
     @Query("SELECT p FROM Pagamento p WHERE p.userGroupMembership.utente = :utente ORDER BY p.dataPagamento DESC")
     List<Pagamento> findByUtenteOrderByDataPagamentoDesc(@Param("utente") Utente utente);
 
-    // Classifica pagamenti per gruppo verranno presi i primi 5 utenti
+    @Query("SELECT p FROM Pagamento p " +
+           "LEFT JOIN FETCH p.userGroupMembership ugm " +
+           "LEFT JOIN FETCH ugm.utente " +
+           "LEFT JOIN FETCH ugm.group " +
+           "WHERE p.userGroupMembership.utente = :utente " +
+           "ORDER BY p.dataPagamento DESC")
+    List<Pagamento> findWithUserGroupMembershipByUtenteOrderByDataPagamentoDesc(@Param("utente") Utente utente);
+
     @Query("""
                 SELECT new com.pagatu.coffee.dto.ClassificaPagamentiPerGruppoDto(u.username,
                     SUM(p.importo),

@@ -9,10 +9,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/**
+ * Repository interface for User entity operations.
+ */
 @Repository
 public interface UtenteRepository extends JpaRepository<Utente, Long> {
-
-    Optional<Utente> findByUsername(String username);
 
     @Query("""
                 select  new com.pagatu.coffee.dto.UtenteDetailDto(
@@ -26,13 +27,9 @@ public interface UtenteRepository extends JpaRepository<Utente, Long> {
             """)
     Optional<UtenteDetailDto> findUserByUsername(@Param("username") String username);
 
+    Optional<Utente> findByUsername(String username);
+
     Utente findByEmail(String email);
 
     Optional<Utente> findByAuthId(Long authId);
-
-    boolean existsByUsername(String username);
-
-    boolean existsByEmail(String email);
-
-    boolean existsByAuthId(Long authId);
 }

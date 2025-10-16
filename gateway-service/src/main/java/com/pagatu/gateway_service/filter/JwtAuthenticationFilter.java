@@ -22,6 +22,11 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+/**
+ * Global filter for JWT authentication in the API Gateway.
+ * Validates JWT tokens for protected endpoints and handles authentication errors.
+ * Implements Ordered interface to control filter execution order.
+ */
 @Component
 @Slf4j
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
@@ -29,9 +34,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    /**
+     * List of endpoints that don't require authentication.
+     * Includes auth endpoints, Swagger, API docs, and actuator endpoints.
+     */
     private final List<String> openApiEndpoints = List.of(
             "/api/auth/login",
             "/api/auth/register",
+            "/api/auth/reset-password",
             "/api/auth/resetPassword",
             "/swagger-ui",
             "/v3/api-docs",
@@ -40,25 +50,32 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/fallback"
     );
 
+    /**
+     * Filters incoming requests to validate JWT tokens for protected endpoints.
+     *
+     * @param exchange ServerWebExchange containing the request and response
+     * @param chain GatewayFilterChain for continuing filter processing
+     * @return Mono<Void> indicating completion of filter processing
+     */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getPath().toString();
         HttpMethod method = request.getMethod();
+
         log.debug("Processing request: {} {}", method, path);
 
-        // Handle preflight requests
         if (method == HttpMethod.OPTIONS) {
-            exchange.getResponse().setStatusCode(HttpStatus.OK);
-            return exchange.getResponse().setComplete();
+            log.debug("Allowing OPTIONS preflight request for path: {}", path);
+            return chain.filter(exchange);
         }
-        // Skip authentication for open endpoints
+
         if (isOpenApiRequest(path)) {
             log.debug("Skipping authentication for: {}", path);
             return chain.filter(exchange);
         }
 
-        // Check for Authorization header
         if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
             log.debug("Missing Authorization header for path: {}", path);
             return onError(exchange, HttpStatus.UNAUTHORIZED, "Authorization Required");
@@ -77,22 +94,39 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         }
 
         log.debug("Valid JWT token for path: {}", path);
+
         return chain.filter(exchange);
     }
 
+    /**
+     * Checks if the requested path is in the open endpoints list.
+     *
+     * @param path Request path to check
+     * @return boolean true if path doesn't require authentication
+     */
     private boolean isOpenApiRequest(String path) {
         return openApiEndpoints.stream().anyMatch(path::startsWith);
     }
 
+    /**
+     * Validates the JWT token using the configured secret key.
+     *
+     * @param token JWT token to validate
+     * @return boolean true if token is valid
+     */
     private boolean isValidToken(String token) {
+
         try {
+
             SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
+
             log.debug("Token validation successful for user: {}", claims.getSubject());
+
             return true;
         } catch (Exception e) {
             log.warn("Token validation failed: {}", e.getMessage());
@@ -100,6 +134,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         }
     }
 
+    /**
+     * Handles authentication errors by returning appropriate HTTP status and message.
+     *
+     * @param exchange ServerWebExchange containing the request and response
+     * @param status HTTP status code to return
+     * @param message Error message to return
+     * @return Mono<Void> with error response
+     */
     private Mono<Void> onError(ServerWebExchange exchange, HttpStatus status, String message) {
         ServerHttpResponse response = exchange.getResponse();
 
@@ -114,8 +156,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         ));
     }
 
+    /**
+     * Gets the order value for this filter.
+     * Lower values have higher priority. Value 1 ensures this runs after CORS filter.
+     *
+     * @return int order value
+     */
     @Override
     public int getOrder() {
-        return 1; // Run after CORS filter (which has order 0)
+        return 1;
     }
 }

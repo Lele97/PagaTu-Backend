@@ -1,16 +1,18 @@
 server:
-  port: 8083
+  port: ${SERVER_PORT:8083}
 
 coffee:
   service:
-    base-url: http://localhost:8082
+    base-url: ${COFFEE_SERVICE_URL:http://coffee:8082}
 
-# For Email Service
+auth:
+  service:
+    base-url: ${AUTH_SERVICE_URL:http://auth:8081}
+
 app:
   frontend:
-    base-url: https://a547-83-225-26-26.ngrok-free.app
-    path: /update/addtogroup
-    resetPswPath: //reset-password
+    invitationPath: /invitation
+    resetPswPath: /resetPassword
     company: Paga-Tu
     domainUrl: http://localhost:8888
 
@@ -26,8 +28,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:grandinetti.gabriele.mail@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:kdwv jbec dnkh jkqz}
+    username: ${SPRING_MAIL_USERNAME:info.pagatu.app@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:qoxy noqn dqrx kvmo}
     properties:
       mail:
         smtp:
@@ -51,15 +53,16 @@ spring:
           saltapagamento:com.pagatu.email.event.SaltaPagamentoEvent
           resetPasswordMail:com.pagatu.email.event.ResetPasswordMailEvent
 
-
-jwt:
-  secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
-
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
 
 springdoc:
   api-docs:

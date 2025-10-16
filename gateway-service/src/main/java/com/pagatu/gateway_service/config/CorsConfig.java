@@ -1,6 +1,7 @@
 package com.pagatu.gateway_service.config;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -8,60 +9,56 @@ import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
+/**
+ * Configuration class for Cross-Origin Resource Sharing (CORS) settings.
+ * Defines allowed origins, methods, headers, and other CORS-related configurations
+ * for the API Gateway service.
+ */
 @Configuration
 @Slf4j
 public class CorsConfig {
 
-    private static final List<String> ALLOWED_ORIGINS = Arrays.asList(
-            "http://localhost:8888",
-            "https://3565-37-118-134-2.ngrok-free.app"
-    );
+    @Value("${cors.allowed-origins}")
+    private String[] allowedOrigins;
 
+    @Value("${cors.allowed-methods}")
+    private String[] allowedMethods;
+
+    @Value("${cors.allowed-headers}")
+    private String[] allowedHeaders;
+
+    @Value("${cors.exposed-headers:Authorization,Content-Type}")
+    private String[] exposedHeaders;
+
+    @Value("${cors.max-age:3600}")
+    private Long maxAge;
+
+    /**
+     * Creates and configures a CORS web filter for reactive environments.
+     * Registers CORS configuration for all endpoints.
+     *
+     * @return CorsWebFilter configured with allowed origins, methods, and headers
+     */
     @Bean
     public CorsWebFilter corsWebFilter() {
-        log.info("Configuring CORS with allowed origins: {}", ALLOWED_ORIGINS);
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        corsConfig.setAllowedMethods(Arrays.asList(allowedMethods));
+        corsConfig.setAllowedHeaders(Arrays.asList(allowedHeaders));
+        corsConfig.setExposedHeaders(Arrays.asList(exposedHeaders));
+        corsConfig.setAllowCredentials(true);
+        corsConfig.setMaxAge(maxAge);
 
-        CorsConfiguration corsConfig = getCorsConfiguration();
-
-        // DON'T call applyPermitDefaultValues() as it adds wildcards
-        log.info("CORS configuration: allowCredentials={}, allowedOrigins={}",
-                corsConfig.getAllowCredentials(), corsConfig.getAllowedOrigins());
+        log.info("CORS Configuration initialized:");
+        log.info("  Allowed Origins: {}", Arrays.toString(allowedOrigins));
+        log.info("  Allowed Methods: {}", Arrays.toString(allowedMethods));
+        log.info("  Allowed Headers: {}", Arrays.toString(allowedHeaders));
+        log.info("  Allow Credentials: {}", corsConfig.getAllowCredentials());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", corsConfig);
 
-        // Make sure CORS filter has highest precedence
         return new CorsWebFilter(source);
-    }
-
-    private static CorsConfiguration getCorsConfiguration() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
-
-        // Explicitly set allowed origins (no wildcards when allowCredentials is true)
-        corsConfig.setAllowedOrigins(ALLOWED_ORIGINS);
-
-        // Set allowed methods
-        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
-
-        // Set allowed headers
-        corsConfig.setAllowedHeaders(Arrays.asList(
-                "Authorization",
-                "Cache-Control",
-                "Content-Type",
-                "X-Requested-With",
-                "Accept",
-                "Origin",
-                "Access-Control-Request-Method",
-                "Access-Control-Request-Headers"
-        ));
-
-        // Allow credentials
-        corsConfig.setAllowCredentials(true);
-
-        // Set max age for preflight requests
-        corsConfig.setMaxAge(3600L);
-        return corsConfig;
     }
 }

@@ -2,7 +2,8 @@ package com.pagatu.auth.controller;
 
 import com.pagatu.auth.batch.TokenCleanupBatchJob;
 import com.pagatu.auth.batch.TokenStatistics;
-import com.pagatu.auth.service.ProfileAwareTokenCleanupMonitoringService;
+import com.pagatu.auth.service.TokenCleanupMonitoringService;
+import com.pagatu.auth.util.Constants;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -19,29 +20,29 @@ import java.util.Map;
  * Provides endpoints for manual triggering and statistics retrieval.
  */
 @RestController
-@RequestMapping("/api/admin/token-cleanup")
+@RequestMapping(Constants.API_BASE_PATH)
 @Slf4j
 @RequiredArgsConstructor
 public class TokenCleanupController {
 
     private final TokenCleanupBatchJob batchJob;
-    private final ProfileAwareTokenCleanupMonitoringService profileAwareTokenCleanupMonitoringService;
+    private final TokenCleanupMonitoringService tokenCleanupMonitoringService;
 
     /**
      * Get current token statistics.
      */
-    @GetMapping("/statistics")
+    @GetMapping(Constants.STATISTICS_ENDPOINT)
     public ResponseEntity<Map<String, Object>> getStatistics() {
         try {
-            TokenStatistics stats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
+            TokenStatistics stats = tokenCleanupMonitoringService.getTokenStatistics();
 
             Map<String, Object> response = new HashMap<>();
-            response.put("totalTokens", stats.getTotalTokens());
-            response.put("activeTokens", stats.getActiveTokens());
-            response.put("expiredTokens", stats.getExpiredTokens());
-            response.put("expiredActiveTokens", stats.getExpiredActiveTokens());
-            response.put("needsCleanup", profileAwareTokenCleanupMonitoringService.hasTokensToCleanup());
-            response.put("timestamp", java.time.LocalDateTime.now());
+            response.put(Constants.TOTAL_TOKENS, stats.getTotalTokens());
+            response.put(Constants.ACTIVE_TOKENS, stats.getActiveTokens());
+            response.put(Constants.EXPIRED_TOKENS, stats.getExpiredTokens());
+            response.put(Constants.EXPIRED_ACTIVE_TOKENS, stats.getExpiredActiveTokens());
+            response.put(Constants.NEEDS_CLEANUP, tokenCleanupMonitoringService.hasTokensToCleanup());
+            response.put(Constants.TIMESTAMP, java.time.LocalDateTime.now());
 
             log.info("Token statistics requested: {}", stats);
             return ResponseEntity.ok(response);
@@ -49,8 +50,8 @@ public class TokenCleanupController {
         } catch (Exception e) {
             log.error("Error retrieving token statistics: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to retrieve statistics");
-            errorResponse.put("message", e.getMessage());
+            errorResponse.put(Constants.ERROR, Constants.RETRIEVE_STATS_FAILED_MSG);
+            errorResponse.put(Constants.MESSAGE, e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
@@ -59,37 +60,35 @@ public class TokenCleanupController {
      * Manually trigger the token cleanup batch job.
      * This endpoint should be restricted to admin users only.
      */
-    @PostMapping("/trigger")
+    @PostMapping(Constants.TRIGGER_ENDPOINT)
     public ResponseEntity<Map<String, Object>> triggerCleanup() {
         try {
+
             log.info("Manual token cleanup triggered via REST endpoint");
 
-            // Get statistics before cleanup
-            TokenStatistics beforeStats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
+            TokenStatistics beforeStats = tokenCleanupMonitoringService.getTokenStatistics();
 
-            // Trigger the cleanup
             batchJob.manualTrigger();
 
-            // Get statistics after cleanup
-            TokenStatistics afterStats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
+            TokenStatistics afterStats = tokenCleanupMonitoringService.getTokenStatistics();
 
             Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Token cleanup completed successfully");
-            response.put("beforeStats", Map.of(
-                    "totalTokens", beforeStats.getTotalTokens(),
-                    "activeTokens", beforeStats.getActiveTokens(),
-                    "expiredTokens", beforeStats.getExpiredTokens(),
-                    "expiredActiveTokens", beforeStats.getExpiredActiveTokens()
+            response.put(Constants.SUCCESS, true);
+            response.put(Constants.MESSAGE, Constants.CLEANUP_SUCCESS_MSG);
+            response.put(Constants.BEFORE_STATS, Map.of(
+                    Constants.TOTAL_TOKENS, beforeStats.getTotalTokens(),
+                    Constants.ACTIVE_TOKENS, beforeStats.getActiveTokens(),
+                    Constants.EXPIRED_TOKENS, beforeStats.getExpiredTokens(),
+                    Constants.EXPIRED_ACTIVE_TOKENS, beforeStats.getExpiredActiveTokens()
             ));
-            response.put("afterStats", Map.of(
-                    "totalTokens", afterStats.getTotalTokens(),
-                    "activeTokens", afterStats.getActiveTokens(),
-                    "expiredTokens", afterStats.getExpiredTokens(),
-                    "expiredActiveTokens", afterStats.getExpiredActiveTokens()
+            response.put(Constants.AFTER_STATS, Map.of(
+                    Constants.TOTAL_TOKENS, afterStats.getTotalTokens(),
+                    Constants.ACTIVE_TOKENS, afterStats.getActiveTokens(),
+                    Constants.EXPIRED_TOKENS, afterStats.getExpiredTokens(),
+                    Constants.EXPIRED_ACTIVE_TOKENS, afterStats.getExpiredActiveTokens()
             ));
-            response.put("tokensProcessed", beforeStats.getExpiredActiveTokens());
-            response.put("timestamp", java.time.LocalDateTime.now());
+            response.put(Constants.TOKENS_PROCESSED, beforeStats.getExpiredActiveTokens());
+            response.put(Constants.TIMESTAMP, java.time.LocalDateTime.now());
 
             log.info("Manual token cleanup completed. Before: {}, After: {}", beforeStats, afterStats);
             return ResponseEntity.ok(response);
@@ -97,10 +96,10 @@ public class TokenCleanupController {
         } catch (Exception e) {
             log.error("Error during manual token cleanup: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("success", false);
-            errorResponse.put("error", "Token cleanup failed");
-            errorResponse.put("message", e.getMessage());
-            errorResponse.put("timestamp", java.time.LocalDateTime.now());
+            errorResponse.put(Constants.SUCCESS, false);
+            errorResponse.put(Constants.ERROR, Constants.CLEANUP_FAILED_MSG);
+            errorResponse.put(Constants.MESSAGE, e.getMessage());
+            errorResponse.put(Constants.TIMESTAMP, java.time.LocalDateTime.now());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
@@ -108,27 +107,27 @@ public class TokenCleanupController {
     /**
      * Health check endpoint for the token cleanup system.
      */
-    @GetMapping("/health")
+    @GetMapping(Constants.HEALTH_ENDPOINT)
     public ResponseEntity<Map<String, Object>> healthCheck() {
 
         try {
-            boolean needsCleanup = profileAwareTokenCleanupMonitoringService.hasTokensToCleanup();
-            TokenStatistics stats = profileAwareTokenCleanupMonitoringService.getTokenStatistics();
+            boolean needsCleanup = tokenCleanupMonitoringService.hasTokensToCleanup();
+            TokenStatistics stats = tokenCleanupMonitoringService.getTokenStatistics();
 
             Map<String, Object> response = new HashMap<>();
-            response.put("status", "healthy");
-            response.put("needsCleanup", needsCleanup);
-            response.put("expiredActiveTokens", stats.getExpiredActiveTokens());
-            response.put("timestamp", java.time.LocalDateTime.now());
+            response.put(Constants.STATUS, Constants.STATUS_HEALTHY);
+            response.put(Constants.NEEDS_CLEANUP, needsCleanup);
+            response.put(Constants.EXPIRED_ACTIVE_TOKENS, stats.getExpiredActiveTokens());
+            response.put(Constants.TIMESTAMP, java.time.LocalDateTime.now());
 
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             log.error("Health check failed: {}", e.getMessage(), e);
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", "unhealthy");
-            errorResponse.put("error", e.getMessage());
-            errorResponse.put("timestamp", java.time.LocalDateTime.now());
+            errorResponse.put(Constants.STATUS, Constants.STATUS_UNHEALTHY);
+            errorResponse.put(Constants.ERROR, e.getMessage());
+            errorResponse.put(Constants.TIMESTAMP, java.time.LocalDateTime.now());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
     }

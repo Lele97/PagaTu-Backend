@@ -1,0 +1,26 @@
+{
+  "project": {
+    "version": "1.0.0",
+    "branchPrefix": "release/pagatu-v"
+  },
+  "services": {
+    "auth": {
+      "path": "./auth"
+    },
+    "coffee": {
+      "path": "./coffee"
+    },
+    "mail": {
+      "path": "./mail"
+    },
+    "gateway-service": {
+      "path": "./gateway-service"
+    },
+    "eureka-server": {
+      "path": "./eureka-server"
+    }
+  },
+  "metadata": {
+    "lastUpdated": "2025-10-15T16:47:48Z"
+  }
+}

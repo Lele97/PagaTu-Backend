@@ -9,11 +9,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class UserMembershipDto {
+
     private Long userId;
     private String username;
     private String name;
     private String lastname;
     private Status status;
+    private Boolean myTurn;
     private Boolean isAdmin;
     private java.time.LocalDateTime joinedAt;
 }

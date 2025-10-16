@@ -14,7 +14,7 @@
 
 	<groupId>com.pagatu</groupId>
 	<artifactId>coffee</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<name>coffee</name>
 	<description>microservice for coffee service</description>
 
@@ -69,6 +69,11 @@
 		</dependency>
 
 		<!-- DB -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.7.3</version>
+		</dependency>
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
