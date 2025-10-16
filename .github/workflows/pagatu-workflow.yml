@@ -1,33 +1,6 @@
 name: PagaTu Workflow
 
 on:
-  # Manual trigger with full control
-  workflow_dispatch:
-    inputs:
-      action_type:
-        description: 'Action to perform'
-        required: true
-        type: choice
-        options:
-          - version-and-sync
-          - version-only
-          - sync-only
-        default: version-and-sync
-      bump_type:
-        description: 'Version bump type (for versioning actions)'
-        required: false
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-        default: patch
-      sync_reason:
-        description: 'Reason for GitLab sync (for sync actions)'
-        required: false
-        default: 'Manual sync'
-  
-  # Automatic triggers
   push:
     branches:
       - develop
@@ -45,8 +18,8 @@ on:
 
 jobs:
   version-and-branch:
-    # Run versioning for manual triggers with version actions, or on automatic push to main/develop
-    if: ${{ (github.event_name == 'workflow_dispatch' && (inputs.action_type == 'version-and-sync' || inputs.action_type == 'version-only')) || (github.event_name == 'push' && contains(fromJson('["main", "develop"]'), github.ref_name)) }}
+    # Run versioning on push to main/develop
+    if: ${{ github.event_name == 'push' && contains(fromJson('["main", "develop"]'), github.ref_name) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -83,10 +56,8 @@ jobs:
       - name: Bump project version and create branch
         id: version
         run: |
-          # Set bump type: use input for manual, default to patch for automatic
-          BUMP_TYPE="${{ inputs.bump_type || 'patch' }}"
-          echo "🔄 Bumping project version ($BUMP_TYPE)"
-          ./script/simple-version-manager.sh bump $BUMP_TYPE
+          echo "🔄 Bumping project version (patch)"
+          ./script/simple-version-manager.sh bump patch
           
           # Get the new version for later steps
           NEW_VERSION=$(jq -r ".project.version" versions.json)
@@ -146,7 +117,7 @@ jobs:
           echo "| Project | PagaTu (all services) |" >> $GITHUB_STEP_SUMMARY
           echo "| New Version | ${{ steps.version.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Version Branch | ${{ steps.version.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Bump Type | ${{ inputs.bump_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bump Type | patch (automatic) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -165,20 +136,14 @@ jobs:
           echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
 
   sync-to-gitlab:
-    # Run GitLab sync for: manual version-and-sync/sync-only, or successful automatic push
-    if: ${{ always() && ((github.event_name == 'workflow_dispatch' && (inputs.action_type == 'version-and-sync' || inputs.action_type == 'sync-only')) || (github.event_name == 'push' && needs.version-and-branch.result == 'success')) && (needs.version-and-branch.result == 'success' || needs.version-and-branch.result == 'skipped') }}
+    # Run GitLab sync after successful version bump
+    if: ${{ needs.version-and-branch.result == 'success' }}
     needs: [version-and-branch]
     runs-on: ubuntu-latest
     steps:
       - name: Show sync reason
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "🔄 GitLab Sync triggered: Automatic after push to ${{ github.ref_name }}"
-          elif [ "${{ inputs.action_type }}" = "version-and-sync" ]; then
-            echo "🔄 GitLab Sync triggered: After version ${{ needs.version-and-branch.outputs.new_version || 'N/A' }}"
-          else
-            echo "🔄 GitLab Sync triggered: ${{ inputs.sync_reason }}"
-          fi
+          echo "🔄 GitLab Sync triggered: Automatic after push to ${{ github.ref_name }}"
           
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -198,11 +163,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Action Type | ${{ inputs.action_type }} |" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ inputs.action_type }}" = "version-and-sync" ]; then
-            echo "| Synced After | Version ${{ needs.version-and-branch.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Branch | ${{ needs.version-and-branch.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Sync Reason | ${{ inputs.sync_reason }} |" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "| Trigger Type | Automatic Push |" >> $GITHUB_STEP_SUMMARY
+          echo "| Synced After | Version ${{ needs.version-and-branch.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ needs.version-and-branch.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Status | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
