@@ -1,5 +1,8 @@
 name: PagaTu Workflow
 
+env:
+  BUMB_TYPE: minor
+
 on:
   push:
     branches:
@@ -9,7 +12,6 @@ on:
       - 'README.md'
       - 'docs/**'
       - '*.md'
-  
   pull_request:
     branches:
       - develop
@@ -25,29 +27,23 @@ jobs:
     outputs:
       new_version: ${{ steps.version.outputs.new_version }}
       branch_name: ${{ steps.version.outputs.branch_name }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.MY_GH_TOKEN }}
-
       - name: Configure Git
         run: |
           git config --local user.email ${{secrets.ACTION_REPO_USER}}
           git config --local user.name ${{secrets.ACTION_REPO_EMAIL}}
-
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
-
       - name: Make scripts executable
         run: |
           chmod +x ./script/simple-version-manager.sh
-
-      # 👇 New Step: Make all Maven wrappers executable
       - name: Make Maven wrappers executable
         run: |
           for service in auth coffee mail gateway-service eureka-server; do
@@ -55,37 +51,30 @@ jobs:
               chmod +x "$service/mvnw"
             fi
           done
-
       - name: Show current versions
         run: |
-          echo "📦 Current service versions:"
+          echo "Current service versions:"
           ./script/simple-version-manager.sh list
-
       - name: Bump project version and create branch
         id: version
         run: |
-          echo "🔄 Bumping project version (patch)"
-          ./script/simple-version-manager.sh bump patch
-          
+          echo "Bumping project version (${{env.BUMB_TYPE}})"
+          ./script/simple-version-manager.sh bump ${{env.BUMB_TYPE}}
           NEW_VERSION=$(jq -r ".project.version" versions.json)
           BRANCH_PREFIX=$(jq -r ".project.branchPrefix" versions.json)
           BRANCH_NAME="${BRANCH_PREFIX}${NEW_VERSION}"
-          
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
-          
           echo "✅ New project version: $NEW_VERSION"
           echo "✅ New branch: $BRANCH_NAME"
-
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           java-version: '17'
           distribution: 'temurin'
-
       - name: Build and test all services
         run: |
-          echo "🏗️ Building all services..."
+          echo "Building all services..."
           for service in auth coffee mail gateway-service eureka-server; do
             if [ -d "$service" ] && [ -f "$service/mvnw" ]; then
               echo "Building $service..."
@@ -94,10 +83,9 @@ jobs:
               echo "✅ Built $service service successfully"
               cd ..
             else
-              echo "⚠️ Service $service not found or no Maven wrapper, skipping"
+              echo "Service $service not found or no Maven wrapper, skipping"
             fi
           done
-
       - name: Create version branch
         run: |
           git checkout -b ${{ steps.version.outputs.branch_name }}
@@ -108,15 +96,13 @@ jobs:
             fi
           done
           git commit -m "feat(project): release version ${{ steps.version.outputs.new_version }}"
-
       - name: Push version branch
         run: |
           git push origin ${{ steps.version.outputs.branch_name }}
           echo "✅ Pushed version branch: ${{ steps.version.outputs.branch_name }}"
-
       - name: Version Summary
         run: |
-          echo "## 🎉 Version Branch Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Version Branch Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
@@ -125,7 +111,7 @@ jobs:
           echo "| Version Branch | ${{ steps.version.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Bump Type | patch (automatic) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "1. **Switch to version branch:**" >> $GITHUB_STEP_SUMMARY
           echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
@@ -140,7 +126,7 @@ jobs:
           echo "   done" >> $GITHUB_STEP_SUMMARY
           echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "💡 To permanently fix Maven wrapper permissions locally:" >> $GITHUB_STEP_SUMMARY
+          echo "To permanently fix Maven wrapper permissions locally:" >> $GITHUB_STEP_SUMMARY
           echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
           echo "   git update-index --chmod=+x mvnw" >> $GITHUB_STEP_SUMMARY
           echo "   git commit -m 'chore: make mvnw executable permanently'" >> $GITHUB_STEP_SUMMARY
@@ -154,23 +140,20 @@ jobs:
     steps:
       - name: Show sync reason
         run: |
-          echo "🔄 GitLab Sync triggered: Automatic after push to ${{ github.ref_name }}"
-
+          echo "GitLab Sync triggered: Automatic after push to ${{ github.ref_name }}"
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Sync to GitLab
         uses: keninkujovic/gitlab-sync@2.0.0
         with:
           gitlab_url: ${{ secrets.GIT_LAB_URI }}
           username: ${{ secrets.GIT_LAB_USERNAME }}
           gitlab_pat: ${{ secrets.GIT_LAB_TOKEN }}
-
       - name: Sync Summary
         run: |
-          echo "## 🔄 GitLab Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## GitLab Sync Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
