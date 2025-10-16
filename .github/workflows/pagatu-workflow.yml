@@ -1,7 +1,7 @@
 name: PagaTu Workflow
 
 env:
-  BUMB_TYPE: minor
+  BUMP_TYPE: minor
 
 on:
   push:
@@ -37,8 +37,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --local user.email ${{secrets.ACTION_REPO_USER}}
-          git config --local user.name ${{secrets.ACTION_REPO_EMAIL}}
+          git config --local user.email ${{secrets.ACTION_REPO_EMAIL}}
+          git config --local user.name ${{secrets.ACTION_REPO_USER}}
 
       - name: Install dependencies
         run: |
@@ -65,8 +65,8 @@ jobs:
       - name: Bump project version and create branch
         id: version
         run: |
-          echo "Bumping project version (${{env.BUMB_TYPE}})"
-          ./script/simple-version-manager.sh bump ${{env.BUMB_TYPE}}
+          echo "Bumping project version (${{env.BUMP_TYPE}})"
+          ./script/simple-version-manager.sh bump ${{env.BUMP_TYPE}}
           
           NEW_VERSION=$(jq -r ".project.version" versions.json)
           BRANCH_PREFIX=$(jq -r ".project.branchPrefix" versions.json)
@@ -124,7 +124,7 @@ jobs:
           echo "| Project | PagaTu (all services) |" >> $GITHUB_STEP_SUMMARY
           echo "| New Version | ${{ steps.version.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Version Branch | ${{ steps.version.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Bump Type | patch (automatic) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bump Type | ${{env.BUMP_TYPE}} (automatic) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
