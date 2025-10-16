@@ -18,7 +18,6 @@ on:
 
 jobs:
   version-and-branch:
-    # Run versioning on push to main/develop
     if: ${{ github.event_name == 'push' && contains(fromJson('["main", "develop"]'), github.ref_name) }}
     runs-on: ubuntu-latest
     permissions:
@@ -26,7 +25,7 @@ jobs:
     outputs:
       new_version: ${{ steps.version.outputs.new_version }}
       branch_name: ${{ steps.version.outputs.branch_name }}
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -36,8 +35,8 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --local user.email "gabriele.grandinetti@hotmail.com"
-          git config --local user.name "Lele97"
+          git config --local user.email ${{secrets.ACTION_REPO_USER}}
+          git config --local user.name ${{secrets.ACTION_REPO_EMAIL}}
 
       - name: Install dependencies
         run: |
@@ -47,6 +46,15 @@ jobs:
       - name: Make scripts executable
         run: |
           chmod +x ./script/simple-version-manager.sh
+
+      # 👇 New Step: Make all Maven wrappers executable
+      - name: Make Maven wrappers executable
+        run: |
+          for service in auth coffee mail gateway-service eureka-server; do
+            if [ -f "$service/mvnw" ]; then
+              chmod +x "$service/mvnw"
+            fi
+          done
 
       - name: Show current versions
         run: |
@@ -59,7 +67,6 @@ jobs:
           echo "🔄 Bumping project version (patch)"
           ./script/simple-version-manager.sh bump patch
           
-          # Get the new version for later steps
           NEW_VERSION=$(jq -r ".project.version" versions.json)
           BRANCH_PREFIX=$(jq -r ".project.branchPrefix" versions.json)
           BRANCH_NAME="${BRANCH_PREFIX}${NEW_VERSION}"
@@ -95,7 +102,6 @@ jobs:
         run: |
           git checkout -b ${{ steps.version.outputs.branch_name }}
           git add versions.json
-          # Add all updated pom.xml files
           for service in auth coffee mail gateway-service eureka-server; do
             if [ -f "$service/pom.xml" ]; then
               git add "$service/pom.xml"
@@ -129,14 +135,19 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "2. **Build All Services:**" >> $GITHUB_STEP_SUMMARY
           echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "   # Build all services" >> $GITHUB_STEP_SUMMARY
           echo "   for service in auth coffee mail gateway-service eureka-server; do" >> $GITHUB_STEP_SUMMARY
           echo "     cd \$service && ./mvnw clean package && cd .." >> $GITHUB_STEP_SUMMARY
           echo "   done" >> $GITHUB_STEP_SUMMARY
           echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "💡 To permanently fix Maven wrapper permissions locally:" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   git update-index --chmod=+x mvnw" >> $GITHUB_STEP_SUMMARY
+          echo "   git commit -m 'chore: make mvnw executable permanently'" >> $GITHUB_STEP_SUMMARY
+          echo "   git push" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
 
   sync-to-gitlab:
-    # Run GitLab sync after successful version bump
     if: ${{ needs.version-and-branch.result == 'success' }}
     needs: [version-and-branch]
     runs-on: ubuntu-latest
@@ -144,7 +155,7 @@ jobs:
       - name: Show sync reason
         run: |
           echo "🔄 GitLab Sync triggered: Automatic after push to ${{ github.ref_name }}"
-          
+
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
