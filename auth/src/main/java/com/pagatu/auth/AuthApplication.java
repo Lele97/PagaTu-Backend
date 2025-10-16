@@ -40,3 +40,4 @@ public class AuthApplication {
         SpringApplication.run(AuthApplication.class, args);
     }
 }
+// Test trigger comment 10/16/2025 12:05:28
