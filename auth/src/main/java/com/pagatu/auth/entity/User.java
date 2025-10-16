@@ -6,7 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
@@ -30,7 +30,7 @@ public class User {
     private String email;
 
     @Column(name = "birthdate", nullable = false)
-    private Date dateOfBirth;
+    private LocalDate dateOfBirth;
 
     @Column(name = "first_name")
     private String firstName;
@@ -38,7 +38,7 @@ public class User {
     @Column(name = "last_name")
     private String lastName;
 
-    @Lob // Questo dice a Hibernate: "Crea un tipo lungo (CLOB) per gruppi"
     @Convert(converter = ListToStringConverter.class)
+    @Column(name = "user_groups", columnDefinition = "TEXT")
     private List<String> groups;
 }

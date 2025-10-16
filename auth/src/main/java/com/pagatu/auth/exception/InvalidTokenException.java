@@ -4,12 +4,8 @@ import lombok.Data;
 
 @Data
 public class InvalidTokenException extends RuntimeException{
-    private final String tokenType;
 
-    public InvalidTokenException(String message) {
-        super(message);
-        this.tokenType = "UNKNOWN";
-    }
+    private final String tokenType;
 
     public InvalidTokenException(String message, String tokenType) {
         super(message);
@@ -19,9 +15,5 @@ public class InvalidTokenException extends RuntimeException{
     public InvalidTokenException(String message, Throwable cause) {
         super(message, cause);
         this.tokenType = "UNKNOWN";
-    }
-
-    public String getTokenType() {
-        return tokenType;
     }
 }

@@ -1,15 +1,11 @@
 package com.pagatu.auth.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class LoginResponse {
-
-    private String token;
-    private String username;
-    private String email;
-}
+/**
+ * Record for login response containing JWT token and user information.
+ * Java 17 record providing immutability and built-in equals, hashCode, toString.
+ */
+public record LoginResponse(
+        String token,
+        String username,
+        String email
+) {}

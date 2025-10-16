@@ -1,0 +1,181 @@
+name: PagaTu Workflow
+
+env:
+  BUMP_TYPE: minor
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.md'
+  pull_request:
+    branches:
+      - develop
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  version-and-branch:
+    if: ${{ github.event_name == 'push' && contains(fromJson('["main", "develop"]'), github.ref_name) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      branch_name: ${{ steps.version.outputs.branch_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.MY_GH_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email ${{secrets.ACTION_REPO_EMAIL}}
+          git config --local user.name ${{secrets.ACTION_REPO_USER}}
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Make scripts executable
+        run: |
+          chmod +x ./script/simple-version-manager.sh
+
+      - name: Make Maven wrappers executable
+        run: |
+          for service in auth coffee mail gateway-service eureka-server; do
+            if [ -f "$service/mvnw" ]; then
+              chmod +x "$service/mvnw"
+            fi
+          done
+
+      - name: Show current versions
+        run: |
+          echo "Current service versions:"
+          ./script/simple-version-manager.sh list
+
+      - name: Bump project version and create branch
+        id: version
+        run: |
+          echo "Bumping project version (${{env.BUMP_TYPE}})"
+          ./script/simple-version-manager.sh bump ${{env.BUMP_TYPE}}
+          
+          NEW_VERSION=$(jq -r ".project.version" versions.json)
+          BRANCH_PREFIX=$(jq -r ".project.branchPrefix" versions.json)
+          BRANCH_NAME="${BRANCH_PREFIX}${NEW_VERSION}"
+          
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          
+          echo "✅ New project version: $NEW_VERSION"
+          echo "✅ New branch: $BRANCH_NAME"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build and test all services
+        run: |
+          echo "Building all services..."
+          for service in auth coffee mail gateway-service eureka-server; do
+            if [ -d "$service" ] && [ -f "$service/mvnw" ]; then
+              echo "Building $service..."
+              cd "$service"
+              ./mvnw clean compile test-compile -DskipTests
+              echo "✅ Built $service service successfully"
+              cd ..
+            else
+              echo "Service $service not found or no Maven wrapper, skipping"
+            fi
+          done
+
+      - name: Create version branch
+        run: |
+          git checkout -b ${{ steps.version.outputs.branch_name }}
+          git add versions.json
+          for service in auth coffee mail gateway-service eureka-server; do
+            if [ -f "$service/pom.xml" ]; then
+              git add "$service/pom.xml"
+            fi
+          done
+          git commit -m "feat(project): release version ${{ steps.version.outputs.new_version }}"
+
+      - name: Push version branch
+        run: |
+          git push origin ${{ steps.version.outputs.branch_name }}
+          echo "✅ Pushed version branch: ${{ steps.version.outputs.branch_name }}"
+
+      - name: Version Summary
+        run: |
+          echo "## Version Branch Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | PagaTu (all services) |" >> $GITHUB_STEP_SUMMARY
+          echo "| New Version | ${{ steps.version.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Branch | ${{ steps.version.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bump Type | ${{env.BUMP_TYPE}} (automatic) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Switch to version branch:**" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   git fetch origin" >> $GITHUB_STEP_SUMMARY
+          echo "   git checkout ${{ steps.version.outputs.branch_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "2. **Build All Services:**" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   for service in auth coffee mail gateway-service eureka-server; do" >> $GITHUB_STEP_SUMMARY
+          echo "     cd \$service && ./mvnw clean package && cd .." >> $GITHUB_STEP_SUMMARY
+          echo "   done" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To permanently fix Maven wrapper permissions locally:" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "   git update-index --chmod=+x mvnw" >> $GITHUB_STEP_SUMMARY
+          echo "   git commit -m 'chore: make mvnw executable permanently'" >> $GITHUB_STEP_SUMMARY
+          echo "   git push" >> $GITHUB_STEP_SUMMARY
+          echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  sync-to-gitlab:
+    if: ${{ needs.version-and-branch.result == 'success' }}
+    needs: [version-and-branch]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show sync reason
+        run: |
+          echo "GitLab Sync triggered: Automatic after push to ${{ github.ref_name }}"
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync to GitLab
+        uses: keninkujovic/gitlab-sync@2.0.0
+        with:
+          gitlab_url: ${{ secrets.GIT_LAB_URI }}
+          username: ${{ secrets.GIT_LAB_USERNAME }}
+          gitlab_pat: ${{ secrets.GIT_LAB_TOKEN }}
+
+      - name: Sync Summary
+        run: |
+          echo "## GitLab Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger Type | Automatic Push |" >> $GITHUB_STEP_SUMMARY
+          echo "| Synced After | Version ${{ needs.version-and-branch.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ needs.version-and-branch.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | ✅ Completed |" >> $GITHUB_STEP_SUMMARY

@@ -13,11 +13,22 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+/**
+ * Security configuration class for authentication service.
+ * Configures HTTP security, CORS, session management, and password encoding.
+ * Defines public endpoints and security policies for the application.
+ */
 @Configuration
 @EnableWebSecurity
 @Log4j2
 public class SecurityConfig {
 
+    /**
+     * List of whitelisted paths that are excluded from authentication.
+     * <p>
+     * Includes authentication endpoints, API documentation (Swagger), and
+     * development tools (e.g., H2 console).
+     */
     private static final String[] AUTH_WHITELIST = {
             "/api/auth/**",
             "/v3/api-docs/*",
@@ -26,16 +37,18 @@ public class SecurityConfig {
             "/h2-console/**",
     };
 
-    private static final String[] CSRF_WHITELIST = {
-            "/h2-console/**",
-            "/api/auth/**"
-    };
-
+    /**
+     * Configures the security filter chain for HTTP requests.
+     *
+     * @param http the HttpSecurity to modify
+     * @return configured SecurityFilterChain
+     * @throws Exception if configuration fails
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(c -> c.ignoringRequestMatchers(CSRF_WHITELIST))
                 .cors(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -46,6 +59,11 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Provides a password encoder bean for hashing and verifying passwords.
+     *
+     * @return BCryptPasswordEncoder instance for password encoding
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
