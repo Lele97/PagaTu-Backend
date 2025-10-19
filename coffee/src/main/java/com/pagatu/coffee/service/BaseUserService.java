@@ -25,7 +25,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class BaseUserService {
 
-
     private final UtenteRepository utenteRepository;
     private final GroupRepository groupRepository;
 
