@@ -161,7 +161,7 @@ management:
 
 coffee:
   service:
-    url: ${COFFEE_SERVICE_URL:http://coffee}
+    url: ${COFFEE_SERVICE_URL:lb://coffee}
 
 springdoc:
   api-docs:

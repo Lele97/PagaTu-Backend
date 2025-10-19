@@ -3,18 +3,18 @@ server:
 
 coffee:
   service:
-    base-url: ${COFFEE_SERVICE_URL:http://coffee:8082}
+    base-url: ${COFFEE_SERVICE_URL:lb://coffee}
 
 auth:
   service:
-    base-url: ${AUTH_SERVICE_URL:http://auth:8081}
+    base-url: ${AUTH_SERVICE_URL:lb://auth}
 
 app:
   frontend:
     invitationPath: /invitation
     resetPswPath: /resetPassword
     company: Paga-Tu
-    domainUrl: http://localhost:8888
+    domainUrl: ${DOMAIN_URL:http://localhost:8888}
 
 spring:
   thymeleaf:
