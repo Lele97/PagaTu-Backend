@@ -1,4 +1,11 @@
-name: PagaTu Workflow
+# PagaTu Development Workflow
+# This workflow only runs on the 'develop' branch for:
+# - Automatic version bumping and release branch creation
+# - Building and testing all microservices
+# - Syncing code to GitLab repository
+# Note: Main branch deployments should be handled separately
+
+name: PagaTu Develop Workflow
 
 env:
   BUMP_TYPE: patch
@@ -7,7 +14,6 @@ on:
   push:
     branches:
       - develop
-      - main
     paths-ignore:
       - 'README.md'
       - 'docs/**'
@@ -19,7 +25,7 @@ on:
 
 jobs:
   version-and-branch:
-    if: ${{ github.event_name == 'push' && contains(fromJson('["main", "develop"]'), github.ref_name) }}
+    if: ${{ github.event_name == 'push' && github.ref_name == 'develop' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -148,13 +154,13 @@ jobs:
           echo "   \`\`\`" >> $GITHUB_STEP_SUMMARY
 
   sync-to-gitlab:
-    if: ${{ needs.version-and-branch.result == 'success' }}
+    if: ${{ needs.version-and-branch.result == 'success' && github.ref_name == 'develop' }}
     needs: [version-and-branch]
     runs-on: ubuntu-latest
     steps:
       - name: Show sync reason
         run: |
-          echo "GitLab Sync triggered: Automatic after push to ${{ github.ref_name }}"
+          echo "GitLab Sync triggered: Automatic after push to develop branch"
 
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -174,7 +180,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Trigger Type | Automatic Push |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger Type | Develop Branch Push |" >> $GITHUB_STEP_SUMMARY
+          echo "| Source Branch | develop |" >> $GITHUB_STEP_SUMMARY
           echo "| Synced After | Version ${{ needs.version-and-branch.outputs.new_version }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Branch | ${{ needs.version-and-branch.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Branch | ${{ needs.version-and-branch.outputs.branch_name }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Status | ✅ Completed |" >> $GITHUB_STEP_SUMMARY
