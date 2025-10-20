@@ -3,18 +3,18 @@ server:
 
 coffee:
   service:
-    base-url: ${COFFEE_SERVICE_URL:http://coffee:8082}
+    base-url: ${COFFEE_SERVICE_URL:lb://coffee}
 
 auth:
   service:
-    base-url: ${AUTH_SERVICE_URL:http://auth:8081}
+    base-url: ${AUTH_SERVICE_URL:lb://auth}
 
 app:
   frontend:
     invitationPath: /invitation
     resetPswPath: /resetPassword
     company: Paga-Tu
-    domainUrl: http://localhost:8888
+    domainUrl: ${DOMAIN_URL:http://localhost:8888}
 
 spring:
   thymeleaf:
@@ -28,8 +28,8 @@ spring:
   mail:
     host: ${SPRING_MAIL_HOST:smtp.gmail.com}
     port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:info.pagatu.app@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:qoxy noqn dqrx kvmo}
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
     properties:
       mail:
         smtp:

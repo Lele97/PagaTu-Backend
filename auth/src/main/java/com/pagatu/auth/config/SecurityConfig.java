@@ -12,6 +12,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 /**
  * Security configuration class for authentication service.
@@ -47,7 +52,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(authorize -> authorize
@@ -67,5 +72,45 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Configures CORS (Cross-Origin Resource Sharing) settings for the auth service.
+     * This is necessary even when using a Gateway because the service needs to handle
+     * CORS for direct service-to-service communication and debugging.
+     *
+     * @return CorsConfigurationSource with configured CORS settings
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Allow all origins for microservice architecture
+        // The Gateway will handle the actual origin filtering
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        
+        // Allow all HTTP methods
+        configuration.setAllowedMethods(Arrays.asList(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"
+        ));
+        
+        // Allow all headers - Gateway will filter as needed
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Allow credentials for JWT tokens and authentication
+        configuration.setAllowCredentials(true);
+        
+        // Expose headers that clients might need
+        configuration.setExposedHeaders(Arrays.asList(
+            "Authorization", "Content-Type", "X-Reset-Token", "Retry-After"
+        ));
+        
+        // Set max age for preflight cache
+        configuration.setMaxAge(3600L);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        
+        return source;
     }
 }

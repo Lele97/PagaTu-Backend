@@ -117,7 +117,7 @@ logging:
 ---
 
 jwt:
-  secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
+  secret: ${JWT_SECRET}
 
 management:
   endpoints:

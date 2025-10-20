@@ -1,6 +1,6 @@
 {
   "project": {
-    "version": "1.0.0",
+    "version": "1.0.1",
     "branchPrefix": "release/pagatu-v"
   },
   "services": {
@@ -21,6 +21,6 @@
     }
   },
   "metadata": {
-    "lastUpdated": "2025-10-15T16:47:48Z"
+    "lastUpdated": "2025-10-20T10:39:12Z"
   }
 }
