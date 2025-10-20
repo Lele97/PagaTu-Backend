@@ -35,3 +35,18 @@ build/
 ### Project ###
 auth/auth
 script/.env.buildone
+
+### Security - Environment Variables ###
+.env
+.env.local
+.env.prod
+.env.staging
+*.env
+
+### Security - Secrets ###
+secrets/
+*.key
+*.pem
+*.p12
+*.jks
+keystore.*
