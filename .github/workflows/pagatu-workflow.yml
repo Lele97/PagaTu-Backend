@@ -1,7 +1,7 @@
 name: PagaTu Workflow
 
 env:
-  BUMP_TYPE: minor
+  BUMP_TYPE: patch
 
 on:
   push:
