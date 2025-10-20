@@ -2,19 +2,19 @@ services:
   gateway:
     build: ./gateway-service
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT:-8080}:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_PROFILES_ACTIVE=${SPRING_PRFOILES_ACTIVE:-dev}
       - SERVER_PORT=8080
       - AUTH_SERVICE_URL=lb://auth
       - COFFEE_SERVICE_URL=lb://coffee
       - EMAIL_SERVICE_URL=lb://mail
-      - EUREKA_URL=http://eureka:8080/eureka/
-      - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
-      - CORS_ALLOWED_ORIGINS=http://localhost:8888,https://*.trycloudflare.com,https://*.ngrok-free.app
-      - CORS_ALLOWED_METHODS=GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD
-      - CORS_ALLOWED_HEADERS=Authorization,Content-Type,Accept-Language,Cache-Control,X-Requested-With,ngrok-skip-browser-warning,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,Access-Control-Allow-Origin,X-Reset-Token
-      - CORS_EXPOSED_HEADERS=Authorization,Content-Type
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - CORS_ALLOWED_METHODS=${CORS_ALLOWED_METHODS}
+      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS}
+      - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS}
     depends_on:
       - auth
       - coffee
@@ -27,16 +27,16 @@ services:
     ports:
       - "8081:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SERVER_PORT=8080
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-pagatu:5432/auth
-      - SPRING_DATASOURCE_USERNAME=pagatu
-      - SPRING_DATASOURCE_PASSWORD=pagatu_root
-      - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
-      - JWT_EXPIRATION=86400000
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SERVER_PORT=${AUTH_PORT:-8080}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST:-pg-pagatu}:${DB_PORT:-5432}/${DB_NAME_AUTH:-auth}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
       - COFFEE_SERVICE_URL=lb://coffee
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8080/eureka/
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
     depends_on:
       - pg-pagatu
     networks:
@@ -47,14 +47,14 @@ services:
     ports:
       - "8082:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SERVER_PORT=8080
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://pg-pagatu:5432/coffee
-      - SPRING_DATASOURCE_USERNAME=pagatu
-      - SPRING_DATASOURCE_PASSWORD=pagatu_root
-      - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8080/eureka/
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SERVER_PORT=${COFFEE_PORT:-8080}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST:-pg-pagatu}:${DB_PORT:-5432}/${DB_NAME_COFFEE:-coffee}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
     depends_on:
       - kafka
     networks:
@@ -65,17 +65,18 @@ services:
     ports:
       - "8083:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
-      - SERVER_PORT=8080
-      - SPRING_MAIL_HOST=smtp.gmail.com
-      - SPRING_MAIL_PORT=587
-      - SPRING_MAIL_USERNAME=grandinetti.gabriele.mail@gmail.com
-      - SPRING_MAIL_PASSWORD=kdwv jbec dnkh jkqz
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SERVER_PORT=${MAIL_PORT:-8080}
+      - SPRING_MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - SPRING_MAIL_PORT=${MAIL_PORT:-587}
+      - DOMAIN_URL=${DOMAIN_URL:-http://localhost:8888}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
       - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
       - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8080/eureka/
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
       - COFFEE_SERVICE_URL=lb://coffee
       - AUTH_SERVICE_URL=lb://auth
     depends_on:
@@ -137,8 +138,8 @@ services:
     image: postgres:15
     container_name: pg-pagatu
     environment:
-      POSTGRES_USER: pagatu
-      POSTGRES_PASSWORD: pagatu_root
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
     ports:
       - "5433:5432"

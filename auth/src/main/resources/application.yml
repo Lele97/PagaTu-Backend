@@ -150,7 +150,7 @@ rate-limiter:
     enabled: ${RATE_LIMITER_ENABLED:true}
 
 jwt:
-  secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
 
 management:
