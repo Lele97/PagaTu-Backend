@@ -14,7 +14,7 @@
 
 	<groupId>com.pagatu</groupId>
 	<artifactId>coffee</artifactId>
-	<version>1.0.1</version>
+	<version>1.0.2</version>
 	<name>coffee</name>
 	<description>microservice for coffee service</description>
 
