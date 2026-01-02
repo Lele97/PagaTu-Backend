@@ -50,3 +50,4 @@ secrets/
 *.p12
 *.jks
 keystore.*
+/script/start-docker.sh
