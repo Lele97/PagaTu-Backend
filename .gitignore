@@ -42,6 +42,7 @@ script/.env.buildone
 .env.prod
 .env.staging
 *.env
+**/application-local.yml
 
 ### Security - Secrets ###
 secrets/
