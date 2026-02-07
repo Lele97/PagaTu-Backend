@@ -67,7 +67,7 @@ email:
     url: ${EMAIL_SERVICE_URL:lb://mail}
 
 jwt:
-  secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
+  secret: ${JWT_SECRET:Cmpf96uITzaqvc/1dNN7OpSI21aXfD8suwy86xCH800=}
 
 eureka:
   client:

@@ -67,6 +67,9 @@ spring:
       enabled: false
       path: /h2-console
 
+  flyway:
+    enabled: false # Disabled in dev, Hibernate handles schema
+
 logging:
   level:
     com.pagatu.coffee: DEBUG
@@ -120,7 +123,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -134,6 +137,13 @@ spring:
       enabled: false
       path: /h2-console
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: "0"
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
 logging:
   level:
     com.pagatu.auth: INFO
@@ -142,7 +152,6 @@ logging:
     org.springframework.transaction: WARN
     root: WARN
 ---
-
 rate-limiter:
   reset-password:
     max-attempts: ${RATE_LIMITER_MAX_ATTEMPTS:3}

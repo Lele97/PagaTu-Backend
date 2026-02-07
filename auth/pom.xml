@@ -13,7 +13,7 @@
 
     <groupId>com.pagatu</groupId>
     <artifactId>auth</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <name>auth</name>
     <description>Authentication microservice</description>
 
@@ -115,6 +115,14 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <version>42.7.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>
