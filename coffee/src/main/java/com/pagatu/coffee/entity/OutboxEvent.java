@@ -1,4 +1,4 @@
-package com.pagatu.auth.entity;
+package com.pagatu.coffee.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

@@ -1,8 +1,8 @@
-package com.pagatu.auth.service;
+package com.pagatu.coffee.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pagatu.auth.entity.OutboxEvent;
-import com.pagatu.auth.repository.OutboxEventRepository;
+import com.pagatu.coffee.entity.OutboxEvent;
+import com.pagatu.coffee.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

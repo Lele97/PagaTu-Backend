@@ -12,20 +12,24 @@ spring:
   application:
     name: coffee
 
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.trusted.packages: com.pagatu.coffee.event
-        spring.json.type.mapping: >
-          prossimopagamento:com.pagatu.coffee.event.ProssimoPagamentoEvent,
-          saltapagamento:com.pagatu.coffee.event.SaltaPagamentoEvent
-    topics:
-      pagamenti-caffe: pagamenti-caffe
-      invitation-caffe: invitation-caffe
-      saltaPagamento-caffe: salta-pagamento-caffe
+  nats:
+    server: ${NATS_SERVER:nats://localhost:4222}
+    connection-timeout: 5000
+    max-reconnect: 10
+    connection-name: coffee-service
+    # NATS subjects
+    subject:
+      next-payment-subject: next-payment-topic
+      skip-payment-subject: skip-payment-topic
+      invitation-subject: invitation-topic
+
+  # Outbox pattern configuration
+  outbox:
+    poll-interval: 5000        # Poll every 5 seconds
+    max-retries: 5             # Max retry attempts before giving up
+    batch-size: 100            # Process up to 100 events per poll
+    cleanup-days: 7            # Keep processed events for 7 days
+    cleanup-cron: "0 0 0 * * ?" # Cleanup at midnight
 
   profiles:
     active: dev
@@ -78,7 +82,7 @@ logging:
     com.pagatu.coffee: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.kafka: DEBUG
+    io.nats: DEBUG
     org.springframework.transaction: DEBUG
     root: INFO
 
@@ -120,7 +124,7 @@ logging:
   level:
     com.pagatu.coffee: INFO
     org.hibernate.SQL: WARN
-    org.springframework.kafka: WARN
+    io.nats: WARN
     org.springframework.transaction: WARN
     root: WARN
 ---

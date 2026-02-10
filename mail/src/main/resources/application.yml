@@ -37,22 +37,18 @@ spring:
           starttls:
             enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
 
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: email-service
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: com.pagatu.coffee.event,com.pagatu.email.event,com.pagatu.auth.event
-        spring.json.use.type.headers: false
-        spring.json.type.mapping: >
-          prossimopagamento:com.pagatu.email.event.ProssimoPagamentoEvent,
-          invitation:com.pagatu.email.event.InvitationEvent,
-          saltapagamento:com.pagatu.email.event.SaltaPagamentoEvent
-          resetPasswordMail:com.pagatu.email.event.ResetPasswordMailEvent
-
+  # NATS Configuration
+  nats:
+    subject:
+      next-payment: next-payment
+      skip-payment: skip-payment
+      invitation: invitation
+      reset-password-mail: reset-password-mail
+    server: ${NATS_SERVER:nats://localhost:4222}
+    connection-timeout: 5000
+    max-reconnect: -1
+    connection-name: mail-service
+  
 management:
   endpoints:
     web:

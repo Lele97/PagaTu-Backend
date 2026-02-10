@@ -22,17 +22,7 @@ public class Constants {
     public static final String TEMPLATE_VAR_LINK = "link";
     public static final String TEMPLATE_VAR_RESET_LINK = "resetLink";
 
-    /**
-     * Kafka Configuration constants
-     */
-    public static final String KAFKA_GROUP_ID = "email-service";
-    public static final String AUTO_OFFSET_RESET_EARLIEST = "earliest";
-
-    /**
-     * Trusted Packages constants
-     */
-    public static final String TRUSTED_PACKAGE_COFFEE_EVENT = "com.pagatu.coffee.event";
-    public static final String TRUSTED_PACKAGE_AUTH_EVENT = "com.pagatu.auth.event";
+    // NATS subjects are configured in application.yml
 
     /**
      * Log message constants

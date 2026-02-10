@@ -1,9 +1,9 @@
 package com.pagatu.coffee.repository;
 
 import com.pagatu.coffee.entity.Group;
-import com.pagatu.coffee.entity.Status;
+import com.pagatu.coffee.entity.PaymentStatus;
 import com.pagatu.coffee.entity.UserGroupMembership;
-import com.pagatu.coffee.entity.Utente;
+import com.pagatu.coffee.entity.CoffeeUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -21,7 +21,7 @@ public interface UserGroupMembershipRepository extends JpaRepository<UserGroupMe
 
     List<UserGroupMembership> findByGroup(Group group);
 
-    List<UserGroupMembership> findByGroupAndStatus(Group group, Status status);
+    List<UserGroupMembership> findByGroupAndStatus(Group group, PaymentStatus status);
 
-    boolean existsByUtenteAndGroup(Utente utente, Group group);
+    boolean existsByCoffeeUserAndGroup(CoffeeUser coffeeUser, Group group);
 }
