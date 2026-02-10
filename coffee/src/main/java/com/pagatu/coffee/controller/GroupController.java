@@ -2,7 +2,7 @@ package com.pagatu.coffee.controller;
 
 import com.pagatu.coffee.dto.GroupDto;
 import com.pagatu.coffee.dto.InvitationRequest;
-import com.pagatu.coffee.dto.NuovoGruppoRequest;
+import com.pagatu.coffee.dto.NewGroupRequest;
 import com.pagatu.coffee.exception.UserNotInGroup;
 import com.pagatu.coffee.service.GroupService;
 import com.pagatu.coffee.service.JwtService;
@@ -19,11 +19,11 @@ import java.util.List;
  * <p>
  * This controller provides endpoints for group management operations including:
  * <ul>
- *   <li>Creating new coffee payment groups</li>
- *   <li>Deleting groups (with proper authorization)</li>
- *   <li>Adding users to existing groups</li>
- *   <li>Sending group invitations</li>
- *   <li>Retrieving user's group memberships</li>
+ * <li>Creating new coffee payment groups</li>
+ * <li>Deleting groups (with proper authorization)</li>
+ * <li>Adding users to existing groups</li>
+ * <li>Sending group invitations</li>
+ * <li>Retrieving user's group memberships</li>
  * </ul>
  * </p>
  * <p>
@@ -46,39 +46,26 @@ public class GroupController {
 
     /**
      * Creates a new coffee payment group.
-     * <p>
-     * This endpoint allows authenticated users to create a new group.
-     * The user who creates the group automatically becomes an admin member
-     * and is set as the first person to pay.
-     * </p>
      *
-     * @param nuovoGruppoRequest the request containing group name and description
-     * @param authHeader JWT authorization header
+     * @param newGroupRequest the request containing group name and description
+     * @param authHeader      JWT authorization header
      * @return ResponseEntity containing the created group information
-     * @throws com.pagatu.coffee.exception.UserNotFoundException if user not found
-     * @throws com.pagatu.coffee.exception.BusinessException if group already exists
      */
     @PostMapping
     public ResponseEntity<GroupDto> createGroup(
-            @Valid @RequestBody NuovoGruppoRequest nuovoGruppoRequest,
+            @Valid @RequestBody NewGroupRequest newGroupRequest,
             @RequestHeader("Authorization") String authHeader) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
-        GroupDto group = groupService.createGroup(nuovoGruppoRequest, userId);
+        GroupDto group = groupService.createGroup(newGroupRequest, userId);
         return ResponseEntity.ok(group);
     }
 
     /**
      * Deletes a group by name.
-     * <p>
-     * This endpoint allows group deletion only if the requesting user is a member
-     * and the group has fewer than 2 members. This prevents accidental deletion
-     * of active groups with multiple participants.
-     * </p>
      *
-     * @param groupName the name of the group to delete
+     * @param groupName  the name of the group to delete
      * @param authHeader JWT authorization header
      * @return ResponseEntity with success message
-     * @throws com.pagatu.coffee.exception.BusinessException if group has multiple members or user not authorized
      */
     @DeleteMapping("/delete/{groupName}")
     public ResponseEntity<String> deleteGroupByName(
@@ -91,17 +78,10 @@ public class GroupController {
 
     /**
      * Adds a user to an existing group.
-     * <p>
-     * This endpoint adds a user to a group with default NON_PAGATO status.
-     * The user will be added as a regular member (non-admin).
-     * </p>
      *
-     * @param username the username of the user to add
+     * @param username  the username of the user to add
      * @param groupName the name of the group to add the user to
      * @return ResponseEntity with success message
-     * @throws com.pagatu.coffee.exception.UserNotFoundException if user not found
-     * @throws com.pagatu.coffee.exception.GroupNotFoundException if group not found
-     * @throws com.pagatu.coffee.exception.BusinessException if user already in group
      */
     @PutMapping("/update/addtogroup")
     public ResponseEntity<String> addUserToGroup(
@@ -113,15 +93,10 @@ public class GroupController {
 
     /**
      * Sends an invitation to a user to join a group.
-     * <p>
-     * This endpoint allows group admins to send invitations to users via Kafka events.
-     * Only admin members of the group can send invitations to others.
-     * </p>
      *
      * @param invitationRequest the invitation details including username and group
-     * @param authHeader JWT authorization header
+     * @param authHeader        JWT authorization header
      * @return ResponseEntity with success message
-     * @throws com.pagatu.coffee.exception.BusinessException if user is not group admin
      */
     @PostMapping("/update/invitation")
     public ResponseEntity<String> sendInvitationToGroup(
@@ -134,21 +109,11 @@ public class GroupController {
 
     /**
      * Retrieves all groups that a user is member of.
-     * <p>
-     * This endpoint requires a valid JWT token in the Authorization header and validates that
-     * the requested username matches the username in the token. If the user is not a member
-     * of any groups, a UserNotInGroup exception is thrown which returns a 404 NOT_FOUND response.
-     * </p>
      *
-     * @param username the username of the user whose groups are being retrieved
+     * @param username   the username of the user whose groups are being retrieved
      * @param authHeader the JWT authorization header containing the bearer token
-     * @return ResponseEntity containing either:
-     *         - List of GroupDto objects (200 OK) if groups are found
-     *         - FORBIDDEN (403) if the requested username doesn't match the token username
-     *         - UNAUTHORIZED (401) if the authorization token is invalid
-     *         - NOT_FOUND (404) if the user is not a member of any groups (handled by GlobalExceptionHandler)
-     * @throws UserNotInGroup if the user is not a member of any groups
-     * @throws IllegalArgumentException if the authorization token is invalid or malformed
+     * @return ResponseEntity containing the list of groups or appropriate error
+     *         response
      */
     @PostMapping("/get/{username}")
     public ResponseEntity<Object> getGroupsByUsernamePost(

@@ -36,9 +36,10 @@ services:
       - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
       - COFFEE_SERVICE_URL=lb://coffee
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      - NATS_SERVER=nats://nats:4222
     depends_on:
       - pg-pagatu
+      - nats
     networks:
       - pagatu-network
 
@@ -54,9 +55,10 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      - NATS_SERVER=nats://nats:4222
     depends_on:
-      - kafka
+      - pg-pagatu
+      - nats
     networks:
       - pagatu-network
 
@@ -74,13 +76,13 @@ services:
       - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
       - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
       - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9092}
+      - NATS_SERVER=nats://nats:4222
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
       - COFFEE_SERVICE_URL=lb://coffee
       - AUTH_SERVICE_URL=lb://auth
     depends_on:
-      - kafka
+      - nats
     networks:
       - pagatu-network
 
@@ -97,40 +99,13 @@ services:
     networks:
       - pagatu-network
 
-  zookeeper:
-    image: zookeeper:latest
-    environment:
-      ALLOW_ANONYMOUS_LOGIN: "yes"
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+  # NATS - Lightweight messaging (replaces Kafka)
+  nats:
+    image: nats:latest
     ports:
-      - "2181:2181"
-      - "2888:2888"
-      - "3888:3888"
-    volumes:
-      - zookeeper_data:/data
-      - zookeeper_log:/datalog
-    networks:
-      - pagatu-network
-
-  kafka:
-    image: wurstmeister/kafka:2.13-2.8.1
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: "1"
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
-      KAFKA_LISTENERS: "PLAINTEXT://:9092"
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
-      ALLOW_PLAINTEXT_LISTENER: "yes"
-    ports:
-      - "9092:9092"
-    volumes:
-      - kafka_data:/var/lib/kafka/data
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+    command: ["--http_port", "8222"]
     networks:
       - pagatu-network
 
@@ -154,6 +129,3 @@ networks:
 
 volumes:
   pg_data:
-  zookeeper_data:
-  zookeeper_log:
-  kafka_data:

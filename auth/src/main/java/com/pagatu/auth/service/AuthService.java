@@ -13,11 +13,9 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,15 +33,17 @@ import java.util.*;
 
 /**
  * Service class for handling authentication and user management operations.
- * Provides functionality for user registration, login, password reset, and token management.
- * Integrates with Kafka for event publishing and external services for user synchronization.
+ * Provides functionality for user registration, login, password reset, and
+ * token management.
+ * Integrates with NATS for event publishing and external services for user
+ * synchronization.
  */
 @Service
 @Slf4j
 public class AuthService {
 
-    @Value("${spring.kafka.topics.resetPasswordMail}")
-    private String resetPasswordTopic;
+    @Value("${spring.nats.subject.reset-password-mail}")
+    private String natsSubject;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -51,33 +51,36 @@ public class AuthService {
     @Value("${jwt.expiration}")
     private long jwtExpiration;
 
+    private final OutboxService outboxService;
     private static final int LIMITER = 10;
     private static final int TOKEN_EXPIRY_MINUTES = 30;
     private final PasswordEncoder passwordEncoder;
     private final WebClient webClient;
     private final UserRepository userRepository;
     private final TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository;
-    private final KafkaTemplate<String, ResetPasswordMailEvent> kafkaTemplateResetPasswordMail;
 
-    public AuthService(@Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
-                       UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       WebClient.Builder webClientBuilder,
-                       @Value("${coffee.service.url}") String coffeeServiceUrl,
-                       @Autowired(required = false) @Qualifier("resetPasswordMailKafkaTemplate") KafkaTemplate<String, ResetPasswordMailEvent> kafkaTemplateResetPasswordMail) {
+    public AuthService(
+            @Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            WebClient.Builder webClientBuilder,
+            @Value("${coffee.service.url}") String coffeeServiceUrl,
+            OutboxService outboxService) {
         this.passwordEncoder = passwordEncoder;
+        this.outboxService = outboxService;
         this.webClient = webClientBuilder.baseUrl(coffeeServiceUrl).build();
         this.tokenForUserPasswordResetRepository = tokenForUserPasswordResetRepository;
         this.userRepository = userRepository;
-        this.kafkaTemplateResetPasswordMail = kafkaTemplateResetPasswordMail;
     }
 
     /**
-     * Authenticates a user and generates a JWT token upon successful authentication.
+     * Authenticates a user and generates a JWT token upon successful
+     * authentication.
      *
      * @param loginRequest the login credentials containing username and password
      * @return LoginResponse containing JWT token and user information
-     * @throws UserNotFoundException if the user with the provided username doesn't exist
+     * @throws UserNotFoundException   if the user with the provided username
+     *                                 doesn't exist
      * @throws AuthenticationException if the provided password is incorrect
      */
     public LoginResponse login(LoginRequest loginRequest) {
@@ -110,8 +113,10 @@ public class AuthService {
      * Synchronizes the user with external services after successful registration.
      *
      * @param registerRequest the user registration information
-     * @throws UserAlreadyExistsException  if username or email already exists in the system
-     * @throws ServiceUnavailableException if synchronization with external services fails
+     * @throws UserAlreadyExistsException  if username or email already exists in
+     *                                     the system
+     * @throws ServiceUnavailableException if synchronization with external services
+     *                                     fails
      */
     @Transactional
     public void register(RegisterRequest registerRequest) {
@@ -127,7 +132,8 @@ public class AuthService {
         boolean emailExists = userRepository.existsByEmail(registerRequest.getEmail());
 
         if (emailExists) {
-            throw new UserAlreadyExistsException("Email already exists", Constants.EMAIL_EXCEPRION_VALUE, registerRequest.getEmail());
+            throw new UserAlreadyExistsException("Email already exists", Constants.EMAIL_EXCEPRION_VALUE,
+                    registerRequest.getEmail());
         }
 
         User user = new User();
@@ -161,8 +167,8 @@ public class AuthService {
 
         Optional<User> userOpt = userRepository.getByEmail(email);
 
-        return userOpt.orElseThrow(() ->
-                new UserNotFoundException("User not found", email, Constants.EMAIL_EXCEPRION_VALUE));
+        return userOpt
+                .orElseThrow(() -> new UserNotFoundException("User not found", email, Constants.EMAIL_EXCEPRION_VALUE));
     }
 
     /**
@@ -182,7 +188,8 @@ public class AuthService {
                 throw new InvalidTokenException("Token is required", "RESET_TOKEN");
             }
 
-            Optional<TokenForUserPasswordReset> tokenOpt = tokenForUserPasswordResetRepository.findTokenForUserPasswordResetByToken(token);
+            Optional<TokenForUserPasswordReset> tokenOpt = tokenForUserPasswordResetRepository
+                    .findTokenForUserPasswordResetByToken(token);
 
             if (tokenOpt.isEmpty()) {
                 log.warn("Token not found: {}", token);
@@ -216,11 +223,13 @@ public class AuthService {
 
     /**
      * Initiates the password reset process for a user.
-     * Validates the email, checks rate limits, creates a reset token, and publishes a reset event.
+     * Validates the email, checks rate limits, creates a reset token, and publishes
+     * a reset event.
      *
      * @param email the email address of the user requesting password reset
      * @throws UserNotFoundException if no user exists with the provided email
-     * @throws RateLimiterException if the daily password reset limit has been exceeded
+     * @throws RateLimiterException  if the daily password reset limit has been
+     *                               exceeded
      */
     public void sendEmailForResetPassword(String email) {
         log.debug("Processing password reset request for email: {}", email);
@@ -254,10 +263,11 @@ public class AuthService {
      * Validates the request, updates the password, and marks the token as used.
      *
      * @param resetPasswordRequest the new password information
-     * @param token the reset token obtained from the email link
-     * @throws ValidationException if the request contains invalid data
+     * @param token                the reset token obtained from the email link
+     * @throws ValidationException   if the request contains invalid data
      * @throws UserNotFoundException if no user exists with the provided email
-     * @throws InvalidTokenException if the token is invalid or doesn't match the email
+     * @throws InvalidTokenException if the token is invalid or doesn't match the
+     *                               email
      * @throws TokenExpiredException if the token has expired
      */
     @Transactional
@@ -269,13 +279,14 @@ public class AuthService {
 
         Optional<User> userOpt = userRepository.getByEmail(resetPasswordRequest.getEmail());
 
-        User user = userOpt.orElseThrow(() ->
-                new UserNotFoundException("User not found", resetPasswordRequest.getEmail(), Constants.EMAIL_EXCEPRION_VALUE));
+        User user = userOpt.orElseThrow(() -> new UserNotFoundException("User not found",
+                resetPasswordRequest.getEmail(), Constants.EMAIL_EXCEPRION_VALUE));
 
-        Optional<TokenForUserPasswordReset> tokenOpt = tokenForUserPasswordResetRepository.findTokenForUserPasswordResetByToken(token);
+        Optional<TokenForUserPasswordReset> tokenOpt = tokenForUserPasswordResetRepository
+                .findTokenForUserPasswordResetByToken(token);
 
-        TokenForUserPasswordReset resetToken = tokenOpt.orElseThrow(() ->
-                new InvalidTokenException("Token not found", "RESET_TOKEN"));
+        TokenForUserPasswordReset resetToken = tokenOpt
+                .orElseThrow(() -> new InvalidTokenException("Token not found", "RESET_TOKEN"));
 
         validateResetToken(resetToken, resetPasswordRequest.getEmail());
 
@@ -297,7 +308,7 @@ public class AuthService {
      * Validates the password reset request parameters.
      *
      * @param request the password reset request to validate
-     * @param token the reset token to validate
+     * @param token   the reset token to validate
      * @throws ValidationException if any required field is missing or empty
      */
     private void validateResetPasswordRequest(ResetPasswordRequest request, String token) {
@@ -322,8 +333,9 @@ public class AuthService {
      * Validates a reset token for a specific email address.
      *
      * @param resetToken the token to validate
-     * @param email the email address to validate against the token
-     * @throws InvalidTokenException if the token doesn't match the email or has been used
+     * @param email      the email address to validate against the token
+     * @throws InvalidTokenException if the token doesn't match the email or has
+     *                               been used
      * @throws TokenExpiredException if the token has expired
      */
     private void validateResetToken(TokenForUserPasswordReset resetToken, String email) {
@@ -394,7 +406,7 @@ public class AuthService {
     }
 
     /**
-     * Publishes a password reset mail event to Kafka.
+     * Publishes a password reset mail event to NATS.
      *
      * @param email the email address of the user requesting password reset
      * @param token the reset token to include in the event
@@ -405,7 +417,8 @@ public class AuthService {
             event.setEmail(email);
             event.setToken(token);
 
-            kafkaTemplateResetPasswordMail.send(resetPasswordTopic, event);
+            outboxService.saveEvent(natsSubject, event);
+
             log.debug("Published reset password mail event for email: {}", email);
         } catch (Exception e) {
             log.error("Failed to publish reset password mail event", e);
@@ -418,29 +431,28 @@ public class AuthService {
      * @param user the user entity to synchronize
      */
     private void syncWithCoffeeService(User user) {
-        UtenteDto utenteDto = new UtenteDto();
-        utenteDto.setId(user.getId());
-        utenteDto.setAuthId(user.getId());
-        utenteDto.setUsername(user.getUsername());
-        utenteDto.setEmail(user.getEmail());
-        utenteDto.setName(user.getFirstName());
-        utenteDto.setLastname(user.getLastName());
-        utenteDto.setGroups(user.getGroups());
+        UserDto userDto = new UserDto();
+        userDto.setId(user.getId());
+        userDto.setAuthId(user.getId());
+        userDto.setUsername(user.getUsername());
+        userDto.setEmail(user.getEmail());
+        userDto.setName(user.getFirstName());
+        userDto.setLastname(user.getLastName());
+        userDto.setGroups(user.getGroups());
 
         webClient.post()
                 .uri("/api/coffee/user")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(utenteDto)
+                .bodyValue(userDto)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, response ->
-                        response.bodyToMono(String.class)
-                                .flatMap(errorBody -> {
-                                    String errorMsg = String.format(
-                                            "Coffee service error - Status: %s, Body: %s",
-                                            response.statusCode(), errorBody);
-                                    log.error(errorMsg);
-                                    return Mono.error(new RuntimeException(errorMsg));
-                                }))
+                .onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
+                        .flatMap(errorBody -> {
+                            String errorMsg = String.format(
+                                    "Coffee service error - Status: %s, Body: %s",
+                                    response.statusCode(), errorBody);
+                            log.error(errorMsg);
+                            return Mono.error(new RuntimeException(errorMsg));
+                        }))
                 .bodyToMono(Void.class)
                 .timeout(Duration.ofSeconds(10))
                 .doOnSuccess(x -> log.info("User successfully synchronized with coffee service"))

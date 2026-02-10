@@ -9,13 +9,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "user_group_memberships", uniqueConstraints = @UniqueConstraint(columnNames = {"utente_id", "group_id"}))
+@Table(name = "user_group_memberships", uniqueConstraints = @UniqueConstraint(columnNames = { "utente_id",
+        "group_id" }))
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "pagamenti"})
-@ToString(exclude = {"utente", "group", "pagamenti"})
-@EqualsAndHashCode(exclude = {"utente", "group", "pagamenti"})
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "payments" })
+@ToString(exclude = { "coffeeUser", "group", "payments" })
+@EqualsAndHashCode(exclude = { "coffeeUser", "group", "payments" })
 public class UserGroupMembership {
 
     @Id
@@ -25,7 +26,7 @@ public class UserGroupMembership {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "utente_id", nullable = false)
     @JsonIgnore
-    private Utente utente;
+    private CoffeeUser coffeeUser;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id", nullable = false)
@@ -34,7 +35,7 @@ public class UserGroupMembership {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private Status status;
+    private PaymentStatus status;
 
     @Column(name = "my_turn")
     private Boolean myTurn;
@@ -47,20 +48,20 @@ public class UserGroupMembership {
 
     @OneToMany(mappedBy = "userGroupMembership", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
-    private List<Pagamento> pagamenti = new ArrayList<>();
+    private List<Payment> payments = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
-        if(Boolean.TRUE.equals(isAdmin)){
+        if (Boolean.TRUE.equals(isAdmin)) {
             joinedAt = java.time.LocalDateTime.now();
             if (status == null) {
-                status = Status.NON_PAGATO;
+                status = PaymentStatus.NON_PAGATO;
             }
             myTurn = true;
-        }else{
+        } else {
             joinedAt = java.time.LocalDateTime.now();
             if (status == null) {
-                status = Status.NON_PAGATO;
+                status = PaymentStatus.NON_PAGATO;
             }
             myTurn = false;
         }

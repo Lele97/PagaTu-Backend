@@ -13,15 +13,15 @@ import java.util.Optional;
  * Repository interface for Group entity operations.
  */
 @Repository
-public interface GroupRepository  extends JpaRepository<Group, Long> {
+public interface GroupRepository extends JpaRepository<Group, Long> {
 
     @Query("SELECT g FROM Group g LEFT JOIN FETCH g.userMemberships WHERE g.name = :name")
     Optional<Group> getGroupByName(@Param("name") String name);
 
-    @Query("SELECT DISTINCT g FROM Group g JOIN g.userMemberships m JOIN m.utente u WHERE u.username = :username")
+    @Query("SELECT DISTINCT g FROM Group g JOIN g.userMemberships m JOIN m.coffeeUser u WHERE u.username = :username")
     List<Group> getGroupsByUsername(@Param("username") String username);
 
-    @Query("SELECT g FROM Group g JOIN FETCH g.userMemberships m JOIN FETCH m.utente WHERE g.name = :name")
+    @Query("SELECT g FROM Group g JOIN FETCH g.userMemberships m JOIN FETCH m.coffeeUser WHERE g.name = :name")
     Optional<Group> findGroupWithMembershipsByName(@Param("name") String name);
 
     void deleteGroupByName(String groupName);

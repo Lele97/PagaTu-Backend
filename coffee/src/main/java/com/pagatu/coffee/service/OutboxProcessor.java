@@ -1,8 +1,8 @@
-package com.pagatu.auth.service;
+package com.pagatu.coffee.service;
 
-import com.pagatu.auth.entity.OutboxEvent;
-import com.pagatu.auth.nats.NatsPublisher;
-import com.pagatu.auth.repository.OutboxEventRepository;
+import com.pagatu.coffee.entity.OutboxEvent;
+import com.pagatu.coffee.nats.NatsPublisher;
+import com.pagatu.coffee.repository.OutboxEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,20 +25,20 @@ public class OutboxProcessor {
     private final OutboxEventRepository outboxEventRepository;
     private final NatsPublisher natsPublisher;
 
-    @Value("${outbox.max-retries:5}")
+    @Value("${spring.outbox.max-retries:5}")
     private int maxRetries;
 
-    @Value("${outbox.batch-size:100}")
+    @Value("${spring.outbox.batch-size:100}")
     private int batchSize;
 
-    @Value("${outbox.cleanup-days:7}")
+    @Value("${spring.outbox.cleanup-days:7}")
     private int cleanupDays;
 
     /**
      * Process pending events from the outbox and publish to NATS.
      * Runs every 5 seconds by default.
      */
-    @Scheduled(fixedRateString = "${outbox.poll-interval:5000}")
+    @Scheduled(fixedRateString = "${spring.outbox.poll-interval:5000}")
     @Transactional
     public void processOutbox() {
         if (!natsPublisher.isConnected()) {
@@ -96,7 +96,7 @@ public class OutboxProcessor {
      * Cleanup old processed events.
      * Runs daily at midnight.
      */
-    @Scheduled(cron = "${outbox.cleanup-cron:0 0 0 * * ?}")
+    @Scheduled(cron = "${spring.outbox.cleanup-cron:0 0 0 * * ?}")
     @Transactional
     public void cleanupOldEvents() {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(cleanupDays);

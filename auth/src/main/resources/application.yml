@@ -2,28 +2,25 @@ server:
   port: ${SERVER_PORT:8081}
 
 spring:
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        spring.json.type.mapping: >
-          userEvent:com.pagatu.auth.event.UserEvent,
-          eventType:com.pagatu.auth.entity.EventType,
-          resetPasswordMail:com.pagatu.auth.event.ResetPasswordMailEvent
-    consumer:
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: com.pagatu.auth.event
-        spring.json.use.type.headers: true
-        spring.json.type.mapping: >
-          userEvent:com.pagatu.auth.event.UserEvent,
-          eventType:com.pagatu.auth.entity.EventType,
-          resetPasswordMail:com.pagatu.auth.event.ResetPasswordMailEvent
-    topics:
-      resetPasswordMail: reset-password-mail
+  config:
+    import: "optional:configserver:"
+
+  nats:
+    server: ${NATS_SERVER:nats://localhost:4222}
+    connection-timeout: 5000
+    max-reconnect: 10
+    connection-name: auth-service
+    # NATS subjects
+    subject:
+      reset-password-mail: reset-password-mail
+
+  # Outbox pattern configuration
+  outbox:
+    poll-interval: 5000        # Poll every 5 seconds
+    max-retries: 5             # Max retry attempts before giving up
+    batch-size: 100            # Process up to 100 events per poll
+    cleanup-days: 7            # Keep processed events for 7 days
+    cleanup-cron: "0 0 0 * * ?" # Cleanup at midnight
 
   application:
     name: auth
@@ -72,10 +69,10 @@ spring:
 
 logging:
   level:
-    com.pagatu.coffee: DEBUG
+    com.pagatu.auth: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.kafka: DEBUG
+    io.nats: DEBUG
     org.springframework.transaction: DEBUG
     root: INFO
 
@@ -148,7 +145,7 @@ logging:
   level:
     com.pagatu.auth: INFO
     org.hibernate.SQL: WARN
-    org.springframework.kafka: WARN
+    io.nats: WARN
     org.springframework.transaction: WARN
     root: WARN
 ---

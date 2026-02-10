@@ -1,11 +1,11 @@
 package com.pagatu.coffee.service;
 
 import com.pagatu.coffee.entity.Group;
-import com.pagatu.coffee.entity.Utente;
+import com.pagatu.coffee.entity.CoffeeUser;
 import com.pagatu.coffee.exception.GroupNotFoundException;
 import com.pagatu.coffee.exception.UserNotFoundException;
 import com.pagatu.coffee.repository.GroupRepository;
-import com.pagatu.coffee.repository.UtenteRepository;
+import com.pagatu.coffee.repository.CoffeeUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,11 +25,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class BaseUserService {
 
-    private final UtenteRepository utenteRepository;
+    private final CoffeeUserRepository coffeeUserRepository;
     private final GroupRepository groupRepository;
 
-    public Utente findUserByAuthId(Long authId) {
-        return utenteRepository.findByAuthId(authId)
+    public CoffeeUser findUserByAuthId(Long authId) {
+        return coffeeUserRepository.findByAuthId(authId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with auth ID: " + authId));
     }
 
@@ -37,11 +37,11 @@ public class BaseUserService {
      * Find user by username with proper exception handling
      *
      * @param username Username
-     * @return User entity
+     * @return CoffeeUser entity
      * @throws UserNotFoundException if user not found
      */
-    public Utente findUserByUsername(String username) {
-        return utenteRepository.findByUsername(username)
+    public CoffeeUser findUserByUsername(String username) {
+        return coffeeUserRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
     }
 
