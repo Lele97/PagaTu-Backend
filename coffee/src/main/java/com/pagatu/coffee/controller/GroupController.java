@@ -92,6 +92,21 @@ public class GroupController {
     }
 
     /**
+     * Rejects an invitation to a group.
+     *
+     * @param username  the username of the user rejecting the invitation
+     * @param groupName the name of the group
+     * @return ResponseEntity with success message
+     */
+    @PutMapping("/update/rejectinvitation")
+    public ResponseEntity<String> rejectInvitation(
+            @RequestParam("username") String username,
+            @RequestParam("groupName") String groupName) {
+        groupService.rejectInvitation(groupName, username);
+        return ResponseEntity.ok("User '" + username + "' rejected invitation to group '" + groupName + "' successfully");
+    }
+
+    /**
      * Sends an invitation to a user to join a group.
      *
      * @param invitationRequest the invitation details including username and group

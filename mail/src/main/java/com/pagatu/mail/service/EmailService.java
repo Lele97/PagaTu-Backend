@@ -4,7 +4,9 @@ import com.pagatu.mail.dto.NextPayerDto;
 import com.pagatu.mail.dto.LastPayerDto;
 import com.pagatu.mail.dto.UserDto;
 import com.pagatu.mail.event.InvitationEvent;
+import com.pagatu.mail.event.InvitationResponseEvent;
 import com.pagatu.mail.event.NextPaymentEvent;
+import com.pagatu.mail.event.PayForEvent;
 import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SkipPaymentEvent;
 import com.pagatu.mail.exception.CustomExceptionEmailSend;
@@ -137,6 +139,71 @@ public class EmailService {
                 .doOnSuccess(success -> log.info("{} to {}", LOG_INFO_INVITO, event.getEmail()))
                 .doOnError(error -> log.error(LOG_ERROR_INVITO, error))
                 .then();
+    }
+
+    /**
+     * Sends payment-on-behalf notification emails to both payer and payee.
+     *
+     * @param event the event containing payment details
+     * @return a Mono that completes when both emails have been sent
+     */
+    public Mono<Void> sendPayForNotification(PayForEvent event) {
+        return Mono.fromRunnable(() -> {
+            Context contextPayer = new Context(ITALIAN_LOCALE);
+            contextPayer.setVariable("payerUsername", event.getPayerUsername());
+            contextPayer.setVariable("friendUsername", event.getFriendUsername());
+            contextPayer.setVariable("groupName", event.getGroupName());
+            contextPayer.setVariable("amount", String.format("%.2f€", event.getAmount()));
+            contextPayer.setVariable("paymentDate", event.getPaymentDate().format(DATE_FORMATTER));
+            contextPayer.setVariable("companyName", company);
+
+            buildAndSendEmail(
+                    event.getPayerEmail(),
+                    null,
+                    "Paga-Tu: Hai pagato per un amico!",
+                    "pagaper-pagatore",
+                    contextPayer);
+
+            Context contextPayee = new Context(ITALIAN_LOCALE);
+            contextPayee.setVariable("payerUsername", event.getPayerUsername());
+            contextPayee.setVariable("friendUsername", event.getFriendUsername());
+            contextPayee.setVariable("groupName", event.getGroupName());
+            contextPayee.setVariable("amount", String.format("%.2f€", event.getAmount()));
+            contextPayee.setVariable("paymentDate", event.getPaymentDate().format(DATE_FORMATTER));
+            contextPayee.setVariable("companyName", company);
+
+            buildAndSendEmail(
+                    event.getFriendEmail(),
+                    null,
+                    "Paga-Tu: Un amico ha pagato per te!",
+                    "pagaper-ricevente",
+                    contextPayee);
+        }).then();
+    }
+
+    /**
+     * Sends an invitation response notification email to the group admin.
+     *
+     * @param event the event containing invitation response details
+     * @return a Mono that completes when the email is sent
+     */
+    public Mono<Void> sendInvitationResponseNotification(InvitationResponseEvent event) {
+        return Mono.fromRunnable(() -> {
+            Context context = new Context(ITALIAN_LOCALE);
+            context.setVariable("username", event.getUsername());
+            context.setVariable("groupName", event.getGroupName());
+            context.setVariable("accepted", event.getAccepted());
+            context.setVariable("adminUsername", event.getAdminUsername());
+            context.setVariable("companyName", company);
+
+            String statusStr = event.getAccepted() ? "accettato" : "rifiutato";
+            buildAndSendEmail(
+                    event.getAdminEmail(),
+                    null,
+                    "Paga-Tu: Invito " + statusStr + " da " + event.getUsername(),
+                    "invitation-response",
+                    context);
+        }).then();
     }
 
     /**
