@@ -3,6 +3,8 @@ package com.pagatu.coffee;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.retry.annotation.EnableRetry;
 
 /**
  * Main application class for the PagaTu Coffee payment management system.
@@ -25,6 +27,8 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
  */
 @SpringBootApplication
 @EnableDiscoveryClient
+@EnableScheduling
+@EnableRetry
 public class CoffeeApplication {
 
     /**

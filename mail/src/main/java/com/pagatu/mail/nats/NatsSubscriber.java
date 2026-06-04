@@ -31,16 +31,6 @@ public class NatsSubscriber {
         dispatcher.subscribe(subject, handler);
     }
 
-    /**
-     * Subscribe to a subject with a simple string handler
-     */
-    public void subscribe(String subject, java.util.function.Consumer<String> handler) {
-        dispatcher.subscribe(subject, msg -> {
-            String message = new String(msg.getData(), StandardCharsets.UTF_8);
-            handler.accept(message);
-        });
-    }
-
     @PreDestroy
     public void cleanup() throws InterruptedException {
         if (dispatcher != null) {

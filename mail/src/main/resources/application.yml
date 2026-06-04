@@ -40,9 +40,9 @@ spring:
   # NATS Configuration
   nats:
     subject:
-      next-payment: next-payment-topic
-      skip-payment: skip-payment-topic
-      invitation: invitation-topic
+      next-payment: next-payment-subject
+      skip-payment: skip-payment-subject
+      invitation: invitation-subject
       reset-password-mail: reset-password-mail
       pay-for: pay-for-topic
       invitation-response: invitation-response-topic
