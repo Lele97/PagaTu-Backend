@@ -9,6 +9,7 @@ import com.pagatu.coffee.entity.PaymentStatus;
 import com.pagatu.coffee.entity.UserGroupMembership;
 import com.pagatu.coffee.entity.CoffeeUser;
 import com.pagatu.coffee.event.InvitationEvent;
+import com.pagatu.coffee.event.InvitationResponseEvent;
 import com.pagatu.coffee.exception.BusinessException;
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
@@ -46,14 +47,19 @@ public class GroupService {
     @Value("${spring.nats.subject.invitation-subject}")
     private String natsSubject;
 
-    private OutboxService outboxService;
+    @Value("${spring.nats.subject.invitation-response-subject}")
+    private String invitationResponseSubject;
+
+    private final OutboxService outboxService;
     private final GroupRepository groupRepository;
     private final UserGroupMembershipRepository userGroupMembershipRepository;
     private final BaseUserService baseUserService;
 
-    public GroupService(GroupRepository groupRepository,
+    public GroupService(OutboxService outboxService,
+            GroupRepository groupRepository,
             UserGroupMembershipRepository userGroupMembershipRepository,
             BaseUserService baseUserService) {
+        this.outboxService = outboxService;
         this.groupRepository = groupRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
         this.baseUserService = baseUserService;
@@ -121,6 +127,29 @@ public class GroupService {
 
             log.info("Added user {} to group {}",
                     user.getUsername(), group.getName());
+
+            try {
+                CoffeeUser admin = group.getUserMemberships().stream()
+                        .filter(m -> Boolean.TRUE.equals(m.getIsAdmin()))
+                        .map(UserGroupMembership::getCoffeeUser)
+                        .findFirst()
+                        .orElse(null);
+
+                if (admin != null) {
+                    InvitationResponseEvent event = new InvitationResponseEvent();
+                    event.setUsername(user.getUsername());
+                    event.setEmail(user.getEmail());
+                    event.setGroupName(group.getName());
+                    event.setAccepted(true);
+                    event.setAdminUsername(admin.getUsername());
+                    event.setAdminEmail(admin.getEmail());
+
+                    outboxService.saveEvent(invitationResponseSubject, event);
+                    log.info("Invitation ACCEPT response event saved in outbox for user {} in group {}", username, groupName);
+                }
+            } catch (Exception e) {
+                log.error("Failed to publish invitation accept event", e);
+            }
 
         } catch (DataIntegrityViolationException ex) {
             log.warn("User {} already in group {}", username, groupName);
@@ -229,5 +258,42 @@ public class GroupService {
         return groups.stream()
                 .map(this::mapToDto)
                 .toList();
+    }
+
+    /**
+     * Rejects a group invitation, notifying the group admin.
+     *
+     * @param groupName the name of the group
+     * @param username  the username rejecting the invitation
+     */
+    @Transactional
+    public void rejectInvitation(String groupName, String username) {
+        CoffeeUser user = baseUserService.findUserByUsername(username);
+        Group group = baseUserService.findGroupByName(groupName);
+
+        log.info("User {} rejected invitation to group {}", username, groupName);
+
+        try {
+            CoffeeUser admin = group.getUserMemberships().stream()
+                    .filter(m -> Boolean.TRUE.equals(m.getIsAdmin()))
+                    .map(UserGroupMembership::getCoffeeUser)
+                    .findFirst()
+                    .orElse(null);
+
+            if (admin != null) {
+                InvitationResponseEvent event = new InvitationResponseEvent();
+                event.setUsername(user.getUsername());
+                event.setEmail(user.getEmail());
+                event.setGroupName(group.getName());
+                event.setAccepted(false);
+                event.setAdminUsername(admin.getUsername());
+                event.setAdminEmail(admin.getEmail());
+
+                outboxService.saveEvent(invitationResponseSubject, event);
+                log.info("Invitation REJECT response event saved in outbox for user {} in group {}", username, groupName);
+            }
+        } catch (Exception e) {
+            log.error("Failed to publish invitation reject event", e);
+        }
     }
 }

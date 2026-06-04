@@ -6,6 +6,7 @@ import com.pagatu.coffee.dto.PaymentDto;
 import com.pagatu.coffee.dto.NextPaymentDto;
 import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.NextPaymentEvent;
+import com.pagatu.coffee.event.PayForEvent;
 import com.pagatu.coffee.event.SkipPaymentEvent;
 import com.pagatu.coffee.exception.ActiveUserMemberNotInGroup;
 import com.pagatu.coffee.exception.GroupNotFoundException;
@@ -53,6 +54,9 @@ public class PaymentService {
 
     @Value("${spring.nats.subject.skip-payment-subject}")
     private String natsSubjectSkipPayment;
+
+    @Value("${spring.nats.subject.pay-for-subject}")
+    private String natsSubjectPayFor;
 
     private final OutboxService outboxService;
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -173,6 +177,22 @@ public class PaymentService {
         NextPaymentEvent event = createPaymentEvent(savedPayment, payingUser, nextPayment);
 
         outboxService.saveEvent(natsSubjectNextPayment, event);
+
+        try {
+            PayForEvent payForEvent = new PayForEvent();
+            payForEvent.setPayerUsername(payingUser.getUsername());
+            payForEvent.setPayerEmail(payingUser.getEmail());
+            payForEvent.setFriendUsername(friend.getUsername());
+            payForEvent.setFriendEmail(friend.getEmail());
+            payForEvent.setGroupName(group.getName());
+            payForEvent.setAmount(savedPayment.getAmount());
+            payForEvent.setPaymentDate(savedPayment.getPaymentDate());
+
+            outboxService.saveEvent(natsSubjectPayFor, payForEvent);
+            log.info("PayFor event saved in outbox: {} paid for {}", payingUser.getUsername(), friend.getUsername());
+        } catch (Exception e) {
+            log.error("Failed to publish payFor event", e);
+        }
 
         log.info("Pagato per: {} - Pagamento registrato: {} - Prossimo pagatore: {}",
                 friend.getAuthId(), savedPayment.getId(), nextPayment.getUsername());

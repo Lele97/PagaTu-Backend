@@ -40,10 +40,12 @@ spring:
   # NATS Configuration
   nats:
     subject:
-      next-payment: next-payment
-      skip-payment: skip-payment
-      invitation: invitation
+      next-payment: next-payment-topic
+      skip-payment: skip-payment-topic
+      invitation: invitation-topic
       reset-password-mail: reset-password-mail
+      pay-for: pay-for-topic
+      invitation-response: invitation-response-topic
     server: ${NATS_SERVER:nats://localhost:4222}
     connection-timeout: 5000
     max-reconnect: -1

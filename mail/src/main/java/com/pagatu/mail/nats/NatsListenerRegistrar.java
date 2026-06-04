@@ -2,7 +2,9 @@ package com.pagatu.mail.nats;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pagatu.mail.event.InvitationEvent;
+import com.pagatu.mail.event.InvitationResponseEvent;
 import com.pagatu.mail.event.NextPaymentEvent;
+import com.pagatu.mail.event.PayForEvent;
 import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SkipPaymentEvent;
 import com.pagatu.mail.service.EmailService;
@@ -40,6 +42,12 @@ public class NatsListenerRegistrar {
     @Value("${spring.nats.subject.reset-password-mail:reset-password-mail}")
     private String resetPasswordMailSubject;
 
+    @Value("${spring.nats.subject.pay-for:pay-for}")
+    private String payForSubject;
+
+    @Value("${spring.nats.subject.invitation-response:invitation-response}")
+    private String invitationResponseSubject;
+
     /**
      * Register all NATS subscriptions on startup.
      */
@@ -62,6 +70,14 @@ public class NatsListenerRegistrar {
         // Subscribe to reset password mail events
         natsSubscriber.subscribe(resetPasswordMailSubject, this::handleResetPasswordMailEvent);
         log.info("Subscribed to subject: {}", resetPasswordMailSubject);
+
+        // Subscribe to pay for events
+        natsSubscriber.subscribe(payForSubject, this::handlePayForEvent);
+        log.info("Subscribed to subject: {}", payForSubject);
+
+        // Subscribe to invitation response events
+        natsSubscriber.subscribe(invitationResponseSubject, this::handleInvitationResponseEvent);
+        log.info("Subscribed to subject: {}", invitationResponseSubject);
 
         log.info("All NATS subscriptions registered successfully");
     }
@@ -144,6 +160,47 @@ public class NatsListenerRegistrar {
 
         } catch (Exception e) {
             log.error("Error processing reset password mail event", e);
+        }
+    }
+
+    /**
+     * Handle pay for events.
+     */
+    private void handlePayForEvent(Message msg) {
+        try {
+            String json = new String(msg.getData(), StandardCharsets.UTF_8);
+            log.debug("Received pay for event: {}", json);
+
+            PayForEvent event = objectMapper.readValue(json, PayForEvent.class);
+            log.info("Processing pay for event: {} paid for {}", event.getPayerUsername(), event.getFriendUsername());
+
+            emailService.sendPayForNotification(event).subscribe(
+                    result -> log.debug("Email sent successfully for pay for event"),
+                    error -> log.error("Failed to send email for pay for event", error));
+
+        } catch (Exception e) {
+            log.error("Error processing pay for event", e);
+        }
+    }
+
+    /**
+     * Handle invitation response events.
+     */
+    private void handleInvitationResponseEvent(Message msg) {
+        try {
+            String json = new String(msg.getData(), StandardCharsets.UTF_8);
+            log.debug("Received invitation response event: {}", json);
+
+            InvitationResponseEvent event = objectMapper.readValue(json, InvitationResponseEvent.class);
+            log.info("Processing invitation response event: {} responded to invitation in group {} (accepted: {})",
+                    event.getUsername(), event.getGroupName(), event.getAccepted());
+
+            emailService.sendInvitationResponseNotification(event).subscribe(
+                    result -> log.debug("Email sent successfully for invitation response event"),
+                    error -> log.error("Failed to send email for invitation response event", error));
+
+        } catch (Exception e) {
+            log.error("Error processing invitation response event", e);
         }
     }
 }
