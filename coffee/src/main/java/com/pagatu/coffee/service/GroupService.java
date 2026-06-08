@@ -4,13 +4,12 @@ import com.pagatu.coffee.dto.GroupDto;
 import com.pagatu.coffee.dto.InvitationRequest;
 import com.pagatu.coffee.dto.NewGroupRequest;
 import com.pagatu.coffee.dto.UserMembershipDto;
-import com.pagatu.coffee.entity.Group;
-import com.pagatu.coffee.entity.PaymentStatus;
-import com.pagatu.coffee.entity.UserGroupMembership;
-import com.pagatu.coffee.entity.CoffeeUser;
+import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.InvitationEvent;
+import com.pagatu.coffee.event.InvitationResponseEvent;
 import com.pagatu.coffee.exception.BusinessException;
 import com.pagatu.coffee.repository.GroupRepository;
+import com.pagatu.coffee.repository.InvitationUserToGroupInformationRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -47,20 +46,22 @@ public class GroupService {
     private String natsSubject;
 
     @Value("${spring.nats.subject.invitation-response-subject}")
-    private String invitationResponseSubject;
+    private String natsSubjectsInvitationResponse;
 
     private final OutboxService outboxService;
     private final GroupRepository groupRepository;
     private final UserGroupMembershipRepository userGroupMembershipRepository;
+    private final InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository;
     private final BaseUserService baseUserService;
 
     public GroupService(OutboxService outboxService,
-            GroupRepository groupRepository,
-            UserGroupMembershipRepository userGroupMembershipRepository,
-            BaseUserService baseUserService) {
+                        GroupRepository groupRepository,
+                        UserGroupMembershipRepository userGroupMembershipRepository, InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository,
+                        BaseUserService baseUserService) {
         this.outboxService = outboxService;
         this.groupRepository = groupRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
+        this.invitationUserToGroupInformationRepository = invitationUserToGroupInformationRepository;
         this.baseUserService = baseUserService;
     }
 
@@ -106,10 +107,21 @@ public class GroupService {
      * @throws BusinessException if the user is already a member of the group
      */
     @Transactional
-    public void addUserToGroup(String groupName, String username) {
+    public void addUserToGroup(String groupName, String username, Long invitationId) {
 
         CoffeeUser user = baseUserService.findUserByUsername(username);
+        CoffeeUser userSendInvitation = baseUserService.findUserByAuthId(invitationId);
         Group group = baseUserService.findGroupByName(groupName);
+
+
+        InvitationUserToGroupInformation invitationUserToGroupInformation =
+                invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId)
+                        .orElseThrow(() -> new BusinessException("Invito non trovato o non più attivo"));
+        Long userWhoSentTheInvitation = invitationUserToGroupInformation.getUserWhoSentInvitation();
+        invitationUserToGroupInformation.setUsedAt(LocalDateTime.now());
+        invitationUserToGroupInformation.setInvitationStatus(InvitationStatus.ACCEPTED);
+        invitationUserToGroupInformationRepository.save(invitationUserToGroupInformation);
+
 
         if (userGroupMembershipRepository.existsByCoffeeUserAndGroup(user, group))
             throw new BusinessException("User '" + username + "' is already a member of group '" + groupName + "'");
@@ -126,6 +138,17 @@ public class GroupService {
 
             log.info("Added user {} to group {}",
                     user.getUsername(), group.getName());
+
+
+            InvitationResponseEvent invitationResponseEvent = new InvitationResponseEvent();
+            invitationResponseEvent.setGroupName(groupName);
+            invitationResponseEvent.setUsername(username);
+            invitationResponseEvent.setUserWhoSentTheInvitation(userWhoSentTheInvitation);
+            invitationResponseEvent.setAccepted(true);
+            invitationResponseEvent.setEmail(userSendInvitation.getEmail());
+
+            outboxService.saveEvent(natsSubjectsInvitationResponse, invitationResponseEvent);
+
 
         } catch (DataIntegrityViolationException ex) {
             log.warn("User {} already in group {}", username, groupName);
@@ -158,11 +181,24 @@ public class GroupService {
         if (!isAdmin)
             throw new BusinessException("You are not an admin of group '" + invitationRequest.getGroupName() + "'");
 
+
+        InvitationUserToGroupInformation invitationUserToGroupInformation = new InvitationUserToGroupInformation();
+        invitationUserToGroupInformation.setUserWhoSentInvitation(userId);
+        invitationUserToGroupInformation.setGroupName(invitationRequest.getGroupName());
+        invitationUserToGroupInformation.setUser(invitationRequest.getUsername());
+        invitationUserToGroupInformation.setEmail(coffeeUser.getEmail());
+        invitationUserToGroupInformation.setCreatedAt(LocalDateTime.now());
+        invitationUserToGroupInformation.setExpiredDate(LocalDateTime.now().plusMinutes(60));
+        invitationUserToGroupInformation.setInvitationStatus(InvitationStatus.ACTIVE);
+
+        InvitationUserToGroupInformation savedInvitationUserToGroupInformation = invitationUserToGroupInformationRepository.save(invitationUserToGroupInformation);
+
         InvitationEvent event = new InvitationEvent();
         event.setUsername(coffeeUser.getUsername());
         event.setGroupName(group.getName());
         event.setEmail(coffeeUser.getEmail());
         event.setUserWhoSentTheInvitation(userWhoSentTheInvitation.getUsername());
+        event.setInvitationId(savedInvitationUserToGroupInformation.getId());
 
         outboxService.saveEvent(natsSubject, event);
 

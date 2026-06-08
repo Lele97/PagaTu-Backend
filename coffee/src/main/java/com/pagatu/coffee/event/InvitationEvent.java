@@ -13,4 +13,5 @@ public class InvitationEvent {
     private String username;
     private String groupName;
     private String userWhoSentTheInvitation;
+    private Long invitationId;
 }

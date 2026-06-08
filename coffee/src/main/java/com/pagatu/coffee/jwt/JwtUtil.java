@@ -2,12 +2,12 @@ package com.pagatu.coffee.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Utility class for JWT (JSON Web Token) operations in the Coffee application.
@@ -43,12 +43,14 @@ public class JwtUtil {
      *
      * @param token the JWT token string to parse (should not include "Bearer " prefix)
      * @return Claims object containing all the token's payload data
-     * @throws io.jsonwebtoken.JwtException if the token is invalid, expired, or malformed
+     * @throws io.jsonwebtoken.JwtException               if the token is invalid, expired, or malformed
      * @throws io.jsonwebtoken.security.SecurityException if the token signature is invalid
      * @see Claims
      */
     public Claims getAllClaimsFromToken(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        SecretKey key = Keys.hmacShaKeyFor(keyBytes);
         return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
@@ -67,7 +69,7 @@ public class JwtUtil {
      *
      * @param token the JWT token string, may include "Bearer " prefix
      * @return the username/subject stored in the token's "sub" claim
-     * @throws io.jsonwebtoken.JwtException if the token is invalid, expired, or malformed
+     * @throws io.jsonwebtoken.JwtException               if the token is invalid, expired, or malformed
      * @throws io.jsonwebtoken.security.SecurityException if the token signature is invalid
      * @see #getAllClaimsFromToken(String)
      */
@@ -90,10 +92,10 @@ public class JwtUtil {
      *
      * @param token the JWT token string, may include "Bearer " prefix
      * @return the user ID as a Long value extracted from the "id" claim
-     * @throws io.jsonwebtoken.JwtException if the token is invalid, expired, or malformed
+     * @throws io.jsonwebtoken.JwtException               if the token is invalid, expired, or malformed
      * @throws io.jsonwebtoken.security.SecurityException if the token signature is invalid
-     * @throws NumberFormatException if the "id" claim cannot be converted to Long
-     * @throws NullPointerException if the "id" claim is not present in the token
+     * @throws NumberFormatException                      if the "id" claim cannot be converted to Long
+     * @throws NullPointerException                       if the "id" claim is not present in the token
      * @see #getAllClaimsFromToken(String)
      */
     public Long getUserIdFromToken(String token) {

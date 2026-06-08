@@ -10,6 +10,7 @@ import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
 import com.pagatu.auth.repository.UserRepository;
 import com.pagatu.auth.util.Constants;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -392,7 +393,10 @@ public class AuthService {
      * @return the generated JWT token as a string
      */
     private String generateToken(User user) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+
+
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        SecretKey key = Keys.hmacShaKeyFor(keyBytes);
 
         Instant now = Instant.now();
         return Jwts.builder()

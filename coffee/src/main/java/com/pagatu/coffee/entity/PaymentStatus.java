@@ -1,9 +1,12 @@
 package com.pagatu.coffee.entity;
 
+import lombok.Getter;
+
 /**
  * Payment status for group memberships.
  * Values are stored in Italian in the database for backward compatibility.
  */
+@Getter
 public enum PaymentStatus {
     PAGATO("PAGATO"), // PAID
     NON_PAGATO("NON_PAGATO"), // NOT_PAID
@@ -15,7 +18,4 @@ public enum PaymentStatus {
         this.dbValue = dbValue;
     }
 
-    public String getDbValue() {
-        return dbValue;
-    }
 }

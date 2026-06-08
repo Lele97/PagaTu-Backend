@@ -55,8 +55,8 @@ public class PaymentService {
     @Value("${spring.nats.subject.skip-payment-subject}")
     private String natsSubjectSkipPayment;
 
-    @Value("${spring.nats.subject.pay-for-subject}")
-    private String natsSubjectPayFor;
+//    @Value("${spring.nats.subject.pay-for-subject}")
+//    private String natsSubjectPayFor;
 
     private final OutboxService outboxService;
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -188,7 +188,7 @@ public class PaymentService {
             payForEvent.setAmount(savedPayment.getAmount());
             payForEvent.setPaymentDate(savedPayment.getPaymentDate());
 
-            outboxService.saveEvent(natsSubjectPayFor, payForEvent);
+            //outboxService.saveEvent(natsSubjectPayFor, payForEvent);
             log.info("PayFor event saved in outbox: {} paid for {}", payingUser.getUsername(), friend.getUsername());
         } catch (Exception e) {
             log.error("Failed to publish payFor event", e);

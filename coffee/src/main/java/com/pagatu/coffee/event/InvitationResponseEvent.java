@@ -12,6 +12,5 @@ public class InvitationResponseEvent {
     private String email;
     private String groupName;
     private Boolean accepted;
-    private String adminUsername;
-    private String adminEmail;
+    private Long userWhoSentTheInvitation;
 }
