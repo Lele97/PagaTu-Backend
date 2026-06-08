@@ -2,7 +2,9 @@ package com.pagatu.gateway_service.filter;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
@@ -118,7 +120,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         try {
 
-            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+            SecretKey key = Keys.hmacShaKeyFor(keyBytes);
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(key)
                     .build()
@@ -165,5 +168,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return 1;
+    }
+
+    @PostConstruct
+    public void logJwtKeyLength() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        System.out.println("JWT secret length: " + keyBytes.length + " bytes (" + (keyBytes.length * 8) + " bits)");
     }
 }

@@ -45,7 +45,7 @@ spring:
       invitation: invitation-subject
       reset-password-mail: reset-password-mail
       pay-for: pay-for-topic
-      invitation-response: invitation-response-topic
+      invitation-response: invitation-response-subject
     server: ${NATS_SERVER:nats://localhost:4222}
     connection-timeout: 5000
     max-reconnect: -1

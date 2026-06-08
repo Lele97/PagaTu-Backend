@@ -193,12 +193,12 @@ public class EmailService {
             context.setVariable("username", event.getUsername());
             context.setVariable("groupName", event.getGroupName());
             context.setVariable("accepted", event.getAccepted());
-            context.setVariable("adminUsername", event.getAdminUsername());
-            context.setVariable("companyName", company);
+            context.setVariable("email", event.getEmail());
+            context.setVariable("userSendInvitation", event.getUserWhoSentTheInvitation());
 
             String statusStr = event.getAccepted() ? "accettato" : "rifiutato";
             buildAndSendEmail(
-                    event.getAdminEmail(),
+                    event.getEmail(),
                     null,
                     "Paga-Tu: Invito " + statusStr + " da " + event.getUsername(),
                     "invitation-response",
@@ -372,10 +372,11 @@ public class EmailService {
         context.setVariable(Constants.TEMPLATE_VAR_USER_WHO_SENT_INVITATION, event.getUserWhoSentTheInvitation());
         context.setVariable(Constants.TEMPLATE_VAR_GROUP_NAME, event.getGroupName());
 
+        String encodedInvitationId = UriUtils.encode(event.getInvitationId(), StandardCharsets.UTF_8);
         String encodedUsername = UriUtils.encode(event.getUsername(), StandardCharsets.UTF_8);
         String encodedGroupName = UriUtils.encode(event.getGroupName(), StandardCharsets.UTF_8);
-        String invitationLink = String.format("%s%s?username=%s&groupName=%s",
-                domainUrl, invitationUserToGroupPath, encodedUsername, encodedGroupName);
+        String invitationLink = String.format("%s%s?username=%s&groupName=%s&invitationId=%s",
+                domainUrl, invitationUserToGroupPath, encodedUsername, encodedGroupName, encodedInvitationId);
 
         context.setVariable(Constants.TEMPLATE_VAR_LINK, invitationLink);
         context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);

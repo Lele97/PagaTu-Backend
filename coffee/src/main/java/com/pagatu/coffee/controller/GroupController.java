@@ -86,8 +86,10 @@ public class GroupController {
     @PutMapping("/update/addtogroup")
     public ResponseEntity<String> addUserToGroup(
             @RequestParam("username") String username,
-            @RequestParam("groupName") String groupName) {
-        groupService.addUserToGroup(groupName, username);
+            @RequestParam("groupName") String groupName,
+            @RequestParam("invitationId") Long invitationId) {
+        log.info("username :: " + username);
+        groupService.addUserToGroup(groupName, username, invitationId);
         return ResponseEntity.ok("User '" + username + "' added to group '" + groupName + "' successfully");
     }
 
@@ -97,14 +99,14 @@ public class GroupController {
      * @param username  the username of the user rejecting the invitation
      * @param groupName the name of the group
      * @return ResponseEntity with success message
-     */
-    @PutMapping("/update/rejectinvitation")
-    public ResponseEntity<String> rejectInvitation(
-            @RequestParam("username") String username,
-            @RequestParam("groupName") String groupName) {
-        groupService.rejectInvitation(groupName, username);
-        return ResponseEntity.ok("User '" + username + "' rejected invitation to group '" + groupName + "' successfully");
-    }
+    //     */
+//    @PutMapping("/update/rejectinvitation")
+//    public ResponseEntity<String> rejectInvitation(
+//            @RequestParam("username") String username,
+//            @RequestParam("groupName") String groupName) {
+//        groupService.rejectInvitation(groupName, username);
+//        return ResponseEntity.ok("User '" + username + "' rejected invitation to group '" + groupName + "' successfully");
+//    }
 
     /**
      * Sends an invitation to a user to join a group.
@@ -128,7 +130,7 @@ public class GroupController {
      * @param username   the username of the user whose groups are being retrieved
      * @param authHeader the JWT authorization header containing the bearer token
      * @return ResponseEntity containing the list of groups or appropriate error
-     *         response
+     * response
      */
     @PostMapping("/get/{username}")
     public ResponseEntity<Object> getGroupsByUsernamePost(

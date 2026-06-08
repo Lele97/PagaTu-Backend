@@ -77,8 +77,7 @@ public class CoffeeUserService {
             CoffeeUser existing = existingByAuthId.get();
             log.info("Existing user found by authId: {}", coffeeUserDto.getAuthId());
             List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(coffeeUserDto.getGroups());
-            if (userGroupMemberships != null)
-                createGroupAndAddUserToTheGroup(existing, userGroupMemberships);
+            createGroupAndAddUserToTheGroup(existing, userGroupMemberships);
             return mapToDto(existing);
         }
 
@@ -89,8 +88,7 @@ public class CoffeeUserService {
             existing.setAuthId(coffeeUserDto.getAuthId());
             existing.setEmail(coffeeUserDto.getEmail());
             List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(coffeeUserDto.getGroups());
-            if (userGroupMemberships != null)
-                createGroupAndAddUserToTheGroup(existing, userGroupMemberships);
+            createGroupAndAddUserToTheGroup(existing, userGroupMemberships);
             CoffeeUser updated = coffeeUserRepository.save(existing);
             log.info("Updated existing user by username: {}", coffeeUserDto.getUsername());
             return mapToDto(updated);
@@ -106,7 +104,7 @@ public class CoffeeUserService {
 
         List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(coffeeUserDto.getGroups());
 
-        if (userGroupMemberships != null && !userGroupMemberships.isEmpty())
+        if (!userGroupMemberships.isEmpty())
             createGroupAndAddUserToTheGroup(savedUser, userGroupMemberships);
 
         log.info("New user created: {}", savedUser.getUsername());
