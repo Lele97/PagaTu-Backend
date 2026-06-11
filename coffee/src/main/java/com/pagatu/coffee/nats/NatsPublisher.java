@@ -7,6 +7,13 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 
+/**
+ * NATS Core publisher for the coffee service.
+ * <p>
+ * Serializes domain events to JSON and publishes them to NATS subjects.
+ * Used by the transactional outbox processor to deliver payment and invitation events.
+ * </p>
+ */
 @Service
 @Slf4j
 public class NatsPublisher {
@@ -14,6 +21,10 @@ public class NatsPublisher {
     private final Connection natsConnection;
     private final ObjectMapper objectMapper;
 
+    /**
+     * @param natsConnection active NATS connection bean
+     * @param objectMapper   Jackson mapper for event serialization
+     */
     public NatsPublisher(Connection natsConnection, ObjectMapper objectMapper) {
         this.natsConnection = natsConnection;
         this.objectMapper = objectMapper;

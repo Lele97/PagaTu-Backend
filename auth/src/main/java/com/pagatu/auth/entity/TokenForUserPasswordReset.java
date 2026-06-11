@@ -7,6 +7,13 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * Entity representing a password reset token issued to a user.
+ * <p>
+ * Tokens have a limited validity window and transition through {@link TokenStatus}
+ * values such as ACTIVE, USED, and EXPIRED.
+ * </p>
+ */
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor

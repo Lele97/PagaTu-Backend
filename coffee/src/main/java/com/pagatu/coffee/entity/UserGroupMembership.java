@@ -8,6 +8,13 @@ import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entity linking a {@link CoffeeUser} to a {@link Group}.
+ * <p>
+ * Tracks payment rotation state ({@link PaymentStatus}, {@code myTurn}),
+ * admin privileges, join date, and the payment history for the membership.
+ * </p>
+ */
 @Entity
 @Table(name = "user_group_memberships", uniqueConstraints = @UniqueConstraint(columnNames = { "utente_id",
         "group_id" }))

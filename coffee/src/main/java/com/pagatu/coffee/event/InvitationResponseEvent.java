@@ -4,6 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Event published when an invited user accepts or rejects a group invitation.
+ * Consumed by the mail service to notify the group admin.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * NATS payload for a group invitation email.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

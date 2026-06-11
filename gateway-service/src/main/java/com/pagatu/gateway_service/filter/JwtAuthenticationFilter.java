@@ -170,6 +170,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return 1;
     }
 
+    /**
+     * Logs the decoded JWT secret length at startup for configuration diagnostics.
+     */
     @PostConstruct
     public void logJwtKeyLength() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);

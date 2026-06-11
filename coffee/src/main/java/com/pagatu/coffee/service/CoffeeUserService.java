@@ -40,6 +40,11 @@ public class CoffeeUserService {
     private final GroupRepository groupRepository;
     private final GroupService groupService;
 
+    /**
+     * @param coffeeUserRepository user persistence
+     * @param groupRepository      group lookups during sync
+     * @param groupService         group creation for new registrations
+     */
     public CoffeeUserService(CoffeeUserRepository coffeeUserRepository,
             GroupRepository groupRepository,
             GroupService groupService) {

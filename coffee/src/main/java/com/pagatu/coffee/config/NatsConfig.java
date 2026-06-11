@@ -11,6 +11,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
+/**
+ * Spring configuration for the NATS connection used by the coffee service.
+ */
 @Configuration
 @Slf4j
 public class NatsConfig {
@@ -24,6 +27,11 @@ public class NatsConfig {
     @Value("${spring.nats.connection-name:coffee-service}")
     private String connectionName;
 
+    /**
+     * Creates and connects a NATS {@link Connection} with reconnect and ping settings.
+     *
+     * @return connected NATS client
+     */
     @Bean
     public Connection natsConnection() {
         try {

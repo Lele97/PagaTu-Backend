@@ -83,7 +83,9 @@ public class NatsListenerRegistrar {
     }
 
     /**
-     * Handle next payment events.
+     * Handles next payment events and triggers the corresponding email.
+     *
+     * @param msg raw NATS message containing a {@link NextPaymentEvent} JSON payload
      */
     private void handleNextPaymentEvent(Message msg) {
         try {
@@ -103,7 +105,9 @@ public class NatsListenerRegistrar {
     }
 
     /**
-     * Handle skip payment events.
+     * Handles skip payment events and triggers the corresponding email.
+     *
+     * @param msg raw NATS message containing a {@link SkipPaymentEvent} JSON payload
      */
     private void handleSkipPaymentEvent(Message msg) {
         try {
@@ -123,7 +127,9 @@ public class NatsListenerRegistrar {
     }
 
     /**
-     * Handle invitation events.
+     * Handles group invitation events and triggers the invitation email.
+     *
+     * @param msg raw NATS message containing an {@link InvitationEvent} JSON payload
      */
     private void handleInvitationEvent(Message msg) {
         try {
@@ -144,7 +150,9 @@ public class NatsListenerRegistrar {
     }
 
     /**
-     * Handle reset password mail events.
+     * Handles password reset events and triggers the reset email.
+     *
+     * @param msg raw NATS message containing a {@link ResetPasswordMailEvent} JSON payload
      */
     private void handleResetPasswordMailEvent(Message msg) {
         try {
@@ -164,7 +172,9 @@ public class NatsListenerRegistrar {
     }
 
     /**
-     * Handle pay for events.
+     * Handles pay-on-behalf events and triggers payer/beneficiary emails.
+     *
+     * @param msg raw NATS message containing a {@link PayForEvent} JSON payload
      */
     private void handlePayForEvent(Message msg) {
         try {
@@ -184,7 +194,9 @@ public class NatsListenerRegistrar {
     }
 
     /**
-     * Handle invitation response events.
+     * Handles invitation response events and notifies the group admin.
+     *
+     * @param msg raw NATS message containing an {@link InvitationResponseEvent} JSON payload
      */
     private void handleInvitationResponseEvent(Message msg) {
         try {

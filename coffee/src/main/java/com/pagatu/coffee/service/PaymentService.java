@@ -66,6 +66,14 @@ public class PaymentService {
     private final CoffeeUserRepository coffeeUserRepository;
     private final BaseUserService baseUserService;
 
+    /**
+     * @param outboxService                 transactional outbox for NATS events
+     * @param paymentRepository             payment persistence layer
+     * @param paymentMapper                 entity/DTO mapper
+     * @param userGroupMembershipRepository membership and rotation state
+     * @param coffeeUserRepository          user lookups for payment history
+     * @param baseUserService               shared user/group resolution
+     */
     public PaymentService(OutboxService outboxService, PaymentRepository paymentRepository,
             PaymentMapper paymentMapper,
             UserGroupMembershipRepository userGroupMembershipRepository,
@@ -128,10 +136,16 @@ public class PaymentService {
     }
 
     /**
-     * Allows a user to make a payment on behalf of another group member.
+     * Allows a user to make a payment on behalf of the member whose turn it is.
+     * <p>
+     * Both the payer and the beneficiary are marked as paid, a payment record is created
+     * for the payer, and the next payer is determined. A {@link PayForEvent} payload is
+     * prepared for notification purposes; NATS outbox publishing for this event is
+     * currently disabled in favour of the next-payment rotation event.
+     * </p>
      *
-     * @param userId    the ID of the user making the payment
-     * @param groupName the name of the group for which the payment is made
+     * @param userId    the auth ID of the user making the payment
+     * @param groupName the name of the group
      * @param request   the payment details including amount and description
      * @return PaymentDto containing the saved payment information
      */

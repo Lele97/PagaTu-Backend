@@ -4,6 +4,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Event published when a user is invited to join a coffee payment group.
+ * Consumed by the mail service to send the invitation email.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

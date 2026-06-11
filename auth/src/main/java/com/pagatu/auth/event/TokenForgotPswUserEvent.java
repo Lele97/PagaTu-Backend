@@ -9,6 +9,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * Event representing a password reset token state change in the auth service.
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

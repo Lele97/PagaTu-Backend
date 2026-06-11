@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+/**
+ * Request payload for user registration.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

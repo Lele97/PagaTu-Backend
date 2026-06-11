@@ -39,6 +39,10 @@ public class GroupController {
     private final GroupService groupService;
     private final JwtService jwtService;
 
+    /**
+     * @param groupService group business logic
+     * @param jwtService   JWT extraction from Authorization header
+     */
     public GroupController(GroupService groupService, JwtService jwtService) {
         this.groupService = groupService;
         this.jwtService = jwtService;
@@ -77,10 +81,11 @@ public class GroupController {
     }
 
     /**
-     * Adds a user to an existing group.
+     * Accepts a group invitation and adds the user to the group.
      *
-     * @param username  the username of the user to add
-     * @param groupName the name of the group to add the user to
+     * @param username     the username of the invited user
+     * @param groupName    the name of the group to join
+     * @param invitationId the identifier of the active invitation
      * @return ResponseEntity with success message
      */
     @PutMapping("/update/addtogroup")
@@ -88,25 +93,26 @@ public class GroupController {
             @RequestParam("username") String username,
             @RequestParam("groupName") String groupName,
             @RequestParam("invitationId") Long invitationId) {
-        log.info("username :: " + username);
         groupService.addUserToGroup(groupName, username, invitationId);
         return ResponseEntity.ok("User '" + username + "' added to group '" + groupName + "' successfully");
     }
 
     /**
-     * Rejects an invitation to a group.
+     * Rejects an invitation to join a group.
      *
-     * @param username  the username of the user rejecting the invitation
-     * @param groupName the name of the group
+     * @param username     the username of the user rejecting the invitation
+     * @param groupName    the name of the group
+     * @param invitationId the identifier of the active invitation
      * @return ResponseEntity with success message
-    //     */
-//    @PutMapping("/update/rejectinvitation")
-//    public ResponseEntity<String> rejectInvitation(
-//            @RequestParam("username") String username,
-//            @RequestParam("groupName") String groupName) {
-//        groupService.rejectInvitation(groupName, username);
-//        return ResponseEntity.ok("User '" + username + "' rejected invitation to group '" + groupName + "' successfully");
-//    }
+     */
+    @PutMapping("/update/rejectinvitation")
+    public ResponseEntity<String> rejectInvitation(
+            @RequestParam("username") String username,
+            @RequestParam("groupName") String groupName,
+            @RequestParam("invitationId") Long invitationId) {
+        groupService.rejectInvitation(groupName, username, invitationId);
+        return ResponseEntity.ok("User '" + username + "' rejected invitation to group '" + groupName + "' successfully");
+    }
 
     /**
      * Sends an invitation to a user to join a group.

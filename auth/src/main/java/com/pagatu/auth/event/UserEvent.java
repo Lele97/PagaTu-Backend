@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * Generic user lifecycle event emitted by the auth service.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

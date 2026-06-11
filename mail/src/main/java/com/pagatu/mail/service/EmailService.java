@@ -72,6 +72,13 @@ public class EmailService {
     @Value("${app.frontend.company}")
     private String company;
 
+    /**
+     * @param mailSender         Spring JavaMail sender
+     * @param templateEngine     Thymeleaf engine for HTML templates
+     * @param webClientBuilder   builder used to call coffee and auth services
+     * @param coffeeServiceBaseUrl base URL of the coffee service
+     * @param authServiceBaseUrl   base URL of the auth service
+     */
     public EmailService(JavaMailSender mailSender,
             TemplateEngine templateEngine,
             WebClient.Builder webClientBuilder,
@@ -183,6 +190,10 @@ public class EmailService {
 
     /**
      * Sends an invitation response notification email to the group admin.
+     * <p>
+     * Uses dedicated Thymeleaf templates for accepted and rejected responses:
+     * {@code invitation-response-accepted} and {@code invitation-response-rejected}.
+     * </p>
      *
      * @param event the event containing invitation response details
      * @return a Mono that completes when the email is sent
@@ -197,12 +208,29 @@ public class EmailService {
             context.setVariable("userSendInvitation", event.getUserWhoSentTheInvitation());
 
             String statusStr = event.getAccepted() ? "accettato" : "rifiutato";
-            buildAndSendEmail(
-                    event.getEmail(),
-                    null,
-                    "Paga-Tu: Invito " + statusStr + " da " + event.getUsername(),
-                    "invitation-response",
-                    context);
+
+
+            switch (statusStr) {
+                case "accettato":
+                    buildAndSendEmail(
+                            event.getEmail(),
+                            null,
+                            "Paga-Tu: Invito " + statusStr + " da " + event.getUsername(),
+                            "invitation-response-accepted",
+                            context);
+                    break;
+                case "rifiutato":
+                    buildAndSendEmail(
+                            event.getEmail(),
+                            null,
+                            "Paga-Tu: Invito " + statusStr + " da " + event.getUsername(),
+                            "invitation-response-rejected",
+                            context);
+                    break;
+            }
+
+
+
         }).then();
     }
 

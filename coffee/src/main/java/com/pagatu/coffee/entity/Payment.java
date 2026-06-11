@@ -6,6 +6,13 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+/**
+ * Entity representing a registered coffee payment.
+ * <p>
+ * Each payment is associated with a {@link UserGroupMembership} and stores
+ * amount, description, and payment timestamp.
+ * </p>
+ */
 @Entity
 @Table(name = "pagamento")
 @Data

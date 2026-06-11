@@ -7,11 +7,17 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
+/**
+ * Repository for managing group invitation records.
+ */
 public interface InvitationUserToGroupInformationRepository extends JpaRepository<InvitationUserToGroupInformation, Long> {
 
-    @Query("Select I from  InvitationUserToGroupInformation I Where I.userWhoSentInvitation =: userWhoSentInvitation AND I.groupName =: groupName AND I.user=: user AND I.invitationStatus='ACTIVE' ORDER BY i.createdAt DESC")
-    InvitationUserToGroupInformation getInvitationUserToGroupInformationByParameter(@Param("userWhoSentInvitation") Long userWhoSentInvitation, @Param("groupName") String groupName, @Param("user") String user);
-
-    @Query("SELECT I FROM InvitationUserToGroupInformation I where I.userWhoSentInvitation=: id AND I.invitationStatus='ACTIVE'")
+    /**
+     * Finds an invitation by ID only if it is still active.
+     *
+     * @param id the invitation identifier
+     * @return the active invitation, if present
+     */
+    @Query("SELECT i FROM InvitationUserToGroupInformation i WHERE i.id = :id AND i.invitationStatus = com.pagatu.coffee.entity.InvitationStatus.ACTIVE")
     Optional<InvitationUserToGroupInformation> findByIdWithStatusActive(@Param("id") Long id);
 }

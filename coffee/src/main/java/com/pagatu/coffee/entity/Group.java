@@ -11,6 +11,13 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entity representing a coffee payment group.
+ * <p>
+ * A group aggregates members who rotate coffee payments. Each group has a unique name,
+ * an optional description, and a collection of {@link UserGroupMembership} records.
+ * </p>
+ */
 @Entity
 @Data
 @Table(name = "user_group")
@@ -18,6 +25,11 @@ import java.util.List;
 @AllArgsConstructor
 public class Group {
 
+    /**
+     * Jackson constructor used when deserializing a group by name only.
+     *
+     * @param name unique group name
+     */
     @JsonCreator
     public Group(@JsonProperty("name") String name) {
         this.name = name;

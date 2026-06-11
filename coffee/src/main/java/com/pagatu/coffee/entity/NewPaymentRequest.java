@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Request payload for registering a coffee payment.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
