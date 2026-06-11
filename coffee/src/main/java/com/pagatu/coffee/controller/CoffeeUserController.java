@@ -32,6 +32,9 @@ public class CoffeeUserController {
 
     private final CoffeeUserService coffeeUserService;
 
+    /**
+     * @param coffeeUserService user sync and lookup logic
+     */
     public CoffeeUserController(CoffeeUserService coffeeUserService) {
         this.coffeeUserService = coffeeUserService;
     }

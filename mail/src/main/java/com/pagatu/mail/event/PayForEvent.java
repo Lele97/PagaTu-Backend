@@ -6,6 +6,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * NATS payload for pay-on-behalf notification emails.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

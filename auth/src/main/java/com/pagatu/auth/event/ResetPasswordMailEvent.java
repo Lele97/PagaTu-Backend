@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Outbox event published when a user requests a password reset email.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

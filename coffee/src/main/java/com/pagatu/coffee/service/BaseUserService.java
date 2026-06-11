@@ -10,16 +10,21 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * Base service providing common user and group lookup operations.
+ * Base service providing common user and group lookup operations with consistent exception handling.
  * <p>
- * This service centralizes user and group retrieval logic with proper
- * exception handling. It serves as a foundation for other services that
- * need to perform user or group lookups with consistent error handling.
+ * This service centralizes user and group retrieval logic with proper exception handling.
+ * It serves as a foundation for other services that need to perform user or group lookups
+ * with consistent error handling across the application.
  * </p>
  * <p>
- * All methods in this service throw appropriate exceptions when entities
- * are not found, ensuring consistent error handling across the application.
+ * All methods in this service throw appropriate exceptions when entities are not found,
+ * ensuring consistent error handling across the application. Each method follows the pattern
+ * of returning the entity if found, or throwing a specific exception if not found.
  * </p>
+ * 
+ * @author PagaTu Team
+ * @version 1.0
+ * @since 1.0
  */
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,13 @@ public class BaseUserService {
     private final CoffeeUserRepository coffeeUserRepository;
     private final GroupRepository groupRepository;
 
+    /**
+     * Finds a user by authentication ID (JWT claim).
+     *
+     * @param authId the authentication identifier from the auth service
+     * @return the matching {@link CoffeeUser}
+     * @throws UserNotFoundException if no user exists for the given auth ID
+     */
     public CoffeeUser findUserByAuthId(Long authId) {
         return coffeeUserRepository.findByAuthId(authId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with auth ID: " + authId));

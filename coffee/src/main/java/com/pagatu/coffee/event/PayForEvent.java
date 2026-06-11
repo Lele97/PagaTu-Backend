@@ -6,6 +6,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * Event published when a user pays the coffee on behalf of another group member.
+ * Consumed by the mail service to notify both payer and beneficiary.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * NATS payload for an invitation accept/reject notification email.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

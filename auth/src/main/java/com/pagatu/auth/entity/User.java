@@ -9,6 +9,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Entity representing an authenticated application user.
+ * <p>
+ * Stores credentials, profile data, and optional default group names requested at registration.
+ * </p>
+ */
 @Entity
 @Table(name = "users")
 @Data

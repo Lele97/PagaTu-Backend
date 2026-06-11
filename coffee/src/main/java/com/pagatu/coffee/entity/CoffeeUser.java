@@ -6,6 +6,13 @@ import lombok.*;
 
 import java.util.List;
 
+/**
+ * Entity representing a user in the coffee domain.
+ * <p>
+ * Users are synchronized from the auth service and linked to groups through
+ * {@link UserGroupMembership}. The {@code authId} stores the identifier from the JWT.
+ * </p>
+ */
 @Entity
 @Table(name = "utenti")
 @Data

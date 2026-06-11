@@ -27,6 +27,11 @@ public class NatsConfig {
     @Value("${spring.nats.connection-name:auth-service}")
     private String connectionName;
 
+    /**
+     * Creates and connects a NATS {@link Connection} with reconnect and ping settings.
+     *
+     * @return connected NATS client
+     */
     @Bean
     public Connection natsConnection() {
         try {

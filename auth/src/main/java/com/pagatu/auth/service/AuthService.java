@@ -60,6 +60,14 @@ public class AuthService {
     private final UserRepository userRepository;
     private final TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository;
 
+    /**
+     * @param tokenForUserPasswordResetRepository reset token persistence
+     * @param userRepository                      user persistence
+     * @param passwordEncoder                     credential hashing
+     * @param webClientBuilder                    HTTP client for coffee service sync
+     * @param coffeeServiceUrl                    base URL of the coffee service
+     * @param outboxService                       transactional outbox for mail events
+     */
     public AuthService(
             @Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
             UserRepository userRepository,

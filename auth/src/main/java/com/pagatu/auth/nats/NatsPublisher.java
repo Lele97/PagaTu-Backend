@@ -18,6 +18,10 @@ public class NatsPublisher {
     private final Connection natsConnection;
     private final ObjectMapper objectMapper;
 
+    /**
+     * @param natsConnection active NATS connection bean
+     * @param objectMapper   Jackson mapper for event serialization
+     */
     public NatsPublisher(Connection natsConnection, ObjectMapper objectMapper) {
         this.natsConnection = natsConnection;
         this.objectMapper = objectMapper;

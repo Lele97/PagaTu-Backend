@@ -6,6 +6,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * Event published after a payment is registered, indicating who paid and who is next.
+ * Consumed by the mail service to notify the next payer.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

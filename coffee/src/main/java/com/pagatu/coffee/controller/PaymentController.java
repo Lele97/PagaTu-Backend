@@ -36,6 +36,10 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final JwtService jwtService;
 
+    /**
+     * @param paymentService payment business logic
+     * @param jwtService     JWT extraction from Authorization header
+     */
     public PaymentController(PaymentService paymentService, JwtService jwtService) {
         this.paymentService = paymentService;
         this.jwtService = jwtService;

@@ -54,6 +54,13 @@ public class GroupService {
     private final InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository;
     private final BaseUserService baseUserService;
 
+    /**
+     * @param outboxService                               transactional outbox for NATS events
+     * @param groupRepository                             group persistence
+     * @param userGroupMembershipRepository               membership management
+     * @param invitationUserToGroupInformationRepository  invitation records
+     * @param baseUserService                             shared user/group resolution
+     */
     public GroupService(OutboxService outboxService,
                         GroupRepository groupRepository,
                         UserGroupMembershipRepository userGroupMembershipRepository, InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository,
@@ -100,19 +107,20 @@ public class GroupService {
     }
 
     /**
-     * Adds a user to the specified group with default NOT_PAID status.
+     * Accepts a group invitation and adds the invited user to the group.
+     * <p>
+     * The invitation must be active and is marked as accepted before the user
+     * is added as a non-admin member with {@link PaymentStatus#NON_PAGATO}.
+     * A response event is published to notify the inviter.
+     * </p>
      *
-     * @param groupName the name of the group to which the user will be added
-     * @param username  the username of the user to be added to the group
-     * @throws BusinessException if the user is already a member of the group
+     * @param groupName    the name of the group to join
+     * @param username     the username of the invited user
+     * @param invitationId the identifier of the active invitation
+     * @throws BusinessException if the invitation is missing, inactive, or the user is already a member
      */
     @Transactional
     public void addUserToGroup(String groupName, String username, Long invitationId) {
-
-        CoffeeUser user = baseUserService.findUserByUsername(username);
-        CoffeeUser userSendInvitation = baseUserService.findUserByAuthId(invitationId);
-        Group group = baseUserService.findGroupByName(groupName);
-
 
         InvitationUserToGroupInformation invitationUserToGroupInformation =
                 invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId)
@@ -122,6 +130,9 @@ public class GroupService {
         invitationUserToGroupInformation.setInvitationStatus(InvitationStatus.ACCEPTED);
         invitationUserToGroupInformationRepository.save(invitationUserToGroupInformation);
 
+        CoffeeUser user = baseUserService.findUserByUsername(username);
+        CoffeeUser userSendInvitation = baseUserService.findUserByAuthId(userWhoSentTheInvitation);
+        Group group = baseUserService.findGroupByName(groupName);
 
         if (userGroupMembershipRepository.existsByCoffeeUserAndGroup(user, group))
             throw new BusinessException("User '" + username + "' is already a member of group '" + groupName + "'");
@@ -185,7 +196,7 @@ public class GroupService {
         InvitationUserToGroupInformation invitationUserToGroupInformation = new InvitationUserToGroupInformation();
         invitationUserToGroupInformation.setUserWhoSentInvitation(userId);
         invitationUserToGroupInformation.setGroupName(invitationRequest.getGroupName());
-        invitationUserToGroupInformation.setUser(invitationRequest.getUsername());
+        invitationUserToGroupInformation.setUsername(invitationRequest.getUsername());
         invitationUserToGroupInformation.setEmail(coffeeUser.getEmail());
         invitationUserToGroupInformation.setCreatedAt(LocalDateTime.now());
         invitationUserToGroupInformation.setExpiredDate(LocalDateTime.now().plusMinutes(60));
@@ -270,5 +281,55 @@ public class GroupService {
         return groups.stream()
                 .map(this::mapToDto)
                 .toList();
+    }
+
+    /**
+     * Rejects a pending group invitation.
+     * <p>
+     * The invitation must be active and is marked as rejected. A response event
+     * is published so the group admin receives a notification email.
+     * </p>
+     *
+     * @param groupName    the name of the group referenced by the invitation
+     * @param username     the username of the user rejecting the invitation
+     * @param invitationId the identifier of the active invitation
+     * @throws BusinessException if the invitation is missing, inactive, or the user is already a member
+     */
+    @Transactional
+    public void rejectInvitation(String groupName, String username, Long invitationId) {
+
+        InvitationUserToGroupInformation invitationUserToGroupInformation =
+                invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId)
+                        .orElseThrow(() -> new BusinessException("Invito non trovato o non più attivo"));
+        Long userWhoSentTheInvitation = invitationUserToGroupInformation.getUserWhoSentInvitation();
+        invitationUserToGroupInformation.setUsedAt(LocalDateTime.now());
+        invitationUserToGroupInformation.setInvitationStatus(InvitationStatus.REJECTED);
+        invitationUserToGroupInformationRepository.save(invitationUserToGroupInformation);
+
+        CoffeeUser user = baseUserService.findUserByUsername(username);
+        CoffeeUser userSendInvitation = baseUserService.findUserByAuthId(userWhoSentTheInvitation);
+        Group group = baseUserService.findGroupByName(groupName);
+
+        if (userGroupMembershipRepository.existsByCoffeeUserAndGroup(user, group))
+            throw new BusinessException("User '" + username + "' is already a member of group '" + groupName + "'");
+
+
+        try {
+
+            InvitationResponseEvent invitationResponseEvent = new InvitationResponseEvent();
+
+            invitationResponseEvent.setGroupName(groupName);
+            invitationResponseEvent.setUsername(username);
+            invitationResponseEvent.setUserWhoSentTheInvitation(userWhoSentTheInvitation);
+            invitationResponseEvent.setAccepted(false);
+            invitationResponseEvent.setEmail(userSendInvitation.getEmail());
+
+            outboxService.saveEvent(natsSubjectsInvitationResponse, invitationResponseEvent);
+            
+
+        } catch (RuntimeException ex) {
+            log.error("Error rejecting invitazion to group: {}", ex.getMessage(), ex);
+            throw ex;
+        }
     }
 }
