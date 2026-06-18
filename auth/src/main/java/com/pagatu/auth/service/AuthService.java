@@ -1,6 +1,7 @@
 package com.pagatu.auth.service;
 
 import com.pagatu.auth.dto.*;
+import com.pagatu.auth.entity.AuthProvider;
 import com.pagatu.auth.entity.TokenForUserPasswordReset;
 import com.pagatu.auth.entity.TokenStatus;
 import com.pagatu.auth.entity.User;
@@ -59,27 +60,22 @@ public class AuthService {
     private final WebClient webClient;
     private final UserRepository userRepository;
     private final TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository;
+    private final EmailVerificationService emailVerificationService;
 
-    /**
-     * @param tokenForUserPasswordResetRepository reset token persistence
-     * @param userRepository                      user persistence
-     * @param passwordEncoder                     credential hashing
-     * @param webClientBuilder                    HTTP client for coffee service sync
-     * @param coffeeServiceUrl                    base URL of the coffee service
-     * @param outboxService                       transactional outbox for mail events
-     */
     public AuthService(
             @Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             WebClient.Builder webClientBuilder,
             @Value("${coffee.service.url}") String coffeeServiceUrl,
-            OutboxService outboxService) {
+            OutboxService outboxService,
+            EmailVerificationService emailVerificationService) {
         this.passwordEncoder = passwordEncoder;
         this.outboxService = outboxService;
         this.webClient = webClientBuilder.baseUrl(coffeeServiceUrl).build();
         this.tokenForUserPasswordResetRepository = tokenForUserPasswordResetRepository;
         this.userRepository = userRepository;
+        this.emailVerificationService = emailVerificationService;
     }
 
     /**
@@ -103,12 +99,18 @@ public class AuthService {
             throw new UserNotFoundException("User not found", loginRequest.username(), "username");
         }
 
-        if (!passwordEncoder.matches(loginRequest.password(), userOpt.get().getPassword())) {
-            log.warn("Failed login attempt - invalid password for user: {}", loginRequest.username());
-            throw new AuthenticationException("Invalid username or password");
+        User user = userOpt.get();
+
+        if (user.getAuthProvider() == AuthProvider.LOCAL
+                && !Boolean.TRUE.equals(user.getEmailVerified())) {
+            throw new AuthenticationException("Verifica la tua email prima di accedere");
         }
 
-        User user = userOpt.get();
+        if (user.getPassword() == null || !passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
+            log.warn("Failed login attempt - invalid password for user: {}", loginRequest.username());
+            throw new AuthenticationException("Username o password non validi");
+        }
+
         String token = generateToken(user);
 
         log.info("Successful login for user: {}", user.getUsername());
@@ -152,17 +154,24 @@ public class AuthService {
         user.setDateOfBirth(registerRequest.getDateOfBirth());
         user.setFirstName(registerRequest.getFirstName());
         user.setLastName(registerRequest.getLastName());
+        user.setAuthProvider(AuthProvider.LOCAL);
+        user.setEmailVerified(false);
 
         User savedUser = userRepository.save(user);
 
         log.info("User saved to database: {}", savedUser.getUsername());
         try {
             syncWithCoffeeService(savedUser);
+            emailVerificationService.sendVerificationEmail(savedUser);
         } catch (Exception e) {
             log.error("Failed to sync with coffee service", e);
             throw new ServiceUnavailableException("Failed to sync with coffee service", e);
         }
 
+    }
+
+    public LoginResponse buildLoginResponse(User user) {
+        return new LoginResponse(generateToken(user), user.getUsername(), user.getEmail());
     }
 
     /**
@@ -442,7 +451,7 @@ public class AuthService {
      *
      * @param user the user entity to synchronize
      */
-    private void syncWithCoffeeService(User user) {
+    void syncWithCoffeeService(User user) {
         UserDto userDto = new UserDto();
         userDto.setId(user.getId());
         userDto.setAuthId(user.getId());

@@ -13,6 +13,7 @@ app:
   frontend:
     invitationPath: /invitation
     resetPswPath: /resetPassword
+    verifyEmailPath: /verify-email
     company: Paga-Tu
     domainUrl: ${DOMAIN_URL:http://localhost:8888}
 
@@ -44,6 +45,7 @@ spring:
       skip-payment: skip-payment-subject
       invitation: invitation-subject
       reset-password-mail: reset-password-mail
+      verify-email-mail: verify-email-mail
       pay-for: pay-for-topic
       invitation-response: invitation-response-subject
       turn-reminder: turn-reminder-subject

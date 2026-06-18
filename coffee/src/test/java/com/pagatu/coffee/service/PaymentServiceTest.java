@@ -54,6 +54,9 @@ class PaymentServiceTest {
     @Mock
     private BaseUserService baseUserService;
 
+    @Mock
+    private GroupRulesService groupRulesService;
+
     @InjectMocks
     private PaymentService paymentService;
 
@@ -118,8 +121,7 @@ class PaymentServiceTest {
         friendMembership.setMyTurn(true);
 
         when(baseUserService.findUserByAuthId(123L)).thenReturn(testUser);
-        when(baseUserService.findUserByAuthId(456L)).thenReturn(friendUser);
-        when(baseUserService.findGroupByName("testgroup")).thenReturn(testGroup);
+        when(baseUserService.findGroupWithMembershipsByName("testgroup")).thenReturn(testGroup);
         when(userGroupMembershipRepository.findByGroup(testGroup))
                 .thenReturn(List.of(testMembership, friendMembership));
         when(userGroupMembershipRepository.findUserTurn("testgroup")).thenReturn(friendMembership);
@@ -229,12 +231,14 @@ class PaymentServiceTest {
 
         when(baseUserService.findUserByAuthId(123L)).thenReturn(testUser);
         when(baseUserService.findGroupByName("testgroup")).thenReturn(testGroup);
+        when(baseUserService.findGroupWithMembershipsByName("testgroup")).thenReturn(testGroup);
         when(userGroupMembershipRepository.findByGroup(testGroup))
                 .thenReturn(List.of(testMembership, otherMembership));
         when(userGroupMembershipRepository.save(any(UserGroupMembership.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(userGroupMembershipRepository.findByGroupAndStatus(testGroup, PaymentStatus.NON_PAGATO))
                 .thenReturn(List.of(otherMembership));
+        doNothing().when(groupRulesService).validateSkipAllowed(any(Group.class), any(UserGroupMembership.class));
 
         // When
         paymentService.skipPayment(123L, "testgroup");

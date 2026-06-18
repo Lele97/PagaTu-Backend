@@ -29,7 +29,7 @@ public class User {
     @Column(unique = true, nullable = false)
     private String username;
 
-    @Column(nullable = false)
+    @Column
     private String password;
 
     @Column(unique = true, nullable = false)
@@ -47,4 +47,14 @@ public class User {
     @Convert(converter = ListToStringConverter.class)
     @Column(name = "user_groups", columnDefinition = "TEXT")
     private List<String> groups;
+
+    @Column(name = "email_verified")
+    private Boolean emailVerified = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider")
+    private AuthProvider authProvider = AuthProvider.LOCAL;
+
+    @Column(name = "provider_id")
+    private String providerId;
 }

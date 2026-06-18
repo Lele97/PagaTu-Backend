@@ -45,6 +45,15 @@ public class Group {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "max_skip_per_round")
+    private Integer maxSkipPerRound;
+
+    @Column(name = "pay_for_enabled")
+    private Boolean payForEnabled = true;
+
+    @Column(name = "pay_for_admin_only")
+    private Boolean payForAdminOnly = false;
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserGroupMembership> userMemberships = new ArrayList<>();

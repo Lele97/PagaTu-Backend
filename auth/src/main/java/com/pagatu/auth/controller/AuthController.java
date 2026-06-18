@@ -5,6 +5,8 @@ import com.pagatu.auth.entity.RateLimiterResult;
 import com.pagatu.auth.entity.User;
 import com.pagatu.auth.exception.UserNotFoundException;
 import com.pagatu.auth.service.AuthService;
+import com.pagatu.auth.service.EmailVerificationService;
+import com.pagatu.auth.service.OAuthService;
 import com.pagatu.auth.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -25,16 +27,17 @@ public class AuthController {
 
     private final AuthService authService;
     private final RateLimiterService rateLimiterService;
+    private final OAuthService oAuthService;
+    private final EmailVerificationService emailVerificationService;
 
-    /**
-     * Constructs an AuthController with the required services.
-     *
-     * @param authService        the authentication service for handling business logic
-     * @param rateLimiterService the rate limiting service for protecting sensitive endpoints
-     */
-    public AuthController(AuthService authService, RateLimiterService rateLimiterService) {
+    public AuthController(AuthService authService,
+                          RateLimiterService rateLimiterService,
+                          OAuthService oAuthService,
+                          EmailVerificationService emailVerificationService) {
         this.authService = authService;
         this.rateLimiterService = rateLimiterService;
+        this.oAuthService = oAuthService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     /**
@@ -47,6 +50,31 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         LoginResponse response = authService.login(loginRequest);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/oauth/google")
+    public ResponseEntity<LoginResponse> loginWithGoogle(@Valid @RequestBody OAuthTokenRequest request) {
+        return ResponseEntity.ok(oAuthService.loginWithGoogle(request));
+    }
+
+    @PostMapping("/oauth/microsoft")
+    public ResponseEntity<LoginResponse> loginWithMicrosoft(@Valid @RequestBody OAuthTokenRequest request) {
+        return ResponseEntity.ok(oAuthService.loginWithMicrosoft(request));
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<String> verifyEmail(@RequestParam("key") String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Il token è obbligatorio");
+        }
+        emailVerificationService.verifyEmail(token);
+        return ResponseEntity.ok("Email verificata con successo");
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<String> resendVerification(@RequestParam("email") String email) {
+        emailVerificationService.resendVerification(email);
+        return ResponseEntity.ok("Email di verifica inviata con successo");
     }
 
     /**

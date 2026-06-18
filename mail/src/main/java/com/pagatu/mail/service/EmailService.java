@@ -7,6 +7,7 @@ import com.pagatu.mail.event.InvitationEvent;
 import com.pagatu.mail.event.InvitationResponseEvent;
 import com.pagatu.mail.event.NextPaymentEvent;
 import com.pagatu.mail.event.PayForEvent;
+import com.pagatu.mail.event.EmailVerificationMailEvent;
 import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SkipPaymentEvent;
 import com.pagatu.mail.event.TurnReminderEvent;
@@ -69,6 +70,9 @@ public class EmailService {
 
     @Value("${app.frontend.resetPswPath}")
     private String resetPswPath;
+
+    @Value("${app.frontend.verifyEmailPath}")
+    private String verifyEmailPath;
 
     @Value("${app.frontend.company}")
     private String company;
@@ -152,6 +156,25 @@ public class EmailService {
                 .flatMap(userDataResetPassword -> sendResetPasswordEmail(event, userDataResetPassword))
                 .doOnSuccess(success -> log.info("{} to {}", LOG_INFO_NOTIFICA, event.getEmail()))
                 .doOnError(error -> log.error(LOG_ERROR_NOTIFICA, error))
+                .then();
+    }
+
+    public Mono<Void> sendEmailVerificationNotification(EmailVerificationMailEvent event) {
+        return Mono.fromRunnable(() -> {
+            Context context = new Context(ITALIAN_LOCALE);
+            context.setVariable(Constants.TEMPLATE_VAR_USER, event.getUsername());
+            String verifyLink = String.format("%s%s?key=%s", domainUrl, verifyEmailPath, event.getToken());
+            context.setVariable("verifyLink", verifyLink);
+            context.setVariable(Constants.TEMPLATE_VAR_COMPANY_NAME, company);
+            buildAndSendEmail(
+                    event.getEmail(),
+                    null,
+                    "Paga-Tu: Verifica il tuo indirizzo email",
+                    "verify-email",
+                    context);
+        })
+                .doOnSuccess(success -> log.info("Email di verifica inviata a {}", event.getEmail()))
+                .doOnError(error -> log.error("Errore invio email di verifica", error))
                 .then();
     }
 
