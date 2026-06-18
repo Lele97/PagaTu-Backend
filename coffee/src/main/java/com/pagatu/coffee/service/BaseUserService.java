@@ -66,7 +66,7 @@ public class BaseUserService {
      */
     public Group findGroupByName(String groupName) {
         return groupRepository.getGroupByName(groupName)
-                .orElseThrow(() -> new GroupNotFoundException("Group not found: " + groupName));
+                .orElseThrow(() -> new GroupNotFoundException("Gruppo non trovato: " + groupName));
     }
 
     /**
@@ -78,6 +78,18 @@ public class BaseUserService {
      */
     public Group findGroupWithMembershipsByName(String groupName) {
         return groupRepository.findGroupWithMembershipsByName(groupName)
-                .orElseThrow(() -> new GroupNotFoundException("Group not found: " + groupName));
+                .orElseThrow(() -> new GroupNotFoundException("Gruppo non trovato: " + groupName));
+    }
+
+    /**
+     * Finds a user by email address.
+     *
+     * @param email the user's email
+     * @return the matching {@link CoffeeUser}
+     * @throws UserNotFoundException if no user exists for the given email
+     */
+    public CoffeeUser findUserByEmail(String email) {
+        return coffeeUserRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("Utente non trovato con email: " + email));
     }
 }

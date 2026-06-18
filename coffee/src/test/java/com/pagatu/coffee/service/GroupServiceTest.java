@@ -7,6 +7,7 @@ import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.InvitationEvent;
 import com.pagatu.coffee.event.InvitationResponseEvent;
 import com.pagatu.coffee.exception.BusinessException;
+import com.pagatu.coffee.exception.ForbiddenException;
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.InvitationUserToGroupInformationRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
@@ -44,6 +45,9 @@ class GroupServiceTest {
 
     @Mock
     private BaseUserService baseUserService;
+
+    @Mock
+    private PaymentService paymentService;
 
     @InjectMocks
     private GroupService groupService;
@@ -122,7 +126,7 @@ class GroupServiceTest {
         BusinessException exception = assertThrows(BusinessException.class, 
             () -> groupService.createGroup(request, 123L));
         
-        assertEquals("Group already exists: existinggroup", exception.getMessage());
+        assertEquals("Il gruppo esiste già: existinggroup", exception.getMessage());
         verify(baseUserService).findUserByAuthId(123L);
         verify(groupRepository).getGroupByName("existinggroup");
         verify(groupRepository, never()).save(any(Group.class));
@@ -137,17 +141,22 @@ class GroupServiceTest {
         
         CoffeeUser newUser = new CoffeeUser();
         newUser.setId(2L);
+        newUser.setAuthId(456L);
         newUser.setUsername("newuser");
         newUser.setEmail("newuser@example.com");
         
         InvitationUserToGroupInformation invitation = new InvitationUserToGroupInformation();
         invitation.setId(invitationId);
         invitation.setUserWhoSentInvitation(123L);
+        invitation.setGroupName(groupName);
+        invitation.setUsername(username);
+        invitation.setExpiredDate(LocalDateTime.now().plusDays(7));
         invitation.setInvitationStatus(InvitationStatus.ACTIVE);
         
         when(invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId))
             .thenReturn(Optional.of(invitation));
         when(baseUserService.findUserByUsername(username)).thenReturn(newUser);
+        when(baseUserService.findUserByAuthId(456L)).thenReturn(newUser);
         when(baseUserService.findUserByAuthId(123L)).thenReturn(testUser);
         when(baseUserService.findGroupByName(groupName)).thenReturn(testGroup);
         when(userGroupMembershipRepository.existsByCoffeeUserAndGroup(newUser, testGroup)).thenReturn(false);
@@ -158,7 +167,7 @@ class GroupServiceTest {
         });
 
         // When
-        groupService.addUserToGroup(groupName, username, invitationId);
+        groupService.addUserToGroup(groupName, username, invitationId, 456L);
 
         // Then
         verify(invitationUserToGroupInformationRepository).findByIdWithStatusActive(invitationId);
@@ -183,25 +192,29 @@ class GroupServiceTest {
         
         CoffeeUser existingUser = new CoffeeUser();
         existingUser.setId(2L);
+        existingUser.setAuthId(123L);
         existingUser.setUsername("existinguser");
         
         InvitationUserToGroupInformation invitation = new InvitationUserToGroupInformation();
         invitation.setId(invitationId);
         invitation.setUserWhoSentInvitation(123L);
+        invitation.setGroupName(groupName);
+        invitation.setUsername(username);
+        invitation.setExpiredDate(LocalDateTime.now().plusDays(7));
         invitation.setInvitationStatus(InvitationStatus.ACTIVE);
         
         when(invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId))
             .thenReturn(Optional.of(invitation));
         when(baseUserService.findUserByUsername(username)).thenReturn(existingUser);
-        when(baseUserService.findUserByAuthId(123L)).thenReturn(testUser);
+        when(baseUserService.findUserByAuthId(123L)).thenReturn(existingUser);
         when(baseUserService.findGroupByName(groupName)).thenReturn(testGroup);
         when(userGroupMembershipRepository.existsByCoffeeUserAndGroup(existingUser, testGroup)).thenReturn(true);
 
         // When & Then
         BusinessException exception = assertThrows(BusinessException.class, 
-            () -> groupService.addUserToGroup(groupName, username, invitationId));
+            () -> groupService.addUserToGroup(groupName, username, invitationId, 123L));
         
-        assertEquals("User 'existinguser' is already a member of group 'testgroup'", exception.getMessage());
+        assertEquals("L'utente 'existinguser' è già membro del gruppo 'testgroup'", exception.getMessage());
         verify(userGroupMembershipRepository).existsByCoffeeUserAndGroup(existingUser, testGroup);
         verify(userGroupMembershipRepository, never()).save(any(UserGroupMembership.class));
     }
@@ -234,6 +247,7 @@ class GroupServiceTest {
         when(baseUserService.findGroupWithMembershipsByName("testgroup")).thenReturn(testGroup);
         when(baseUserService.findUserByUsername("invitee")).thenReturn(inviteeUser);
         when(baseUserService.findUserByAuthId(userId)).thenReturn(testUser);
+        when(userGroupMembershipRepository.existsByCoffeeUserAndGroup(inviteeUser, testGroup)).thenReturn(false);
         when(invitationUserToGroupInformationRepository.save(any(InvitationUserToGroupInformation.class)))
             .thenReturn(savedInvitation);
 
@@ -270,10 +284,10 @@ class GroupServiceTest {
         when(baseUserService.findUserByAuthId(userId)).thenReturn(testUser);
 
         // When & Then
-        BusinessException exception = assertThrows(BusinessException.class, 
+        ForbiddenException exception = assertThrows(ForbiddenException.class, 
             () -> groupService.sendInvitationToGroup(userId, request));
         
-        assertEquals("You are not an admin of group 'testgroup'", exception.getMessage());
+        assertEquals("Non sei admin del gruppo 'testgroup'", exception.getMessage());
         verify(invitationUserToGroupInformationRepository, never()).save(any(InvitationUserToGroupInformation.class));
         verify(outboxService, never()).saveEvent(anyString(), any(InvitationEvent.class));
     }
@@ -323,7 +337,7 @@ class GroupServiceTest {
         BusinessException exception = assertThrows(BusinessException.class, 
             () -> groupService.deleteGroupByName(groupName, userId));
         
-        assertTrue(exception.getMessage().contains("Cannot delete group"));
+        assertTrue(exception.getMessage().contains("Impossibile eliminare il gruppo"));
         verify(baseUserService).findGroupByName(groupName);
         verify(groupRepository, never()).deleteGroupByName(groupName);
     }
@@ -356,7 +370,7 @@ class GroupServiceTest {
 
         // When & Then
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> groupService.addUserToGroup("testgroup", "testuser", 99L));
+                () -> groupService.addUserToGroup("testgroup", "testuser", 99L, 123L));
 
         assertEquals("Invito non trovato o non più attivo", exception.getMessage());
         verify(userGroupMembershipRepository, never()).save(any());
@@ -370,7 +384,7 @@ class GroupServiceTest {
 
         // When & Then
         BusinessException exception = assertThrows(BusinessException.class,
-                () -> groupService.rejectInvitation("testgroup", "testuser", 99L));
+                () -> groupService.rejectInvitation("testgroup", "testuser", 99L, 123L));
 
         assertEquals("Invito non trovato o non più attivo", exception.getMessage());
         verify(outboxService, never()).saveEvent(anyString(), any());
@@ -386,6 +400,9 @@ class GroupServiceTest {
         InvitationUserToGroupInformation invitation = new InvitationUserToGroupInformation();
         invitation.setId(invitationId);
         invitation.setUserWhoSentInvitation(123L);
+        invitation.setGroupName(groupName);
+        invitation.setUsername(username);
+        invitation.setExpiredDate(LocalDateTime.now().plusDays(7));
         invitation.setInvitationStatus(InvitationStatus.ACTIVE);
         
         when(invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId))
@@ -396,12 +413,12 @@ class GroupServiceTest {
         when(userGroupMembershipRepository.existsByCoffeeUserAndGroup(testUser, testGroup)).thenReturn(false);
 
         // When
-        groupService.rejectInvitation(groupName, username, invitationId);
+        groupService.rejectInvitation(groupName, username, invitationId, 123L);
 
         // Then
         verify(invitationUserToGroupInformationRepository).findByIdWithStatusActive(invitationId);
         verify(baseUserService).findUserByUsername(username);
-        verify(baseUserService).findUserByAuthId(123L);
+        verify(baseUserService, atLeast(2)).findUserByAuthId(123L);
         verify(baseUserService).findGroupByName(groupName);
         verify(outboxService).saveEvent(anyString(), any(InvitationResponseEvent.class));
         

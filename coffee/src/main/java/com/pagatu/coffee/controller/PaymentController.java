@@ -1,5 +1,6 @@
 package com.pagatu.coffee.controller;
 
+import com.pagatu.coffee.dto.GroupPaymentHistoryRequest;
 import com.pagatu.coffee.dto.GroupPaymentRankingDto;
 import com.pagatu.coffee.dto.GroupPaymentRankingRequest;
 import com.pagatu.coffee.dto.PaymentDto;
@@ -76,7 +77,7 @@ public class PaymentController {
             @RequestParam("groupNme") String groupName) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         paymentService.skipPayment(userId, groupName);
-        return ResponseEntity.ok("User: " + userId + " ha saltato il pagamento");
+        return ResponseEntity.ok("Hai saltato il turno di pagamento della colazione");
     }
 
     /**
@@ -121,6 +122,14 @@ public class PaymentController {
      * @return ResponseEntity containing the user's payment history or appropriate
      *         error response
      */
+    @PostMapping("/pagamenti/gruppo")
+    public ResponseEntity<List<PaymentDto>> getGroupPaymentHistory(
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody GroupPaymentHistoryRequest request) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        return ResponseEntity.ok(paymentService.getGroupPaymentHistory(userId, request));
+    }
+
     @PostMapping("/ultimi/pagamenti/{username}")
     public ResponseEntity<Object> getLatestPayments(
             @PathVariable("username") String username,
@@ -135,7 +144,7 @@ public class PaymentController {
                 log.warn("Authorization failed: User {} attempted to access payments for {}",
                         tokenUsername, username);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Not authorized to access this user's payment history");
+                        .body("Non autorizzato ad accedere allo storico pagamenti di questo utente");
             }
 
             List<PaymentDto> payments = paymentService.getLatestPaymentsByUsername(username);
@@ -150,11 +159,11 @@ public class PaymentController {
         } catch (IllegalArgumentException e) {
             log.error("Invalid authorization token: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid authorization token");
+                    .body("Token di autorizzazione non valido");
         } catch (Exception e) {
             log.error("Error retrieving payments for user {}: {}", username, e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unable to retrieve payment history");
+                    .body("Impossibile recuperare lo storico pagamenti");
         }
     }
 }

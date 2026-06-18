@@ -145,7 +145,7 @@ class CoffeeUserServiceTest {
         // Given
         CoffeeUser user = new CoffeeUser();
         user.setEmail("test@example.com");
-        when(coffeeUserRepository.findByEmail("test@example.com")).thenReturn(user);
+        when(coffeeUserRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
 
         // When
         CoffeeUser result = coffeeUserService.findByEmail("test@example.com");

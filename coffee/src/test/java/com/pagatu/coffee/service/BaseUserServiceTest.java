@@ -131,7 +131,7 @@ class BaseUserServiceTest {
         GroupNotFoundException exception = assertThrows(GroupNotFoundException.class, 
             () -> baseUserService.findGroupByName(groupName));
         
-        assertEquals("Group not found: " + groupName, exception.getMessage());
+        assertEquals("Gruppo non trovato: " + groupName, exception.getMessage());
         verify(groupRepository).getGroupByName(groupName);
     }
 
@@ -161,7 +161,7 @@ class BaseUserServiceTest {
         GroupNotFoundException exception = assertThrows(GroupNotFoundException.class, 
             () -> baseUserService.findGroupWithMembershipsByName(groupName));
         
-        assertEquals("Group not found: " + groupName, exception.getMessage());
+        assertEquals("Gruppo non trovato: " + groupName, exception.getMessage());
         verify(groupRepository).findGroupWithMembershipsByName(groupName);
     }
 }

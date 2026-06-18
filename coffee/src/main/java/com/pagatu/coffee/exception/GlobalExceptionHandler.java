@@ -114,6 +114,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbiddenException(
+            ForbiddenException ex, HttpServletRequest request) {
+        log.error("Forbidden: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                "FORBIDDEN",
+                ex.getMessage(),
+                HttpStatus.FORBIDDEN.value()
+        );
+        errorResponse.setPath(request.getRequestURI());
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+    }
+
     /**
      * Handles NoContentAvailableException and returns a structured error response.
      * This method is triggered when requested content is not available or
@@ -131,7 +146,7 @@ public class GlobalExceptionHandler {
 
         ErrorResponse errorResponse = new ErrorResponse(
                 "NO_CONTENT",
-                "An unexpected error occurred",
+                ex.getMessage(),
                 HttpStatus.NO_CONTENT.value()
         );
         errorResponse.setPath(request.getRequestURI());
@@ -212,7 +227,7 @@ public class GlobalExceptionHandler {
 
         ErrorResponse errorResponse = new ErrorResponse(
                 "INTERNAL_SERVER_ERROR",
-                "An unexpected error occurred",
+                "Si è verificato un errore imprevisto",
                 HttpStatus.INTERNAL_SERVER_ERROR.value()
         );
         errorResponse.setPath(request.getRequestURI());

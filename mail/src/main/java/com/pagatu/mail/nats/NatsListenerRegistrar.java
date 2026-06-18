@@ -7,6 +7,7 @@ import com.pagatu.mail.event.NextPaymentEvent;
 import com.pagatu.mail.event.PayForEvent;
 import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SkipPaymentEvent;
+import com.pagatu.mail.event.TurnReminderEvent;
 import com.pagatu.mail.service.EmailService;
 import io.nats.client.Message;
 import jakarta.annotation.PostConstruct;
@@ -48,6 +49,9 @@ public class NatsListenerRegistrar {
     @Value("${spring.nats.subject.invitation-response:invitation-response}")
     private String invitationResponseSubject;
 
+    @Value("${spring.nats.subject.turn-reminder:turn-reminder-subject}")
+    private String turnReminderSubject;
+
     /**
      * Register all NATS subscriptions on startup.
      */
@@ -78,6 +82,9 @@ public class NatsListenerRegistrar {
         // Subscribe to invitation response events
         natsSubscriber.subscribe(invitationResponseSubject, this::handleInvitationResponseEvent);
         log.info("Subscribed to subject: {}", invitationResponseSubject);
+
+        natsSubscriber.subscribe(turnReminderSubject, this::handleTurnReminderEvent);
+        log.info("Subscribed to subject: {}", turnReminderSubject);
 
         log.info("All NATS subscriptions registered successfully");
     }
@@ -200,6 +207,20 @@ public class NatsListenerRegistrar {
      *
      * @param msg raw NATS message containing an {@link InvitationResponseEvent} JSON payload
      */
+    private void handleTurnReminderEvent(Message msg) {
+        try {
+            String json = new String(msg.getData(), StandardCharsets.UTF_8);
+            TurnReminderEvent event = objectMapper.readValue(json, TurnReminderEvent.class);
+            log.info("Processing turn reminder for {} in group {}", event.getUsername(), event.getGroupName());
+
+            emailService.sendTurnReminderNotification(event).subscribe(
+                    result -> log.debug("Turn reminder email sent successfully"),
+                    error -> log.error("Failed to send turn reminder email", error));
+        } catch (Exception e) {
+            log.error("Error processing turn reminder event", e);
+        }
+    }
+
     private void handleInvitationResponseEvent(Message msg) {
         try {
             String json = new String(msg.getData(), StandardCharsets.UTF_8);

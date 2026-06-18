@@ -43,4 +43,17 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
                 limit 5
             """)
     List<GroupPaymentRankingDto> getGroupPaymentRanking(@Param("groupName") String groupName);
+
+    @Query("SELECT p FROM Payment p " +
+            "JOIN FETCH p.userGroupMembership ugm " +
+            "JOIN FETCH ugm.coffeeUser " +
+            "JOIN FETCH ugm.group g " +
+            "WHERE g.name = :groupName " +
+            "AND (:year IS NULL OR YEAR(p.paymentDate) = :year) " +
+            "AND (:month IS NULL OR MONTH(p.paymentDate) = :month) " +
+            "ORDER BY p.paymentDate DESC")
+    List<Payment> findGroupPayments(
+            @Param("groupName") String groupName,
+            @Param("year") Integer year,
+            @Param("month") Integer month);
 }

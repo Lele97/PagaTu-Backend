@@ -24,6 +24,11 @@ spring:
       invitation-subject: invitation-subject
       invitation-response-subject: invitation-response-subject
       pay-for-subject: pay-for-topic
+      turn-reminder-subject: turn-reminder-subject
+
+app:
+  turn-reminder:
+    poll-interval-ms: 3600000
 
   # Outbox pattern configuration
   outbox:

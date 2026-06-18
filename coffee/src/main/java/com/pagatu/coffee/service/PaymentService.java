@@ -1,9 +1,12 @@
 package com.pagatu.coffee.service;
 
+import com.pagatu.coffee.dto.GroupPaymentHistoryRequest;
 import com.pagatu.coffee.dto.GroupPaymentRankingDto;
 import com.pagatu.coffee.dto.GroupPaymentRankingRequest;
 import com.pagatu.coffee.dto.PaymentDto;
 import com.pagatu.coffee.dto.NextPaymentDto;
+import com.pagatu.coffee.exception.BusinessException;
+import com.pagatu.coffee.exception.ForbiddenException;
 import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.NextPaymentEvent;
 import com.pagatu.coffee.event.PayForEvent;
@@ -106,7 +109,10 @@ public class PaymentService {
 
         UserGroupMembership membership = userGroupMembership.stream()
                 .filter(p -> p.getCoffeeUser().equals(coffeeUser))
-                .toList().get(0);
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("Non sei membro del gruppo '" + groupName + "'"));
+
+        validateMyTurn(membership, groupName);
 
         membership.setStatus(PaymentStatus.PAGATO);
         membership.setMyTurn(false);
@@ -238,7 +244,7 @@ public class PaymentService {
             }
 
             UserGroupMembership nextPayer = resetMemberships.get(RANDOM.nextInt(resetMemberships.size()));
-            nextPayer.setMyTurn(true);
+            assignTurn(nextPayer);
             userGroupMembershipRepository.save(nextPayer);
             log.info("All members paid in group {}, starting new round. Next payer: {}",
                     group.getName(), nextPayer.getCoffeeUser().getUsername());
@@ -246,7 +252,7 @@ public class PaymentService {
             return createNextPaymentDto(nextPayer.getCoffeeUser(), group);
         } else {
             UserGroupMembership nextPayer = notPaidMemberships.get(RANDOM.nextInt(notPaidMemberships.size()));
-            nextPayer.setMyTurn(true);
+            assignTurn(nextPayer);
             userGroupMembershipRepository.save(nextPayer);
             log.info("Next payer in group {}: {}", group.getName(), nextPayer.getCoffeeUser().getUsername());
 
@@ -340,7 +346,9 @@ public class PaymentService {
         UserGroupMembership membership = userGroupMembership.stream()
                 .filter(p -> p.getCoffeeUser().equals(coffeeUser))
                 .findFirst()
-                .orElseThrow(() -> new RuntimeException("Membership not found for user in group"));
+                .orElseThrow(() -> new BusinessException("Non sei membro del gruppo '" + groupName + "'"));
+
+        validateMyTurn(membership, groupName);
 
         membership.setStatus(PaymentStatus.SALTATO);
         membership.setMyTurn(false);
@@ -409,6 +417,65 @@ public class PaymentService {
         }
 
         return rankings;
+    }
+
+    /**
+     * Retrieves shared payment history for a group, optionally filtered by year/month.
+     */
+    @Transactional(readOnly = true)
+    public List<PaymentDto> getGroupPaymentHistory(Long userId, GroupPaymentHistoryRequest request) {
+        CoffeeUser coffeeUser = baseUserService.findUserByAuthId(userId);
+        Group group = baseUserService.findGroupByName(request.getGroupName());
+
+        boolean isMember = userGroupMembershipRepository.existsByCoffeeUserAndGroup(coffeeUser, group);
+        if (!isMember) {
+            throw new ForbiddenException("Non sei autorizzato a visualizzare lo storico di questo gruppo");
+        }
+
+        List<Payment> payments = paymentRepository.findGroupPayments(
+                request.getGroupName(), request.getYear(), request.getMonth());
+
+        if (payments.isEmpty()) {
+            throw new NoContentAvailableException("Non ci sono pagamenti per questo gruppo");
+        }
+
+        return payments.stream()
+                .map(this::convertToPaymentDto)
+                .toList();
+    }
+
+    /**
+     * Reassigns the active turn to a random non-paid member when the current payer leaves.
+     */
+    @Transactional
+    public void reassignTurnAfterMemberRemoval(Group group) {
+        List<UserGroupMembership> memberships = userGroupMembershipRepository.findByGroup(group);
+        memberships.forEach(m -> m.setMyTurn(false));
+        userGroupMembershipRepository.saveAll(memberships);
+
+        List<UserGroupMembership> notPaid = memberships.stream()
+                .filter(m -> PaymentStatus.NON_PAGATO.equals(m.getStatus()))
+                .toList();
+
+        if (!notPaid.isEmpty()) {
+            UserGroupMembership nextPayer = notPaid.get(RANDOM.nextInt(notPaid.size()));
+            assignTurn(nextPayer);
+            userGroupMembershipRepository.save(nextPayer);
+        } else if (!memberships.isEmpty()) {
+            determineNextPayer(group);
+        }
+    }
+
+    private void validateMyTurn(UserGroupMembership membership, String groupName) {
+        if (!Boolean.TRUE.equals(membership.getMyTurn())) {
+            throw new BusinessException("Non è il tuo turno di pagare la colazione nel gruppo '" + groupName + "'");
+        }
+    }
+
+    private void assignTurn(UserGroupMembership membership) {
+        membership.setMyTurn(true);
+        membership.setTurnAssignedAt(LocalDateTime.now());
+        membership.setReminderLevel(0);
     }
 
     /**
