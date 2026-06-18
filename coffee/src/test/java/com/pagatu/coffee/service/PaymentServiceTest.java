@@ -8,6 +8,7 @@ import com.pagatu.coffee.event.NextPaymentEvent;
 import com.pagatu.coffee.event.PayForEvent;
 import com.pagatu.coffee.event.SkipPaymentEvent;
 
+import com.pagatu.coffee.exception.BusinessException;
 import com.pagatu.coffee.exception.NoContentAvailableException;
 import com.pagatu.coffee.mapper.PaymentMapper;
 import com.pagatu.coffee.repository.CoffeeUserRepository;
@@ -160,6 +161,20 @@ class PaymentServiceTest {
         assertEquals(PaymentStatus.NON_PAGATO, testMembership.getStatus());
         assertEquals(PaymentStatus.NON_PAGATO, friendMembership.getStatus());
         assertTrue(testMembership.getMyTurn() || friendMembership.getMyTurn());
+    }
+
+    @Test
+    void registerPayment_WhenNotUserTurn_ShouldThrowBusinessException() {
+        testMembership.setMyTurn(false);
+        NewPaymentRequest request = new NewPaymentRequest(2.5, "Colazione");
+
+        when(baseUserService.findUserByAuthId(123L)).thenReturn(testUser);
+        when(baseUserService.findGroupByName("testgroup")).thenReturn(testGroup);
+        when(userGroupMembershipRepository.findByGroup(testGroup))
+                .thenReturn(List.of(testMembership));
+
+        assertThrows(BusinessException.class,
+                () -> paymentService.registerPayment(123L, "testgroup", request));
     }
 
     @Test

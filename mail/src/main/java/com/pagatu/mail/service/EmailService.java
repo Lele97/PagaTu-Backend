@@ -9,6 +9,7 @@ import com.pagatu.mail.event.NextPaymentEvent;
 import com.pagatu.mail.event.PayForEvent;
 import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SkipPaymentEvent;
+import com.pagatu.mail.event.TurnReminderEvent;
 import com.pagatu.mail.exception.CustomExceptionEmailSend;
 import com.pagatu.mail.util.Constants;
 import jakarta.mail.MessagingException;
@@ -127,6 +128,25 @@ public class EmailService {
      *              token
      * @return a Mono that completes when the email has been sent successfully
      */
+    public Mono<Void> sendTurnReminderNotification(TurnReminderEvent event) {
+        return Mono.fromRunnable(() -> {
+            Context context = new Context(ITALIAN_LOCALE);
+            context.setVariable("username", event.getUsername());
+            context.setVariable("groupName", event.getGroupName());
+            context.setVariable("hoursPending", event.getHoursPending());
+
+            buildAndSendEmail(
+                    event.getEmail(),
+                    null,
+                    "Paga-Tu: Promemoria — è il tuo turno di pagare la colazione!",
+                    "promemoria-turno",
+                    context);
+        })
+                .doOnSuccess(success -> log.info("Promemoria turno inviato a {}", event.getEmail()))
+                .doOnError(error -> log.error("Errore invio promemoria turno", error))
+                .then();
+    }
+
     public Mono<Void> sendResetPasswordNotification(ResetPasswordMailEvent event) {
         return fetchResetPasswordUserData(event)
                 .flatMap(userDataResetPassword -> sendResetPasswordEmail(event, userDataResetPassword))

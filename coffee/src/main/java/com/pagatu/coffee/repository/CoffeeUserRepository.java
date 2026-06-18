@@ -29,7 +29,7 @@ public interface CoffeeUserRepository extends JpaRepository<CoffeeUser, Long> {
 
     Optional<CoffeeUser> findByUsername(String username);
 
-    CoffeeUser findByEmail(String email);
+    Optional<CoffeeUser> findByEmail(String email);
 
     Optional<CoffeeUser> findByAuthId(Long authId);
 }

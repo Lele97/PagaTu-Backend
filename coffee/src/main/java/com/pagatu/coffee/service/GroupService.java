@@ -8,6 +8,7 @@ import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.InvitationEvent;
 import com.pagatu.coffee.event.InvitationResponseEvent;
 import com.pagatu.coffee.exception.BusinessException;
+import com.pagatu.coffee.exception.ForbiddenException;
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.InvitationUserToGroupInformationRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
@@ -18,7 +19,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+
 
 /**
  * Service for managing coffee payment groups and group memberships.
@@ -53,6 +56,9 @@ public class GroupService {
     private final UserGroupMembershipRepository userGroupMembershipRepository;
     private final InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository;
     private final BaseUserService baseUserService;
+    private final PaymentService paymentService;
+
+    private static final int INVITATION_VALIDITY_DAYS = 7;
 
     /**
      * @param outboxService                               transactional outbox for NATS events
@@ -60,16 +66,20 @@ public class GroupService {
      * @param userGroupMembershipRepository               membership management
      * @param invitationUserToGroupInformationRepository  invitation records
      * @param baseUserService                             shared user/group resolution
+     * @param paymentService                              payment rotation logic
      */
     public GroupService(OutboxService outboxService,
                         GroupRepository groupRepository,
-                        UserGroupMembershipRepository userGroupMembershipRepository, InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository,
-                        BaseUserService baseUserService) {
+                        UserGroupMembershipRepository userGroupMembershipRepository,
+                        InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository,
+                        BaseUserService baseUserService,
+                        PaymentService paymentService) {
         this.outboxService = outboxService;
         this.groupRepository = groupRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
         this.invitationUserToGroupInformationRepository = invitationUserToGroupInformationRepository;
         this.baseUserService = baseUserService;
+        this.paymentService = paymentService;
     }
 
     /**
@@ -86,7 +96,7 @@ public class GroupService {
 
         groupRepository.getGroupByName(newGroupRequest.getName())
                 .ifPresent(g -> {
-                    throw new BusinessException("Group already exists: " + newGroupRequest.getName());
+                    throw new BusinessException("Il gruppo esiste già: " + newGroupRequest.getName());
                 });
 
         Group group = new Group();
@@ -120,11 +130,11 @@ public class GroupService {
      * @throws BusinessException if the invitation is missing, inactive, or the user is already a member
      */
     @Transactional
-    public void addUserToGroup(String groupName, String username, Long invitationId) {
+    public void addUserToGroup(String groupName, String username, Long invitationId, Long requestingUserId) {
 
-        InvitationUserToGroupInformation invitationUserToGroupInformation =
-                invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId)
-                        .orElseThrow(() -> new BusinessException("Invito non trovato o non più attivo"));
+        InvitationUserToGroupInformation invitationUserToGroupInformation = validateInvitation(
+                groupName, username, invitationId, requestingUserId);
+
         Long userWhoSentTheInvitation = invitationUserToGroupInformation.getUserWhoSentInvitation();
         invitationUserToGroupInformation.setUsedAt(LocalDateTime.now());
         invitationUserToGroupInformation.setInvitationStatus(InvitationStatus.ACCEPTED);
@@ -135,7 +145,7 @@ public class GroupService {
         Group group = baseUserService.findGroupByName(groupName);
 
         if (userGroupMembershipRepository.existsByCoffeeUserAndGroup(user, group))
-            throw new BusinessException("User '" + username + "' is already a member of group '" + groupName + "'");
+            throw new BusinessException("L'utente '" + username + "' è già membro del gruppo '" + groupName + "'");
 
         try {
             UserGroupMembership membership = new UserGroupMembership();
@@ -163,7 +173,7 @@ public class GroupService {
 
         } catch (DataIntegrityViolationException ex) {
             log.warn("User {} already in group {}", username, groupName);
-            throw new BusinessException("User is already in the group");
+            throw new BusinessException("L'utente è già nel gruppo");
         } catch (RuntimeException ex) {
             log.error("Error adding user to group: {}", ex.getMessage(), ex);
             throw ex;
@@ -179,27 +189,28 @@ public class GroupService {
      */
     public void sendInvitationToGroup(Long userId, InvitationRequest invitationRequest) {
 
+        if ((invitationRequest.getUsername() == null || invitationRequest.getUsername().isBlank())
+                && (invitationRequest.getEmail() == null || invitationRequest.getEmail().isBlank())) {
+            throw new BusinessException("Specificare username o email dell'utente da invitare");
+        }
+
         Group group = baseUserService.findGroupWithMembershipsByName(invitationRequest.getGroupName());
-        CoffeeUser coffeeUser = baseUserService.findUserByUsername(invitationRequest.getUsername());
+        CoffeeUser coffeeUser = resolveInvitee(invitationRequest);
         CoffeeUser userWhoSentTheInvitation = baseUserService.findUserByAuthId(userId);
 
-        boolean isAdmin = group.getUserMemberships().stream()
-                .anyMatch(membership -> membership.getCoffeeUser() != null &&
-                        membership.getCoffeeUser().getAuthId() != null &&
-                        membership.getCoffeeUser().getAuthId().equals(userId) &&
-                        Boolean.TRUE.equals(membership.getIsAdmin()));
+        assertAdmin(group, userId, invitationRequest.getGroupName());
 
-        if (!isAdmin)
-            throw new BusinessException("You are not an admin of group '" + invitationRequest.getGroupName() + "'");
-
+        if (userGroupMembershipRepository.existsByCoffeeUserAndGroup(coffeeUser, group)) {
+            throw new BusinessException("L'utente è già membro del gruppo '" + invitationRequest.getGroupName() + "'");
+        }
 
         InvitationUserToGroupInformation invitationUserToGroupInformation = new InvitationUserToGroupInformation();
         invitationUserToGroupInformation.setUserWhoSentInvitation(userId);
         invitationUserToGroupInformation.setGroupName(invitationRequest.getGroupName());
-        invitationUserToGroupInformation.setUsername(invitationRequest.getUsername());
+        invitationUserToGroupInformation.setUsername(coffeeUser.getUsername());
         invitationUserToGroupInformation.setEmail(coffeeUser.getEmail());
         invitationUserToGroupInformation.setCreatedAt(LocalDateTime.now());
-        invitationUserToGroupInformation.setExpiredDate(LocalDateTime.now().plusMinutes(60));
+        invitationUserToGroupInformation.setExpiredDate(LocalDateTime.now().plusDays(INVITATION_VALIDITY_DAYS));
         invitationUserToGroupInformation.setInvitationStatus(InvitationStatus.ACTIVE);
 
         InvitationUserToGroupInformation savedInvitationUserToGroupInformation = invitationUserToGroupInformationRepository.save(invitationUserToGroupInformation);
@@ -213,8 +224,15 @@ public class GroupService {
 
         outboxService.saveEvent(natsSubject, event);
 
-        log.info("Invitation event sent for user {} to group {}", invitationRequest.getUsername(),
+        log.info("Invito inviato a {} per il gruppo {}", coffeeUser.getUsername(),
                 invitationRequest.getGroupName());
+    }
+
+    private CoffeeUser resolveInvitee(InvitationRequest invitationRequest) {
+        if (invitationRequest.getEmail() != null && !invitationRequest.getEmail().isBlank()) {
+            return baseUserService.findUserByEmail(invitationRequest.getEmail().trim());
+        }
+        return baseUserService.findUserByUsername(invitationRequest.getUsername().trim());
     }
 
     /**
@@ -265,8 +283,150 @@ public class GroupService {
             log.info("Group '{}' deleted by user with ID {}", groupName, userId);
         } else {
             throw new BusinessException(
-                    "Cannot delete group '" + groupName + "': group has more than one member or you are not a member");
+                    "Impossibile eliminare il gruppo '" + groupName + "': ha più di un membro oppure non ne fai parte");
         }
+    }
+
+    @Transactional
+    public void leaveGroup(String groupName, Long userId) {
+        Group group = baseUserService.findGroupWithMembershipsByName(groupName);
+        CoffeeUser user = baseUserService.findUserByAuthId(userId);
+
+        UserGroupMembership membership = userGroupMembershipRepository.findByCoffeeUserAndGroup(user, group)
+                .orElseThrow(() -> new BusinessException("Non sei membro del gruppo '" + groupName + "'"));
+
+        boolean hadTurn = Boolean.TRUE.equals(membership.getMyTurn());
+        boolean wasAdmin = Boolean.TRUE.equals(membership.getIsAdmin());
+        int remainingCount = group.getUserMemberships().size() - 1;
+
+        if (remainingCount == 0) {
+            groupRepository.deleteGroupByName(groupName);
+            log.info("Gruppo '{}' eliminato: ultimo membro uscito", groupName);
+            return;
+        }
+
+        userGroupMembershipRepository.delete(membership);
+
+        if (wasAdmin) {
+            promoteNewAdmin(group, userId);
+        }
+
+        if (hadTurn) {
+            Group refreshedGroup = baseUserService.findGroupByName(groupName);
+            paymentService.reassignTurnAfterMemberRemoval(refreshedGroup);
+        }
+
+        log.info("Utente {} ha lasciato il gruppo {}", user.getUsername(), groupName);
+    }
+
+    @Transactional
+    public void removeMember(Long adminUserId, String groupName, String memberUsername) {
+        Group group = baseUserService.findGroupWithMembershipsByName(groupName);
+        assertAdmin(group, adminUserId, groupName);
+
+        CoffeeUser member = baseUserService.findUserByUsername(memberUsername);
+        CoffeeUser admin = baseUserService.findUserByAuthId(adminUserId);
+
+        if (member.getAuthId().equals(adminUserId)) {
+            throw new BusinessException("Per uscire dal gruppo usa l'endpoint dedicato");
+        }
+
+        UserGroupMembership membership = userGroupMembershipRepository.findByCoffeeUserAndGroup(member, group)
+                .orElseThrow(() -> new BusinessException("L'utente non è membro del gruppo"));
+
+        boolean hadTurn = Boolean.TRUE.equals(membership.getMyTurn());
+        boolean wasAdmin = Boolean.TRUE.equals(membership.getIsAdmin());
+
+        userGroupMembershipRepository.delete(membership);
+
+        if (wasAdmin) {
+            promoteNewAdmin(group, member.getAuthId());
+        }
+
+        if (hadTurn) {
+            Group refreshedGroup = baseUserService.findGroupByName(groupName);
+            paymentService.reassignTurnAfterMemberRemoval(refreshedGroup);
+        }
+
+        log.info("Admin {} ha rimosso {} dal gruppo {}", admin.getUsername(), memberUsername, groupName);
+    }
+
+    @Transactional
+    public void transferAdmin(Long currentAdminId, String groupName, String newAdminUsername) {
+        Group group = baseUserService.findGroupWithMembershipsByName(groupName);
+        assertAdmin(group, currentAdminId, groupName);
+
+        CoffeeUser newAdmin = baseUserService.findUserByUsername(newAdminUsername);
+        if (newAdmin.getAuthId().equals(currentAdminId)) {
+            throw new BusinessException("Sei già admin del gruppo");
+        }
+
+        UserGroupMembership newAdminMembership = userGroupMembershipRepository
+                .findByCoffeeUserAndGroup(newAdmin, group)
+                .orElseThrow(() -> new BusinessException("Il nuovo admin deve essere membro del gruppo"));
+
+        for (UserGroupMembership m : group.getUserMemberships()) {
+            if (m.getCoffeeUser().getAuthId().equals(currentAdminId)) {
+                m.setIsAdmin(false);
+            }
+            if (m.getCoffeeUser().getAuthId().equals(newAdmin.getAuthId())) {
+                m.setIsAdmin(true);
+            }
+        }
+        userGroupMembershipRepository.saveAll(group.getUserMemberships());
+        log.info("Admin del gruppo {} trasferito a {}", groupName, newAdminUsername);
+    }
+
+    private void promoteNewAdmin(Group group, Long excludedAuthId) {
+        group.getUserMemberships().stream()
+                .filter(m -> !m.getCoffeeUser().getAuthId().equals(excludedAuthId))
+                .min(Comparator.comparing(UserGroupMembership::getJoinedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .ifPresent(m -> {
+                    m.setIsAdmin(true);
+                    userGroupMembershipRepository.save(m);
+                });
+    }
+
+    private void assertAdmin(Group group, Long userId, String groupName) {
+        boolean isAdmin = group.getUserMemberships().stream()
+                .anyMatch(membership -> membership.getCoffeeUser() != null &&
+                        membership.getCoffeeUser().getAuthId() != null &&
+                        membership.getCoffeeUser().getAuthId().equals(userId) &&
+                        Boolean.TRUE.equals(membership.getIsAdmin()));
+
+        if (!isAdmin) {
+            throw new ForbiddenException("Non sei admin del gruppo '" + groupName + "'");
+        }
+    }
+
+    private InvitationUserToGroupInformation validateInvitation(
+            String groupName, String username, Long invitationId, Long requestingUserId) {
+
+        InvitationUserToGroupInformation invitation =
+                invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId)
+                        .orElseThrow(() -> new BusinessException("Invito non trovato o non più attivo"));
+
+        if (invitation.getExpiredDate() != null && invitation.getExpiredDate().isBefore(LocalDateTime.now())) {
+            invitation.setInvitationStatus(InvitationStatus.EXPIRED);
+            invitationUserToGroupInformationRepository.save(invitation);
+            throw new BusinessException("Invito scaduto");
+        }
+
+        if (!groupName.equals(invitation.getGroupName())) {
+            throw new BusinessException("Il gruppo non corrisponde all'invito");
+        }
+
+        CoffeeUser requestingUser = baseUserService.findUserByAuthId(requestingUserId);
+        if (!username.equals(requestingUser.getUsername())) {
+            throw new ForbiddenException("Non puoi accettare un invito per un altro utente");
+        }
+
+        if (!username.equals(invitation.getUsername())) {
+            throw new BusinessException("L'invito non è destinato a questo utente");
+        }
+
+        return invitation;
     }
 
     /**
@@ -296,11 +456,11 @@ public class GroupService {
      * @throws BusinessException if the invitation is missing, inactive, or the user is already a member
      */
     @Transactional
-    public void rejectInvitation(String groupName, String username, Long invitationId) {
+    public void rejectInvitation(String groupName, String username, Long invitationId, Long requestingUserId) {
 
-        InvitationUserToGroupInformation invitationUserToGroupInformation =
-                invitationUserToGroupInformationRepository.findByIdWithStatusActive(invitationId)
-                        .orElseThrow(() -> new BusinessException("Invito non trovato o non più attivo"));
+        InvitationUserToGroupInformation invitationUserToGroupInformation = validateInvitation(
+                groupName, username, invitationId, requestingUserId);
+
         Long userWhoSentTheInvitation = invitationUserToGroupInformation.getUserWhoSentInvitation();
         invitationUserToGroupInformation.setUsedAt(LocalDateTime.now());
         invitationUserToGroupInformation.setInvitationStatus(InvitationStatus.REJECTED);
@@ -311,7 +471,7 @@ public class GroupService {
         Group group = baseUserService.findGroupByName(groupName);
 
         if (userGroupMembershipRepository.existsByCoffeeUserAndGroup(user, group))
-            throw new BusinessException("User '" + username + "' is already a member of group '" + groupName + "'");
+            throw new BusinessException("L'utente '" + username + "' è già membro del gruppo '" + groupName + "'");
 
 
         try {

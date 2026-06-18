@@ -210,7 +210,7 @@ public class CoffeeUserService {
      */
     @Transactional
     public CoffeeUser findByEmail(String email) {
-        return coffeeUserRepository.findByEmail(email);
+        return coffeeUserRepository.findByEmail(email).orElse(null);
     }
 
     /**

@@ -53,6 +53,12 @@ public class UserGroupMembership {
     @Column(name = "is_admin")
     private Boolean isAdmin = false;
 
+    @Column(name = "turn_assigned_at")
+    private java.time.LocalDateTime turnAssignedAt;
+
+    @Column(name = "reminder_level")
+    private Integer reminderLevel = 0;
+
     @OneToMany(mappedBy = "userGroupMembership", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Payment> payments = new ArrayList<>();
@@ -65,12 +71,15 @@ public class UserGroupMembership {
                 status = PaymentStatus.NON_PAGATO;
             }
             myTurn = true;
+            turnAssignedAt = java.time.LocalDateTime.now();
+            reminderLevel = 0;
         } else {
             joinedAt = java.time.LocalDateTime.now();
             if (status == null) {
                 status = PaymentStatus.NON_PAGATO;
             }
             myTurn = false;
+            reminderLevel = 0;
         }
     }
 }

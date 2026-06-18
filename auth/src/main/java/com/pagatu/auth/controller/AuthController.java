@@ -59,7 +59,7 @@ public class AuthController {
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
         authService.register(registerRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body("User registered successfully");
+                .body("Registrazione completata con successo");
     }
 
     /**
@@ -83,11 +83,11 @@ public class AuthController {
                     clientIp, rateLimitResult.getWaitTimeSeconds());
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .header("Retry-After", String.valueOf(rateLimitResult.getWaitTimeSeconds()))
-                    .body("Too many requests. Please try again later.");
+                    .body("Troppe richieste. Riprova più tardi.");
         }
 
         authService.sendEmailForResetPassword(email);
-        return ResponseEntity.ok("Password reset email sent successfully");
+        return ResponseEntity.ok("Email di reset password inviata con successo");
     }
 
     /**
@@ -101,17 +101,17 @@ public class AuthController {
 
         if (token == null || token.trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new TokenValidationResponse(false, null, "Token is required"));
+                    .body(new TokenValidationResponse(false, null, "Il token è obbligatorio"));
         }
 
         String email = authService.validateResetTokenAndGetEmail(token);
 
         if (email != null) {
             return ResponseEntity.ok()
-                    .body(new TokenValidationResponse(true, email, "Token is valid"));
+                    .body(new TokenValidationResponse(true, email, "Token valido"));
         } else {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new TokenValidationResponse(false, null, "Invalid or expired token"));
+                    .body(new TokenValidationResponse(false, null, "Token non valido o scaduto"));
         }
     }
 
@@ -129,11 +129,11 @@ public class AuthController {
 
         if (token == null || token.trim().isEmpty()) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body("Reset token is required");
+                    .body("Il token di reset è obbligatorio");
         }
 
         authService.resetPassword(resetPasswordRequest, token);
-        return ResponseEntity.ok("Password reset successfully");
+        return ResponseEntity.ok("Password reimpostata con successo");
     }
 
     /**

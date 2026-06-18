@@ -6,9 +6,12 @@ import com.pagatu.coffee.entity.UserGroupMembership;
 import com.pagatu.coffee.entity.CoffeeUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository interface for UserGroupMembership entity operations.
@@ -24,4 +27,13 @@ public interface UserGroupMembershipRepository extends JpaRepository<UserGroupMe
     List<UserGroupMembership> findByGroupAndStatus(Group group, PaymentStatus status);
 
     boolean existsByCoffeeUserAndGroup(CoffeeUser coffeeUser, Group group);
+
+    @Query("SELECT ugm FROM UserGroupMembership ugm JOIN FETCH ugm.coffeeUser JOIN FETCH ugm.group WHERE ugm.myTurn = true")
+    List<UserGroupMembership> findAllWithActiveTurn();
+
+    @Query("SELECT ugm FROM UserGroupMembership ugm JOIN FETCH ugm.coffeeUser JOIN FETCH ugm.group " +
+            "WHERE ugm.coffeeUser = :user AND ugm.myTurn = true")
+    List<UserGroupMembership> findActiveTurnsByUser(@Param("user") CoffeeUser user);
+
+    Optional<UserGroupMembership> findByCoffeeUserAndGroup(CoffeeUser coffeeUser, Group group);
 }

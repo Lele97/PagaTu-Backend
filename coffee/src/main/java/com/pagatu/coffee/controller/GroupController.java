@@ -3,6 +3,8 @@ package com.pagatu.coffee.controller;
 import com.pagatu.coffee.dto.GroupDto;
 import com.pagatu.coffee.dto.InvitationRequest;
 import com.pagatu.coffee.dto.NewGroupRequest;
+import com.pagatu.coffee.dto.RemoveMemberRequest;
+import com.pagatu.coffee.dto.TransferAdminRequest;
 import com.pagatu.coffee.exception.UserNotInGroup;
 import com.pagatu.coffee.service.GroupService;
 import com.pagatu.coffee.service.JwtService;
@@ -77,7 +79,7 @@ public class GroupController {
             @RequestHeader("Authorization") String authHeader) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         groupService.deleteGroupByName(groupName, userId);
-        return ResponseEntity.ok("Group '" + groupName + "' deleted successfully");
+        return ResponseEntity.ok("Gruppo '" + groupName + "' eliminato con successo");
     }
 
     /**
@@ -92,9 +94,11 @@ public class GroupController {
     public ResponseEntity<String> addUserToGroup(
             @RequestParam("username") String username,
             @RequestParam("groupName") String groupName,
-            @RequestParam("invitationId") Long invitationId) {
-        groupService.addUserToGroup(groupName, username, invitationId);
-        return ResponseEntity.ok("User '" + username + "' added to group '" + groupName + "' successfully");
+            @RequestParam("invitationId") Long invitationId,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.addUserToGroup(groupName, username, invitationId, userId);
+        return ResponseEntity.ok("Utente '" + username + "' aggiunto al gruppo '" + groupName + "' con successo");
     }
 
     /**
@@ -109,9 +113,11 @@ public class GroupController {
     public ResponseEntity<String> rejectInvitation(
             @RequestParam("username") String username,
             @RequestParam("groupName") String groupName,
-            @RequestParam("invitationId") Long invitationId) {
-        groupService.rejectInvitation(groupName, username, invitationId);
-        return ResponseEntity.ok("User '" + username + "' rejected invitation to group '" + groupName + "' successfully");
+            @RequestParam("invitationId") Long invitationId,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.rejectInvitation(groupName, username, invitationId, userId);
+        return ResponseEntity.ok("Invito al gruppo '" + groupName + "' rifiutato con successo");
     }
 
     /**
@@ -123,11 +129,39 @@ public class GroupController {
      */
     @PostMapping("/update/invitation")
     public ResponseEntity<String> sendInvitationToGroup(
-            @RequestBody InvitationRequest invitationRequest,
+            @Valid @RequestBody InvitationRequest invitationRequest,
             @RequestHeader("Authorization") String authHeader) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         groupService.sendInvitationToGroup(userId, invitationRequest);
-        return ResponseEntity.ok("Invitation sent to user '" + invitationRequest.getUsername() + "' successfully");
+        String target = invitationRequest.getEmail() != null ? invitationRequest.getEmail() : invitationRequest.getUsername();
+        return ResponseEntity.ok("Invito inviato a '" + target + "' con successo");
+    }
+
+    @PutMapping("/update/leave")
+    public ResponseEntity<String> leaveGroup(
+            @RequestParam("groupName") String groupName,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.leaveGroup(groupName, userId);
+        return ResponseEntity.ok("Hai lasciato il gruppo '" + groupName + "' con successo");
+    }
+
+    @DeleteMapping("/update/member")
+    public ResponseEntity<String> removeMember(
+            @Valid @RequestBody RemoveMemberRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.removeMember(userId, request.getGroupName(), request.getUsername());
+        return ResponseEntity.ok("Membro '" + request.getUsername() + "' rimosso dal gruppo");
+    }
+
+    @PutMapping("/update/transfer-admin")
+    public ResponseEntity<String> transferAdmin(
+            @Valid @RequestBody TransferAdminRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.transferAdmin(userId, request.getGroupName(), request.getNewAdminUsername());
+        return ResponseEntity.ok("Admin del gruppo trasferito a '" + request.getNewAdminUsername() + "'");
     }
 
     /**
@@ -151,7 +185,7 @@ public class GroupController {
             String tokenUsername = jwtService.extractUsernameFromAuthHeader(authHeader);
             if (!username.equals(tokenUsername)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Not authorized to access this user's groups");
+                        .body("Non autorizzato ad accedere ai gruppi di questo utente");
             }
 
             List<GroupDto> groups = groupService.getGroupsByUsername(username);
@@ -163,7 +197,7 @@ public class GroupController {
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid authorization token");
+                    .body("Token di autorizzazione non valido");
         }
     }
 }
