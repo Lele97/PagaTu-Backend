@@ -56,4 +56,23 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("groupName") String groupName,
             @Param("year") Integer year,
             @Param("month") Integer month);
+
+    @Query("SELECT p FROM Payment p " +
+            "JOIN FETCH p.userGroupMembership ugm " +
+            "JOIN FETCH ugm.coffeeUser " +
+            "JOIN FETCH ugm.group g " +
+            "WHERE g.name = :groupName")
+    List<Payment> findAllByGroupName(@Param("groupName") String groupName);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+            "JOIN p.userGroupMembership ugm " +
+            "JOIN ugm.coffeeUser u " +
+            "JOIN ugm.group g " +
+            "WHERE g.name = :groupName AND u.username = :username " +
+            "AND YEAR(p.paymentDate) = :year AND MONTH(p.paymentDate) = :month")
+    Double sumPaymentsByUserInGroupForMonth(
+            @Param("groupName") String groupName,
+            @Param("username") String username,
+            @Param("year") int year,
+            @Param("month") int month);
 }

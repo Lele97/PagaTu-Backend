@@ -5,6 +5,7 @@ import com.pagatu.mail.event.InvitationEvent;
 import com.pagatu.mail.event.InvitationResponseEvent;
 import com.pagatu.mail.event.NextPaymentEvent;
 import com.pagatu.mail.event.PayForEvent;
+import com.pagatu.mail.event.EmailVerificationMailEvent;
 import com.pagatu.mail.event.ResetPasswordMailEvent;
 import com.pagatu.mail.event.SkipPaymentEvent;
 import com.pagatu.mail.event.TurnReminderEvent;
@@ -43,6 +44,9 @@ public class NatsListenerRegistrar {
     @Value("${spring.nats.subject.reset-password-mail:reset-password-mail}")
     private String resetPasswordMailSubject;
 
+    @Value("${spring.nats.subject.verify-email-mail:verify-email-mail}")
+    private String verifyEmailMailSubject;
+
     @Value("${spring.nats.subject.pay-for:pay-for}")
     private String payForSubject;
 
@@ -74,6 +78,9 @@ public class NatsListenerRegistrar {
         // Subscribe to reset password mail events
         natsSubscriber.subscribe(resetPasswordMailSubject, this::handleResetPasswordMailEvent);
         log.info("Subscribed to subject: {}", resetPasswordMailSubject);
+
+        natsSubscriber.subscribe(verifyEmailMailSubject, this::handleVerifyEmailMailEvent);
+        log.info("Subscribed to subject: {}", verifyEmailMailSubject);
 
         // Subscribe to pay for events
         natsSubscriber.subscribe(payForSubject, this::handlePayForEvent);
@@ -161,6 +168,20 @@ public class NatsListenerRegistrar {
      *
      * @param msg raw NATS message containing a {@link ResetPasswordMailEvent} JSON payload
      */
+    private void handleVerifyEmailMailEvent(Message msg) {
+        try {
+            String json = new String(msg.getData(), StandardCharsets.UTF_8);
+            EmailVerificationMailEvent event = objectMapper.readValue(json, EmailVerificationMailEvent.class);
+            log.info("Processing verify email event for: {}", event.getEmail());
+
+            emailService.sendEmailVerificationNotification(event).subscribe(
+                    result -> log.debug("Verify email sent successfully"),
+                    error -> log.error("Failed to send verify email", error));
+        } catch (Exception e) {
+            log.error("Error processing verify email event", e);
+        }
+    }
+
     private void handleResetPasswordMailEvent(Message msg) {
         try {
             String json = new String(msg.getData(), StandardCharsets.UTF_8);

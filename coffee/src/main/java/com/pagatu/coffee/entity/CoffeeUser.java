@@ -41,6 +41,12 @@ public class CoffeeUser {
     @Column(name = "lastname")
     private String lastname;
 
+    @Column(name = "satispay_link")
+    private String satispayLink;
+
+    @Column(name = "revolut_link")
+    private String revolutLink;
+
     @OneToMany(mappedBy = "coffeeUser", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserGroupMembership> groupMemberships;

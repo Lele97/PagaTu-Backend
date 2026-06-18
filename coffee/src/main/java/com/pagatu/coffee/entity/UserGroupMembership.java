@@ -59,6 +59,18 @@ public class UserGroupMembership {
     @Column(name = "reminder_level")
     private Integer reminderLevel = 0;
 
+    @Column(name = "payment_count")
+    private Integer paymentCount = 0;
+
+    @Column(name = "skip_count")
+    private Integer skipCount = 0;
+
+    @Column(name = "payment_streak")
+    private Integer paymentStreak = 0;
+
+    @Column(name = "round_skip_count")
+    private Integer roundSkipCount = 0;
+
     @OneToMany(mappedBy = "userGroupMembership", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Payment> payments = new ArrayList<>();

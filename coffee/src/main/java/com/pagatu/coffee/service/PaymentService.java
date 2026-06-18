@@ -68,26 +68,21 @@ public class PaymentService {
     private final UserGroupMembershipRepository userGroupMembershipRepository;
     private final CoffeeUserRepository coffeeUserRepository;
     private final BaseUserService baseUserService;
+    private final GroupRulesService groupRulesService;
 
-    /**
-     * @param outboxService                 transactional outbox for NATS events
-     * @param paymentRepository             payment persistence layer
-     * @param paymentMapper                 entity/DTO mapper
-     * @param userGroupMembershipRepository membership and rotation state
-     * @param coffeeUserRepository          user lookups for payment history
-     * @param baseUserService               shared user/group resolution
-     */
     public PaymentService(OutboxService outboxService, PaymentRepository paymentRepository,
             PaymentMapper paymentMapper,
             UserGroupMembershipRepository userGroupMembershipRepository,
             CoffeeUserRepository coffeeUserRepository,
-            BaseUserService baseUserService) {
+            BaseUserService baseUserService,
+            GroupRulesService groupRulesService) {
         this.outboxService = outboxService;
         this.paymentRepository = paymentRepository;
         this.paymentMapper = paymentMapper;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
         this.coffeeUserRepository = coffeeUserRepository;
         this.baseUserService = baseUserService;
+        this.groupRulesService = groupRulesService;
     }
 
     /**
@@ -116,6 +111,7 @@ public class PaymentService {
 
         membership.setStatus(PaymentStatus.PAGATO);
         membership.setMyTurn(false);
+        incrementPaymentStats(membership);
 
         UserGroupMembership savedMembership = userGroupMembershipRepository.save(membership);
 
@@ -124,6 +120,7 @@ public class PaymentService {
         payment.setAmount(request.getAmount());
         payment.setDescription(request.getDescription());
         payment.setPaymentDate(LocalDateTime.now());
+        payment.setBeneficiaryUsername(null);
 
         Payment savedPayment = paymentRepository.save(payment);
 
@@ -160,7 +157,8 @@ public class PaymentService {
 
         CoffeeUser payingUser = baseUserService.findUserByAuthId(userId);
 
-        Group group = baseUserService.findGroupByName(groupName);
+        Group group = baseUserService.findGroupWithMembershipsByName(groupName);
+        groupRulesService.validatePayForAllowed(group, payingUser);
 
         List<UserGroupMembership> userGroupMembership = userGroupMembershipRepository.findByGroup(group);
 
@@ -170,12 +168,13 @@ public class PaymentService {
 
         payerMembership.setStatus(PaymentStatus.PAGATO);
         payerMembership.setMyTurn(false);
+        incrementPaymentStats(payerMembership);
 
         UserGroupMembership savedPayerMembership = userGroupMembershipRepository.save(payerMembership);
 
         UserGroupMembership friendMembership = userGroupMembershipRepository.findUserTurn(group.getName());
 
-        CoffeeUser friend = baseUserService.findUserByAuthId(friendMembership.getCoffeeUser().getAuthId());
+        CoffeeUser friend = friendMembership.getCoffeeUser();
 
         friendMembership.setStatus(PaymentStatus.PAGATO);
         friendMembership.setMyTurn(false);
@@ -187,6 +186,7 @@ public class PaymentService {
         payment.setAmount(request.getAmount());
         payment.setDescription(request.getDescription());
         payment.setPaymentDate(LocalDateTime.now());
+        payment.setBeneficiaryUsername(friend.getUsername());
 
         Payment savedPayment = paymentRepository.save(payment);
 
@@ -273,6 +273,7 @@ public class PaymentService {
 
         for (UserGroupMembership membership : allMemberships) {
             membership.setStatus(PaymentStatus.NON_PAGATO);
+            membership.setRoundSkipCount(0);
         }
 
         List<UserGroupMembership> savedMemberships = userGroupMembershipRepository.saveAll(allMemberships);
@@ -348,10 +349,13 @@ public class PaymentService {
                 .findFirst()
                 .orElseThrow(() -> new BusinessException("Non sei membro del gruppo '" + groupName + "'"));
 
+        Group groupWithRules = baseUserService.findGroupWithMembershipsByName(groupName);
+        groupRulesService.validateSkipAllowed(groupWithRules, membership);
         validateMyTurn(membership, groupName);
 
         membership.setStatus(PaymentStatus.SALTATO);
         membership.setMyTurn(false);
+        incrementSkipStats(membership);
 
         userGroupMembershipRepository.save(membership);
 
@@ -476,6 +480,17 @@ public class PaymentService {
         membership.setMyTurn(true);
         membership.setTurnAssignedAt(LocalDateTime.now());
         membership.setReminderLevel(0);
+    }
+
+    private void incrementPaymentStats(UserGroupMembership membership) {
+        membership.setPaymentCount((membership.getPaymentCount() != null ? membership.getPaymentCount() : 0) + 1);
+        membership.setPaymentStreak((membership.getPaymentStreak() != null ? membership.getPaymentStreak() : 0) + 1);
+    }
+
+    private void incrementSkipStats(UserGroupMembership membership) {
+        membership.setSkipCount((membership.getSkipCount() != null ? membership.getSkipCount() : 0) + 1);
+        membership.setRoundSkipCount((membership.getRoundSkipCount() != null ? membership.getRoundSkipCount() : 0) + 1);
+        membership.setPaymentStreak(0);
     }
 
     /**

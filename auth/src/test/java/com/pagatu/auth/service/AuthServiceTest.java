@@ -3,6 +3,7 @@ package com.pagatu.auth.service;
 import com.pagatu.auth.dto.LoginRequest;
 import com.pagatu.auth.dto.LoginResponse;
 import com.pagatu.auth.dto.RegisterRequest;
+import com.pagatu.auth.entity.AuthProvider;
 import com.pagatu.auth.entity.TokenForUserPasswordReset;
 import com.pagatu.auth.entity.TokenStatus;
 import com.pagatu.auth.entity.User;
@@ -52,6 +53,9 @@ class AuthServiceTest {
     private TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository;
 
     @Mock
+    private EmailVerificationService emailVerificationService;
+
+    @Mock
     private WebClient webClient;
 
     private AuthService authService;
@@ -70,7 +74,8 @@ class AuthServiceTest {
                 passwordEncoder,
                 webClientBuilder,
                 "http://localhost:8082",
-                outboxService
+                outboxService,
+                emailVerificationService
         );
 
         ReflectionTestUtils.setField(authService, "jwtSecret", JWT_SECRET);
@@ -82,6 +87,8 @@ class AuthServiceTest {
         testUser.setUsername("testuser");
         testUser.setEmail("test@example.com");
         testUser.setPassword("encoded-password");
+        testUser.setEmailVerified(true);
+        testUser.setAuthProvider(AuthProvider.LOCAL);
     }
 
     @Test

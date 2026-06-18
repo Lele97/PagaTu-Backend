@@ -35,4 +35,7 @@ public class Payment {
 
     @Column(name = "data_pagamento")
     private LocalDateTime paymentDate;
+
+    @Column(name = "beneficiary_username")
+    private String beneficiaryUsername;
 }
