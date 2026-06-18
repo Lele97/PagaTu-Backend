@@ -29,10 +29,12 @@ public class Constants {
      */
     public static final String LOG_ERROR_NOTIFICA = "Errore nell'invio dell'email di notifica";
     public static final String LOG_ERROR_INVITO = "Errore nell'invio dell'email di invito";
+    public static final String LOG_ERROR_PAGA_PER = "Errore nell'invio delle email paga-per";
     public static final String LOG_ERROR_PAGATORE = "Errore durante il recupero del prossimo pagatore";
     public static final String LOG_ERROR_UTENTE = "Errore durante il recupero dell'utente";
     public static final String LOG_INFO_NOTIFICA = "Email di notifica inviata con successo";
     public static final String LOG_INFO_INVITO = "Email di invito inviata con successo";
+    public static final String LOG_INFO_PAGA_PER = "Email paga-per inviate con successo";
     public static final String LOG_INFO_PAGATORE = "Prossimo pagatore recuperato con successo ";
     public static final String LOG_INFO_UTENTE = "Utente recuperato con successo";
 

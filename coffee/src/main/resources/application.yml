@@ -23,6 +23,7 @@ spring:
       skip-payment-subject: skip-payment-subject
       invitation-subject: invitation-subject
       invitation-response-subject: invitation-response-subject
+      pay-for-subject: pay-for-topic
 
   # Outbox pattern configuration
   outbox:

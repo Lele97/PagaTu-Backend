@@ -55,8 +55,8 @@ public class PaymentService {
     @Value("${spring.nats.subject.skip-payment-subject}")
     private String natsSubjectSkipPayment;
 
-//    @Value("${spring.nats.subject.pay-for-subject}")
-//    private String natsSubjectPayFor;
+    @Value("${spring.nats.subject.pay-for-subject}")
+    private String natsSubjectPayFor;
 
     private final OutboxService outboxService;
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -140,8 +140,8 @@ public class PaymentService {
      * <p>
      * Both the payer and the beneficiary are marked as paid, a payment record is created
      * for the payer, and the next payer is determined. A {@link PayForEvent} payload is
-     * prepared for notification purposes; NATS outbox publishing for this event is
-     * currently disabled in favour of the next-payment rotation event.
+     * prepared and published via the transactional outbox so the mail service can
+     * notify both the payer and the beneficiary.
      * </p>
      *
      * @param userId    the auth ID of the user making the payment
@@ -202,7 +202,7 @@ public class PaymentService {
             payForEvent.setAmount(savedPayment.getAmount());
             payForEvent.setPaymentDate(savedPayment.getPaymentDate());
 
-            //outboxService.saveEvent(natsSubjectPayFor, payForEvent);
+            outboxService.saveEvent(natsSubjectPayFor, payForEvent);
             log.info("PayFor event saved in outbox: {} paid for {}", payingUser.getUsername(), friend.getUsername());
         } catch (Exception e) {
             log.error("Failed to publish payFor event", e);

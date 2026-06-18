@@ -185,8 +185,10 @@ public class NatsListenerRegistrar {
             log.info("Processing pay for event: {} paid for {}", event.getPayerUsername(), event.getFriendUsername());
 
             emailService.sendPayForNotification(event).subscribe(
-                    result -> log.debug("Email sent successfully for pay for event"),
-                    error -> log.error("Failed to send email for pay for event", error));
+                    result -> log.info("Email paga-per inviate: {} -> {} nel gruppo {}",
+                            event.getPayerUsername(), event.getFriendUsername(), event.getGroupName()),
+                    error -> log.error("Invio email paga-per fallito per {} -> {} nel gruppo {}",
+                            event.getPayerUsername(), event.getFriendUsername(), event.getGroupName(), error));
 
         } catch (Exception e) {
             log.error("Error processing pay for event", e);

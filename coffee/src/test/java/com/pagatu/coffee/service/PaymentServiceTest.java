@@ -5,6 +5,7 @@ import com.pagatu.coffee.dto.GroupPaymentRankingRequest;
 import com.pagatu.coffee.dto.PaymentDto;
 import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.event.NextPaymentEvent;
+import com.pagatu.coffee.event.PayForEvent;
 import com.pagatu.coffee.event.SkipPaymentEvent;
 
 import com.pagatu.coffee.exception.NoContentAvailableException;
@@ -65,6 +66,7 @@ class PaymentServiceTest {
     void setUp() {
         ReflectionTestUtils.setField(paymentService, "natsSubjectNextPayment", "next-payment");
         ReflectionTestUtils.setField(paymentService, "natsSubjectSkipPayment", "skip-payment");
+        ReflectionTestUtils.setField(paymentService, "natsSubjectPayFor", "pay-for-topic");
 
         testUser = new CoffeeUser();
         testUser.setId(1L);
@@ -143,6 +145,16 @@ class PaymentServiceTest {
         verify(userGroupMembershipRepository).findUserTurn("testgroup");
         verify(userGroupMembershipRepository, atLeast(2)).save(any(UserGroupMembership.class));
         verify(outboxService).saveEvent(eq("next-payment"), any(NextPaymentEvent.class));
+
+        ArgumentCaptor<PayForEvent> payForCaptor = ArgumentCaptor.forClass(PayForEvent.class);
+        verify(outboxService).saveEvent(eq("pay-for-topic"), payForCaptor.capture());
+        PayForEvent payForEvent = payForCaptor.getValue();
+        assertEquals("testuser", payForEvent.getPayerUsername());
+        assertEquals("test@example.com", payForEvent.getPayerEmail());
+        assertEquals("frienduser", payForEvent.getFriendUsername());
+        assertEquals("friend@example.com", payForEvent.getFriendEmail());
+        assertEquals("testgroup", payForEvent.getGroupName());
+        assertEquals(2.5, payForEvent.getAmount());
 
         // Dopo payFor, determineNextPayer avvia un nuovo giro resettando i membri
         assertEquals(PaymentStatus.NON_PAGATO, testMembership.getStatus());
