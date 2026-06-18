@@ -156,6 +156,9 @@ public class EmailService {
      */
     public Mono<Void> sendPayForNotification(PayForEvent event) {
         return Mono.fromRunnable(() -> {
+            log.info("Invio email paga-per: {} paga per {} nel gruppo {}",
+                    event.getPayerUsername(), event.getFriendUsername(), event.getGroupName());
+
             Context contextPayer = new Context(ITALIAN_LOCALE);
             contextPayer.setVariable("payerUsername", event.getPayerUsername());
             contextPayer.setVariable("friendUsername", event.getFriendUsername());
@@ -170,6 +173,7 @@ public class EmailService {
                     "Paga-Tu: Hai pagato per un amico!",
                     "pagaper-pagatore",
                     contextPayer);
+            log.info("Email pagatore inviata a {} (template: pagaper-pagatore)", event.getPayerEmail());
 
             Context contextPayee = new Context(ITALIAN_LOCALE);
             contextPayee.setVariable("payerUsername", event.getPayerUsername());
@@ -185,7 +189,12 @@ public class EmailService {
                     "Paga-Tu: Un amico ha pagato per te!",
                     "pagaper-ricevente",
                     contextPayee);
-        }).then();
+            log.info("Email beneficiario inviata a {} (template: pagaper-ricevente)", event.getFriendEmail());
+        })
+                .doOnSuccess(success -> log.info("{} a {} e {}",
+                        LOG_INFO_PAGA_PER, event.getPayerEmail(), event.getFriendEmail()))
+                .doOnError(error -> log.error(LOG_ERROR_PAGA_PER, error))
+                .then();
     }
 
     /**
