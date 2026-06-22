@@ -36,6 +36,7 @@ services:
       - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
       - COFFEE_SERVICE_URL=lb://coffee
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - EUREKA_INSTANCE_PREFER_IP=true
       - NATS_SERVER=nats://nats:4222
     depends_on:
       - pg-pagatu
@@ -55,6 +56,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - EUREKA_INSTANCE_PREFER_IP=true
       - NATS_SERVER=nats://nats:4222
     depends_on:
       - pg-pagatu
@@ -79,6 +81,7 @@ services:
       - NATS_SERVER=nats://nats:4222
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - EUREKA_INSTANCE_PREFER_IP=true
       - COFFEE_SERVICE_URL=lb://coffee
       - AUTH_SERVICE_URL=lb://auth
     depends_on:

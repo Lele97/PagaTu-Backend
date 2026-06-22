@@ -79,7 +79,7 @@ eureka:
     prefer-ip-address: true
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://pagatu.app,http://localhost:8888}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://pagatu.app,http://localhost:8888,http://127.0.0.1:8888}
   allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS,HEAD}
   allowed-headers: ${CORS_ALLOWED_HEADERS:Authorization,Content-Type,Accept-Language,Cache-Control,X-Requested-With,ngrok-skip-browser-warning,Accept,Origin,Access-Control-Request-Method,Access-Control-Request-Headers,Access-Control-Allow-Origin,X-Reset-Token,X-Forwarded-For,X-Forwarded-Proto,X-Forwarded-Port}
   exposed-headers: ${CORS_EXPOSED_HEADERS:Authorization,Content-Type}

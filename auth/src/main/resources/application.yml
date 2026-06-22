@@ -85,7 +85,9 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP:false}
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
     instance-id: ${spring.application.name}:${random.value}
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30
@@ -157,7 +159,7 @@ rate-limiter:
     enabled: ${RATE_LIMITER_ENABLED:true}
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:m7ZHXrUpzs99wfS3L3/dFWOZrbkuJJIE3YPl66yY4nawGza/rY6RdPKeT8Cf9AA/}
   expiration: ${JWT_EXPIRATION:86400000}
 
 management:
