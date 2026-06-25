@@ -35,6 +35,18 @@ public class GlobalExceptionHandler {
      * @param e the AuthenticationException containing details about the failure
      * @return ResponseEntity with UNAUTHORIZED status and error details
      */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
+        log.warn("Invalid request argument: {}", e.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.UNAUTHORIZED,
+                e.getMessage(),
+                "Invalid or missing authentication token.",
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException e) {
         log.warn("Authentication failed: {}", e.getMessage());

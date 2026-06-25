@@ -47,6 +47,15 @@ public class CoffeeUser {
     @Column(name = "revolut_link")
     private String revolutLink;
 
+    @Column(name = "avatar_key")
+    private String avatarKey = "default";
+
+    @Column(name = "theme_key")
+    private String themeKey = "classic";
+
+    @Column(name = "email_turn_reminders")
+    private Boolean emailTurnReminders = true;
+
     @OneToMany(mappedBy = "coffeeUser", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserGroupMembership> groupMemberships;

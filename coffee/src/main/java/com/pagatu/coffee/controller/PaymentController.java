@@ -58,7 +58,7 @@ public class PaymentController {
     public ResponseEntity<PaymentDto> registerPayment(
             @RequestHeader("Authorization") String authHeader,
             @Valid @RequestBody NewPaymentRequest request,
-            @RequestParam("groupNme") String groupName) {
+            @RequestParam("groupName") String groupName) {
         log.info("Richiesta di pagamento ricevuta. Body: {}, GroupName: {}", request, groupName);
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         return ResponseEntity.ok(paymentService.registerPayment(userId, groupName, request));
@@ -74,7 +74,7 @@ public class PaymentController {
     @PostMapping("/salta/pagamento")
     public ResponseEntity<String> skipPayment(
             @RequestHeader("Authorization") String authHeader,
-            @RequestParam("groupNme") String groupName) {
+            @RequestParam("groupName") String groupName) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         paymentService.skipPayment(userId, groupName);
         return ResponseEntity.ok("Hai saltato il turno di pagamento della colazione");
@@ -108,7 +108,7 @@ public class PaymentController {
     public ResponseEntity<PaymentDto> payFor(
             @RequestHeader("Authorization") String authHeader,
             @Valid @RequestBody NewPaymentRequest request,
-            @RequestParam("groupNme") String groupName) {
+            @RequestParam("groupName") String groupName) {
         log.info("Richiesta di pagamento 'pagaPer' ricevuta. Body: {}, GroupName: {}", request, groupName);
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         return ResponseEntity.ok(paymentService.payFor(userId, groupName, request));

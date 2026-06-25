@@ -1,0 +1,2 @@
+ALTER TABLE utenti
+    ADD COLUMN IF NOT EXISTS email_turn_reminders BOOLEAN DEFAULT TRUE;

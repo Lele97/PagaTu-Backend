@@ -57,6 +57,12 @@ public class TurnReminderService {
     }
 
     private void sendReminder(UserGroupMembership membership, int hoursPending) {
+        if (Boolean.FALSE.equals(membership.getCoffeeUser().getEmailTurnReminders())) {
+            log.debug("Promemoria turno saltato per {} — notifiche email disabilitate",
+                    membership.getCoffeeUser().getUsername());
+            return;
+        }
+
         TurnReminderEvent event = new TurnReminderEvent();
         event.setUsername(membership.getCoffeeUser().getUsername());
         event.setEmail(membership.getCoffeeUser().getEmail());

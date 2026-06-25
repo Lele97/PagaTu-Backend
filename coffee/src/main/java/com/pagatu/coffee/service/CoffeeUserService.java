@@ -81,9 +81,11 @@ public class CoffeeUserService {
         if (existingByAuthId.isPresent()) {
             CoffeeUser existing = existingByAuthId.get();
             log.info("Existing user found by authId: {}", coffeeUserDto.getAuthId());
+            applyProfileFields(existing, coffeeUserDto);
+            CoffeeUser updated = coffeeUserRepository.save(existing);
             List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(coffeeUserDto.getGroups());
-            createGroupAndAddUserToTheGroup(existing, userGroupMemberships);
-            return mapToDto(existing);
+            createGroupAndAddUserToTheGroup(updated, userGroupMemberships);
+            return mapToDto(updated);
         }
 
         Optional<CoffeeUser> existingByUsername = coffeeUserRepository.findByUsername(coffeeUserDto.getUsername());
@@ -92,6 +94,7 @@ public class CoffeeUserService {
             CoffeeUser existing = existingByUsername.get();
             existing.setAuthId(coffeeUserDto.getAuthId());
             existing.setEmail(coffeeUserDto.getEmail());
+            applyProfileFields(existing, coffeeUserDto);
             List<GroupMembershipDto> userGroupMemberships = convertGroupsToMemberships(coffeeUserDto.getGroups());
             createGroupAndAddUserToTheGroup(existing, userGroupMemberships);
             CoffeeUser updated = coffeeUserRepository.save(existing);
@@ -115,6 +118,15 @@ public class CoffeeUserService {
         log.info("New user created: {}", savedUser.getUsername());
 
         return mapToDto(savedUser);
+    }
+
+    private void applyProfileFields(CoffeeUser user, CoffeeUserDto dto) {
+        if (dto.getName() != null) {
+            user.setName(dto.getName().isBlank() ? null : dto.getName().trim());
+        }
+        if (dto.getLastname() != null) {
+            user.setLastname(dto.getLastname().isBlank() ? null : dto.getLastname().trim());
+        }
     }
 
     /**

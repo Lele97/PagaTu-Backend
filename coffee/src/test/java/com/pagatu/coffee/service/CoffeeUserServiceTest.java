@@ -49,8 +49,7 @@ class CoffeeUserServiceTest {
     }
 
     @Test
-    void createCoffeeUser_WhenUserExistsByAuthId_ShouldReturnExistingUser() {
-        // Given
+    void createCoffeeUser_WhenUserExistsByAuthId_ShouldUpdateProfileAndSave() {
         CoffeeUser existing = new CoffeeUser();
         existing.setId(1L);
         existing.setAuthId(123L);
@@ -58,15 +57,16 @@ class CoffeeUserServiceTest {
         existing.setEmail("test@example.com");
 
         when(coffeeUserRepository.findByAuthId(123L)).thenReturn(Optional.of(existing));
+        when(coffeeUserRepository.save(existing)).thenReturn(existing);
         when(groupRepository.getGroupByName("teamcoffee")).thenReturn(Optional.of(new Group()));
 
-        // When
         CoffeeUserDto result = coffeeUserService.createCoffeeUser(inputDto);
 
-        // Then
         assertEquals(123L, result.getAuthId());
         assertEquals("testuser", result.getUsername());
-        verify(coffeeUserRepository, never()).save(any());
+        assertEquals("Mario", existing.getName());
+        assertEquals("Rossi", existing.getLastname());
+        verify(coffeeUserRepository).save(existing);
     }
 
     @Test
