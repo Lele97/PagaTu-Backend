@@ -29,4 +29,8 @@ public interface InvitationUserToGroupInformationRepository extends JpaRepositor
             @Param("username") String username,
             @Param("email") String email,
             @Param("now") LocalDateTime now);
+
+    @Query("SELECT i FROM InvitationUserToGroupInformation i WHERE i.groupName = :groupName " +
+            "AND i.invitationStatus = com.pagatu.coffee.entity.InvitationStatus.ACTIVE")
+    List<InvitationUserToGroupInformation> findActiveByGroupName(@Param("groupName") String groupName);
 }

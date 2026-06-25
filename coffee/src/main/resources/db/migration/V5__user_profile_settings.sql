@@ -1,0 +1,3 @@
+ALTER TABLE utenti
+    ADD COLUMN IF NOT EXISTS avatar_key VARCHAR(50) DEFAULT 'default',
+    ADD COLUMN IF NOT EXISTS theme_key VARCHAR(50) DEFAULT 'classic';

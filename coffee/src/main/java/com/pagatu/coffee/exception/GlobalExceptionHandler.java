@@ -210,6 +210,32 @@ public class GlobalExceptionHandler {
 
     }
 
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(
+            ValidationException ex, HttpServletRequest request) {
+        log.warn("Validation error: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                "VALIDATION_ERROR",
+                ex.getMessage(),
+                HttpStatus.BAD_REQUEST.value()
+        );
+        errorResponse.setPath(request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException ex, HttpServletRequest request) {
+        log.warn("Invalid request: {}", ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse(
+                "UNAUTHORIZED",
+                ex.getMessage(),
+                HttpStatus.UNAUTHORIZED.value()
+        );
+        errorResponse.setPath(request.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+    }
+
     /**
      * Handles all other uncaught exceptions and returns a generic error response.
      * This method serves as a fallback handler for any exception not specifically

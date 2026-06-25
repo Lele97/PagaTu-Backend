@@ -447,21 +447,27 @@ public class AuthService {
     }
 
     /**
-     * Synchronizes user information with an external coffee service.
+     * Synchronizes user information with an external coffee service (fire-and-forget).
      *
      * @param user the user entity to synchronize
      */
     void syncWithCoffeeService(User user) {
-        UserDto userDto = new UserDto();
-        userDto.setId(user.getId());
-        userDto.setAuthId(user.getId());
-        userDto.setUsername(user.getUsername());
-        userDto.setEmail(user.getEmail());
-        userDto.setName(user.getFirstName());
-        userDto.setLastname(user.getLastName());
-        userDto.setGroups(user.getGroups());
+        syncWithCoffeeService(user, false);
+    }
 
-        webClient.post()
+    /**
+     * Synchronizes profile fields with coffee service and waits for completion.
+     *
+     * @param user the user entity to synchronize
+     */
+    public void syncProfileWithCoffeeService(User user) {
+        syncWithCoffeeService(user, true);
+    }
+
+    private void syncWithCoffeeService(User user, boolean blocking) {
+        UserDto userDto = buildCoffeeUserDto(user);
+
+        var request = webClient.post()
                 .uri("/api/coffee/user")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(userDto)
@@ -472,7 +478,8 @@ public class AuthService {
                                     "Coffee service error - Status: %s, Body: %s",
                                     response.statusCode(), errorBody);
                             log.error(errorMsg);
-                            return Mono.error(new RuntimeException(errorMsg));
+                            return Mono.error(new ServiceUnavailableException("Failed to sync with coffee service",
+                                    new RuntimeException(errorMsg)));
                         }))
                 .bodyToMono(Void.class)
                 .timeout(Duration.ofSeconds(10))
@@ -480,11 +487,27 @@ public class AuthService {
                 .doOnError(WebClientResponseException.class,
                         error -> log.error("Coffee service HTTP error: {}", error.getMessage()))
                 .doOnError(Exception.class,
-                        error -> log.error("Error synchronizing with coffee service", error))
-                .onErrorResume(Exception.class, error -> {
-                    log.warn("Coffee service sync failed, continuing with main operation");
-                    return Mono.empty();
-                })
-                .subscribe();
+                        error -> log.error("Error synchronizing with coffee service", error));
+
+        if (blocking) {
+            request.block();
+        } else {
+            request.onErrorResume(Exception.class, error -> {
+                log.warn("Coffee service sync failed, continuing with main operation");
+                return Mono.empty();
+            }).subscribe();
+        }
+    }
+
+    private UserDto buildCoffeeUserDto(User user) {
+        UserDto userDto = new UserDto();
+        userDto.setId(user.getId());
+        userDto.setAuthId(user.getId());
+        userDto.setUsername(user.getUsername());
+        userDto.setEmail(user.getEmail());
+        userDto.setName(user.getFirstName());
+        userDto.setLastname(user.getLastName());
+        userDto.setGroups(user.getGroups());
+        return userDto;
     }
 }
