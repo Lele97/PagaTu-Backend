@@ -16,6 +16,7 @@ import com.pagatu.coffee.exception.GroupNotFoundException;
 import com.pagatu.coffee.exception.NoContentAvailableException;
 import com.pagatu.coffee.exception.UserNotFoundException;
 import com.pagatu.coffee.mapper.PaymentMapper;
+import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.PaymentRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
 import com.pagatu.coffee.repository.CoffeeUserRepository;
@@ -69,13 +70,15 @@ public class PaymentService {
     private final CoffeeUserRepository coffeeUserRepository;
     private final BaseUserService baseUserService;
     private final GroupRulesService groupRulesService;
+    private final GroupRepository groupRepository;
 
     public PaymentService(OutboxService outboxService, PaymentRepository paymentRepository,
             PaymentMapper paymentMapper,
             UserGroupMembershipRepository userGroupMembershipRepository,
             CoffeeUserRepository coffeeUserRepository,
             BaseUserService baseUserService,
-            GroupRulesService groupRulesService) {
+            GroupRulesService groupRulesService,
+            GroupRepository groupRepository) {
         this.outboxService = outboxService;
         this.paymentRepository = paymentRepository;
         this.paymentMapper = paymentMapper;
@@ -83,6 +86,7 @@ public class PaymentService {
         this.coffeeUserRepository = coffeeUserRepository;
         this.baseUserService = baseUserService;
         this.groupRulesService = groupRulesService;
+        this.groupRepository = groupRepository;
     }
 
     /**
@@ -269,6 +273,10 @@ public class PaymentService {
     private List<UserGroupMembership> resetGroupMembersToNotPaid(Group group) {
         log.info("Resetting all members in group {} to NOT_PAID status", group.getName());
 
+        int round = group.getCurrentRoundNumber() != null ? group.getCurrentRoundNumber() : 1;
+        group.setCurrentRoundNumber(round + 1);
+        groupRepository.save(group);
+
         List<UserGroupMembership> allMemberships = userGroupMembershipRepository.findByGroup(group);
 
         for (UserGroupMembership membership : allMemberships) {
@@ -277,7 +285,8 @@ public class PaymentService {
         }
 
         List<UserGroupMembership> savedMemberships = userGroupMembershipRepository.saveAll(allMemberships);
-        log.info("Reset {} members in group {} to NOT_PAID", savedMemberships.size(), group.getName());
+        log.info("Reset {} members in group {} to NOT_PAID — starting giro {}",
+                savedMemberships.size(), group.getName(), group.getCurrentRoundNumber());
 
         return savedMemberships;
     }
@@ -351,6 +360,7 @@ public class PaymentService {
 
         Group groupWithRules = baseUserService.findGroupWithMembershipsByName(groupName);
         groupRulesService.validateSkipAllowed(groupWithRules, membership);
+        groupRulesService.validateNotLastUnpaidMember(groupWithRules, membership);
         validateMyTurn(membership, groupName);
 
         membership.setStatus(PaymentStatus.SALTATO);
@@ -491,6 +501,7 @@ public class PaymentService {
         membership.setSkipCount((membership.getSkipCount() != null ? membership.getSkipCount() : 0) + 1);
         membership.setRoundSkipCount((membership.getRoundSkipCount() != null ? membership.getRoundSkipCount() : 0) + 1);
         membership.setPaymentStreak(0);
+        groupRulesService.incrementMonthlySkip(membership);
     }
 
     /**

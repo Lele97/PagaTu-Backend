@@ -1,6 +1,7 @@
 package com.pagatu.coffee.service;
 
 import com.pagatu.coffee.dto.GroupDto;
+import com.pagatu.coffee.dto.UserMembershipDto;
 import com.pagatu.coffee.dto.InvitationRequest;
 import com.pagatu.coffee.dto.NewGroupRequest;
 import com.pagatu.coffee.entity.*;
@@ -26,6 +27,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +51,9 @@ class GroupServiceTest {
 
     @Mock
     private PaymentService paymentService;
+
+    @Mock
+    private MembershipDtoFactory membershipDtoFactory;
 
     @InjectMocks
     private GroupService groupService;
@@ -81,6 +87,21 @@ class GroupServiceTest {
 
         ReflectionTestUtils.setField(groupService, "natsSubject", "invitation-subject");
         ReflectionTestUtils.setField(groupService, "natsSubjectsInvitationResponse", "invitation-response-subject");
+
+        lenient().when(membershipDtoFactory.toDto(any(Group.class), any(UserGroupMembership.class)))
+                .thenAnswer(inv -> {
+                    UserGroupMembership m = inv.getArgument(1);
+                    UserMembershipDto dto = new UserMembershipDto();
+                    dto.setUsername(m.getCoffeeUser().getUsername());
+                    dto.setStatus(m.getStatus());
+                    dto.setMyTurn(m.getMyTurn());
+                    dto.setIsAdmin(m.getIsAdmin());
+                    dto.setRoundSkipCount(m.getRoundSkipCount());
+                    if (m.getRoundSkipCount() != null && inv.getArgument(0, Group.class).getMaxSkipPerRound() != null) {
+                        dto.setSkipsRemaining(inv.getArgument(0, Group.class).getMaxSkipPerRound() - m.getRoundSkipCount());
+                    }
+                    return dto;
+                });
     }
 
     @Test
@@ -425,5 +446,31 @@ class GroupServiceTest {
         // Verify invitation was updated
         assertEquals(InvitationStatus.REJECTED, invitation.getInvitationStatus());
         assertNotNull(invitation.getUsedAt());
+    }
+
+    @Test
+    void getGroupSummary_ShouldReturnTurnAndSkipInfo() {
+        testGroup.setMaxSkipPerRound(2);
+        testGroup.setCurrentRoundNumber(4);
+        testMembership.setRoundSkipCount(1);
+        testMembership.getCoffeeUser().setName("Mario");
+        testGroup.getUserMemberships().add(testMembership);
+
+        when(baseUserService.findGroupWithMembershipsByName("testgroup")).thenReturn(testGroup);
+
+        GroupDto result = groupService.getGroupSummary("testgroup", 123L);
+
+        assertEquals("testgroup", result.getName());
+        assertEquals(1, result.getMemberCount());
+        assertEquals("testuser", result.getCurrentTurnUsername());
+        assertEquals(2, result.getMaxSkipPerRound());
+        assertEquals(1, result.getRoundPendingCount());
+        assertEquals(4, result.getCurrentRoundNumber());
+        assertEquals(4, result.getMaxSkipPerMonth());
+
+        UserMembershipDto member = result.getUserMembershipsdto().get(0);
+        assertEquals(1, member.getRoundSkipCount());
+        assertEquals(1, member.getSkipsRemaining());
+        assertTrue(member.getMyTurn());
     }
 }

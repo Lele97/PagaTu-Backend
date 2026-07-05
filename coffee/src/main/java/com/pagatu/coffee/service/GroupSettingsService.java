@@ -24,6 +24,7 @@ public class GroupSettingsService {
     private final BaseUserService baseUserService;
     private final GroupRepository groupRepository;
     private final InvitationUserToGroupInformationRepository invitationRepository;
+    private final MembershipDtoFactory membershipDtoFactory;
 
     @Transactional(readOnly = true)
     public GroupSettingsDto getSettings(Long userId, String groupName) {
@@ -104,7 +105,7 @@ public class GroupSettingsService {
                 .sorted(Comparator
                         .comparing((UserGroupMembership m) -> !Boolean.TRUE.equals(m.getIsAdmin()))
                         .thenComparing(m -> m.getJoinedAt(), Comparator.nullsLast(Comparator.naturalOrder())))
-                .map(this::toMemberDto)
+                .map(m -> membershipDtoFactory.toDto(group, m))
                 .toList();
 
         return new GroupSettingsDto(
@@ -114,19 +115,6 @@ public class GroupSettingsService {
                 group.getPayForEnabled(),
                 group.getPayForAdminOnly(),
                 members);
-    }
-
-    private UserMembershipDto toMemberDto(UserGroupMembership membership) {
-        UserMembershipDto dto = new UserMembershipDto();
-        dto.setUserId(membership.getCoffeeUser().getId());
-        dto.setUsername(membership.getCoffeeUser().getUsername());
-        dto.setName(membership.getCoffeeUser().getName());
-        dto.setLastname(membership.getCoffeeUser().getLastname());
-        dto.setStatus(membership.getStatus());
-        dto.setMyTurn(membership.getMyTurn());
-        dto.setIsAdmin(membership.getIsAdmin());
-        dto.setJoinedAt(membership.getJoinedAt());
-        return dto;
     }
 
     private void assertAdmin(Group group, Long userId, String groupName) {

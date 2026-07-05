@@ -172,6 +172,17 @@ public class GroupController {
      * @return ResponseEntity containing the list of groups or appropriate error
      * response
      */
+    /**
+     * Returns a rich summary for a single group (members, turn, skips remaining).
+     */
+    @GetMapping("/summary")
+    public ResponseEntity<GroupDto> getGroupSummary(
+            @RequestParam("groupName") String groupName,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        return ResponseEntity.ok(groupService.getGroupSummary(groupName, userId));
+    }
+
     @PostMapping("/get/{username}")
     public ResponseEntity<Object> getGroupsByUsernamePost(
             @PathVariable("username") String username,

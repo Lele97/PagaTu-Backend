@@ -54,6 +54,9 @@ public class Group {
     @Column(name = "pay_for_admin_only")
     private Boolean payForAdminOnly = false;
 
+    @Column(name = "current_round_number")
+    private Integer currentRoundNumber = 1;
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserGroupMembership> userMemberships = new ArrayList<>();

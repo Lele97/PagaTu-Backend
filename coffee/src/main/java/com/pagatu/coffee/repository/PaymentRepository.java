@@ -75,4 +75,17 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             @Param("username") String username,
             @Param("year") int year,
             @Param("month") int month);
+
+    @Query("SELECT COUNT(p.id) FROM Payment p " +
+            "JOIN p.userGroupMembership ugm " +
+            "JOIN ugm.coffeeUser u " +
+            "JOIN ugm.group g " +
+            "WHERE g.name = :groupName AND u.username = :username " +
+            "AND p.beneficiaryUsername IS NOT NULL " +
+            "AND YEAR(p.paymentDate) = :year AND MONTH(p.paymentDate) = :month")
+    long countPayForByUserInGroupForMonth(
+            @Param("groupName") String groupName,
+            @Param("username") String username,
+            @Param("year") int year,
+            @Param("month") int month);
 }
