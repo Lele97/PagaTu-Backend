@@ -18,4 +18,11 @@ public class UserMembershipDto {
     private Boolean myTurn;
     private Boolean isAdmin;
     private java.time.LocalDateTime joinedAt;
+    private Integer roundSkipCount;
+    /** Null means unlimited skips allowed this round. */
+    private Integer skipsRemaining;
+    private Integer monthlySkipCount;
+    private Integer monthlySkipsRemaining;
+    private Integer monthlyPayForCount;
+    private Integer monthlyPayForRemaining;
 }

@@ -2,6 +2,7 @@ package com.pagatu.coffee.service;
 
 import com.pagatu.coffee.dto.GroupSettingsDto;
 import com.pagatu.coffee.dto.GroupSettingsRequest;
+import com.pagatu.coffee.dto.UserMembershipDto;
 import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.exception.BusinessException;
 import com.pagatu.coffee.exception.ForbiddenException;
@@ -21,6 +22,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,6 +36,9 @@ class GroupSettingsServiceTest {
 
     @Mock
     private InvitationUserToGroupInformationRepository invitationRepository;
+
+    @Mock
+    private MembershipDtoFactory membershipDtoFactory;
 
     @InjectMocks
     private GroupSettingsService groupSettingsService;
@@ -65,6 +70,7 @@ class GroupSettingsServiceTest {
     @Test
     void getSettings_asAdmin_returnsFullSettings() {
         when(baseUserService.findGroupWithMembershipsByName("Caffe Team")).thenReturn(group);
+        stubMemberDtos();
 
         GroupSettingsDto result = groupSettingsService.getSettings(ADMIN_ID, "Caffe Team");
 
@@ -87,6 +93,7 @@ class GroupSettingsServiceTest {
     @Test
     void updateSettings_renameGroup_updatesPendingInvitations() {
         when(baseUserService.findGroupWithMembershipsByName("Caffe Team")).thenReturn(group);
+        stubMemberDtos();
         when(groupRepository.getGroupByName("Nuovo Caffe")).thenReturn(Optional.empty());
         when(groupRepository.save(any(Group.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -123,6 +130,7 @@ class GroupSettingsServiceTest {
     @Test
     void updateSettings_rulesAndDescription() {
         when(baseUserService.findGroupWithMembershipsByName("Caffe Team")).thenReturn(group);
+        stubMemberDtos();
         when(groupRepository.save(any(Group.class))).thenAnswer(inv -> inv.getArgument(0));
 
         GroupSettingsRequest request = new GroupSettingsRequest();
@@ -150,6 +158,18 @@ class GroupSettingsServiceTest {
 
         assertThrows(ForbiddenException.class,
                 () -> groupSettingsService.updateSettings(MEMBER_ID, request));
+    }
+
+    private void stubMemberDtos() {
+        when(membershipDtoFactory.toDto(eq(group), any(UserGroupMembership.class)))
+                .thenAnswer(inv -> {
+                    UserGroupMembership m = inv.getArgument(1);
+                    UserMembershipDto dto = new UserMembershipDto();
+                    dto.setUsername(m.getCoffeeUser().getUsername());
+                    dto.setIsAdmin(m.getIsAdmin());
+                    dto.setMyTurn(m.getMyTurn());
+                    return dto;
+                });
     }
 
     private CoffeeUser user(Long authId, String username) {

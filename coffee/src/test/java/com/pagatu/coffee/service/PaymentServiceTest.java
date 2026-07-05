@@ -12,6 +12,7 @@ import com.pagatu.coffee.exception.BusinessException;
 import com.pagatu.coffee.exception.NoContentAvailableException;
 import com.pagatu.coffee.mapper.PaymentMapper;
 import com.pagatu.coffee.repository.CoffeeUserRepository;
+import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.PaymentRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,6 +57,9 @@ class PaymentServiceTest {
 
     @Mock
     private GroupRulesService groupRulesService;
+
+    @Mock
+    private GroupRepository groupRepository;
 
     @InjectMocks
     private PaymentService paymentService;

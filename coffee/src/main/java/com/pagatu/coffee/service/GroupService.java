@@ -9,6 +9,7 @@ import com.pagatu.coffee.event.InvitationEvent;
 import com.pagatu.coffee.event.InvitationResponseEvent;
 import com.pagatu.coffee.exception.BusinessException;
 import com.pagatu.coffee.exception.ForbiddenException;
+
 import com.pagatu.coffee.repository.GroupRepository;
 import com.pagatu.coffee.repository.InvitationUserToGroupInformationRepository;
 import com.pagatu.coffee.repository.UserGroupMembershipRepository;
@@ -57,6 +58,7 @@ public class GroupService {
     private final InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository;
     private final BaseUserService baseUserService;
     private final PaymentService paymentService;
+    private final MembershipDtoFactory membershipDtoFactory;
 
     private static final int INVITATION_VALIDITY_DAYS = 7;
 
@@ -73,13 +75,15 @@ public class GroupService {
                         UserGroupMembershipRepository userGroupMembershipRepository,
                         InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository,
                         BaseUserService baseUserService,
-                        PaymentService paymentService) {
+                        PaymentService paymentService,
+                        MembershipDtoFactory membershipDtoFactory) {
         this.outboxService = outboxService;
         this.groupRepository = groupRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
         this.invitationUserToGroupInformationRepository = invitationUserToGroupInformationRepository;
         this.baseUserService = baseUserService;
         this.paymentService = paymentService;
+        this.membershipDtoFactory = membershipDtoFactory;
     }
 
     /**
@@ -102,6 +106,7 @@ public class GroupService {
         Group group = new Group();
         group.setName(newGroupRequest.getName());
         group.setDescription(newGroupRequest.getDescription());
+        group.setCurrentRoundNumber(1);
         UserGroupMembership membership = new UserGroupMembership();
         membership.setGroup(group);
         membership.setCoffeeUser(coffeeUser);
@@ -236,30 +241,61 @@ public class GroupService {
     }
 
     /**
-     * Maps a Group entity to a GroupDto including user membership information.
-     *
-     * @param group the Group entity to convert
-     * @return GroupDto with populated membership data
+     * Returns a rich group summary for any member of the group.
      */
+    @Transactional
+    public GroupDto getGroupSummary(String groupName, Long userId) {
+        Group group = baseUserService.findGroupWithMembershipsByName(groupName);
+        assertMember(group, userId, groupName);
+        return mapToDto(group);
+    }
+
     private GroupDto mapToDto(Group group) {
         GroupDto groupDto = new GroupDto();
         groupDto.setId(group.getId());
         groupDto.setName(group.getName());
         groupDto.setDescription(group.getDescription());
+        groupDto.setMaxSkipPerRound(group.getMaxSkipPerRound());
+        groupDto.setPayForEnabled(group.getPayForEnabled());
+        groupDto.setPayForAdminOnly(group.getPayForAdminOnly());
 
         List<UserMembershipDto> membershipDtos = group.getUserMemberships().stream()
-                .map(m -> {
-                    UserMembershipDto membershipDto = new UserMembershipDto();
-                    membershipDto.setUserId(m.getCoffeeUser().getId());
-                    membershipDto.setUsername(m.getCoffeeUser().getUsername());
-                    membershipDto.setStatus(m.getStatus());
-                    membershipDto.setMyTurn(m.getMyTurn());
-                    membershipDto.setIsAdmin(m.getIsAdmin());
-                    return membershipDto;
-                }).toList();
+                .sorted(Comparator
+                        .comparing((UserGroupMembership m) -> !Boolean.TRUE.equals(m.getMyTurn()))
+                        .thenComparing((UserGroupMembership m) -> !Boolean.TRUE.equals(m.getIsAdmin()))
+                        .thenComparing(m -> m.getJoinedAt(), Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(m -> membershipDtoFactory.toDto(group, m))
+                .toList();
 
         groupDto.setUserMembershipsdto(membershipDtos);
+        groupDto.setMemberCount(membershipDtos.size());
+        groupDto.setCurrentRoundNumber(group.getCurrentRoundNumber() != null ? group.getCurrentRoundNumber() : 1);
+        groupDto.setMaxSkipPerMonth(MembershipDtoFactory.MAX_SKIP_PER_MONTH);
+        groupDto.setMaxPayForPerMonth(MembershipDtoFactory.MAX_PAYFOR_PER_MONTH);
+
+        membershipDtos.stream()
+                .filter(m -> Boolean.TRUE.equals(m.getMyTurn()))
+                .findFirst()
+                .ifPresent(m -> groupDto.setCurrentTurnUsername(m.getUsername()));
+
+        int paid = (int) membershipDtos.stream()
+                .filter(m -> PaymentStatus.PAGATO.equals(m.getStatus()))
+                .count();
+        int pending = (int) membershipDtos.stream()
+                .filter(m -> PaymentStatus.NON_PAGATO.equals(m.getStatus()))
+                .count();
+        groupDto.setRoundPaidCount(paid);
+        groupDto.setRoundPendingCount(pending);
+
         return groupDto;
+    }
+
+    private void assertMember(Group group, Long userId, String groupName) {
+        boolean isMember = group.getUserMemberships().stream()
+                .anyMatch(m -> m.getCoffeeUser().getAuthId().equals(userId));
+        if (!isMember) {
+            throw new ForbiddenException("Non sei membro del gruppo '" + groupName + "'");
+        }
     }
 
     /**

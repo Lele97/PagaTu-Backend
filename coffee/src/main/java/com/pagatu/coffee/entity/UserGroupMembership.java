@@ -71,6 +71,12 @@ public class UserGroupMembership {
     @Column(name = "round_skip_count")
     private Integer roundSkipCount = 0;
 
+    @Column(name = "monthly_skip_count")
+    private Integer monthlySkipCount = 0;
+
+    @Column(name = "monthly_skip_period")
+    private String monthlySkipPeriod;
+
     @OneToMany(mappedBy = "userGroupMembership", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
     private List<Payment> payments = new ArrayList<>();

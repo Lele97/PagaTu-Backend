@@ -4,7 +4,9 @@ import com.pagatu.coffee.dto.GroupRulesDto;
 import com.pagatu.coffee.dto.GroupRulesRequest;
 import com.pagatu.coffee.entity.*;
 import com.pagatu.coffee.exception.ForbiddenException;
+import com.pagatu.coffee.exception.BusinessException;
 import com.pagatu.coffee.repository.GroupRepository;
+import com.pagatu.coffee.repository.PaymentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +19,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +31,12 @@ class GroupRulesServiceTest {
 
     @Mock
     private GroupRepository groupRepository;
+
+    @Mock
+    private PaymentRepository paymentRepository;
+
+    @Mock
+    private MembershipDtoFactory membershipDtoFactory;
 
     @InjectMocks
     private GroupRulesService groupRulesService;
@@ -70,6 +80,42 @@ class GroupRulesServiceTest {
 
         assertThrows(ForbiddenException.class,
                 () -> groupRulesService.updateRules(MEMBER_ID, request));
+    }
+
+    @Test
+    void validateSkipAllowed_monthlyLimitReached_throws() {
+        UserGroupMembership member = group.getUserMemberships().get(1);
+        member.setMonthlySkipPeriod(java.time.YearMonth.now().toString());
+        member.setMonthlySkipCount(4);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> groupRulesService.validateSkipAllowed(group, member));
+
+        assertTrue(ex.getMessage().contains("4 skip al mese"));
+    }
+
+    @Test
+    void validateNotLastUnpaidMember_onlyOneLeft_throws() {
+        UserGroupMembership admin = group.getUserMemberships().get(0);
+        UserGroupMembership member = group.getUserMemberships().get(1);
+        admin.setStatus(PaymentStatus.PAGATO);
+        member.setMyTurn(true);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> groupRulesService.validateNotLastUnpaidMember(group, member));
+
+        assertTrue(ex.getMessage().contains("qualcuno deve pagare"));
+    }
+
+    @Test
+    void validatePayForAllowed_monthlyLimitReached_throws() {
+        when(paymentRepository.countPayForByUserInGroupForMonth(
+                eq("Caffe Team"), eq("admin"), anyInt(), anyInt())).thenReturn(4L);
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> groupRulesService.validatePayForAllowed(group, group.getUserMemberships().get(0).getCoffeeUser()));
+
+        assertTrue(ex.getMessage().contains("paga per"));
     }
 
     @Test
