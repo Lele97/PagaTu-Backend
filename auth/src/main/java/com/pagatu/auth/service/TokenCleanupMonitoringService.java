@@ -4,6 +4,7 @@ import com.pagatu.auth.batch.TokenStatistics;
 import com.pagatu.auth.entity.TokenStatus;
 import com.pagatu.auth.exception.TokenStatisticsException;
 import com.pagatu.auth.repository.TokenForUserPasswordResetRepository;
+import com.pagatu.auth.repository.TokenForVerificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 public class TokenCleanupMonitoringService {
 
     private final TokenForUserPasswordResetRepository tokenRepository;
+    private final TokenForVerificationRepository tokenForVerificationRepository;
 
     /**
      * Retrieves comprehensive statistics about password reset tokens in the system.
@@ -52,6 +54,33 @@ public class TokenCleanupMonitoringService {
             log.error("Error retrieving token statistics {}", e.getMessage(), e);
             throw new TokenStatisticsException(e.getMessage());
         }
+    }
+
+    @Transactional
+    public TokenStatistics getVerificationTokenStatistics() {
+
+        try {
+
+            log.debug("Getting verification token statistics");
+
+            LocalDateTime currentTime = LocalDateTime.now();
+            long totalTokens = tokenForVerificationRepository.count();
+            long activeTokens = tokenForVerificationRepository.findAllByTokenStatus(TokenStatus.ACTIVE).size();
+            long expiredTokens = tokenForVerificationRepository.findAllByTokenStatus(TokenStatus.EXPIRED).size();
+            long expiredActiveTokens = tokenForVerificationRepository.findExpiredActiveTokens(TokenStatus.ACTIVE, currentTime).size();
+
+            TokenStatistics stats = new TokenStatistics(totalTokens, activeTokens, expiredTokens, expiredActiveTokens);
+
+            log.debug("Token statistics - Total={}, Active={}, Expired={}, ExpiredActive={}",
+                    totalTokens, activeTokens, expiredTokens, expiredActiveTokens);
+
+            return stats;
+
+        } catch (Exception e) {
+            log.error("Error retrieving token statistics {}", e.getMessage(), e);
+            throw new TokenStatisticsException(e.getMessage());
+        }
+
     }
 
     /**

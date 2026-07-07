@@ -55,6 +55,9 @@ public class EmailVerificationService {
 
     @Transactional
     public void verifyEmail(String token) {
+
+        log.info(token);
+
         EmailVerificationToken verificationToken = tokenRepository
                 .findByTokenAndTokenStatus(token, TokenStatus.ACTIVE)
                 .orElseThrow(() -> new InvalidTokenException("Token di verifica non valido", "VERIFY_TOKEN"));
