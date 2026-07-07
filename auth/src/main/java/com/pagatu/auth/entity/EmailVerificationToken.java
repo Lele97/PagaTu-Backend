@@ -24,6 +24,9 @@ public class EmailVerificationToken {
     @Column(nullable = false, unique = true)
     private String token;
 
+    @Column(name = "email", nullable = false)
+    private String email;
+
     @Column(name = "expired_date", nullable = false)
     private LocalDateTime expiredDate;
 
