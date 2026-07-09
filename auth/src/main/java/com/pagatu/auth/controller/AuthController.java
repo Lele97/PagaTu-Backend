@@ -63,7 +63,19 @@ public class AuthController {
     }
 
     @GetMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(@RequestParam("key") String token) {
+    public ResponseEntity<String> verifyEmail(@RequestParam("key") String token, HttpServletRequest request) {
+
+        String clientIp = getClientIpAddress(request);
+        RateLimiterResult rateLimitResult = rateLimiterService.checkRateLimit(clientIp);
+
+        if (!rateLimitResult.isAllowed()) {
+            log.warn("Rate limit exceeded for IP: {}, wait time: {} seconds",
+                    clientIp, rateLimitResult.getWaitTimeSeconds());
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(rateLimitResult.getWaitTimeSeconds()))
+                    .body("Troppe richieste. Riprova più tardi.");
+        }
+
         if (token == null || token.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("Il token è obbligatorio");
         }
@@ -72,7 +84,19 @@ public class AuthController {
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<String> resendVerification(@RequestParam("email") String email) {
+    public ResponseEntity<String> resendVerification(@RequestParam("email") String email, HttpServletRequest request) {
+
+        String clientIp = getClientIpAddress(request);
+        RateLimiterResult rateLimitResult = rateLimiterService.checkRateLimit(clientIp);
+
+        if (!rateLimitResult.isAllowed()) {
+            log.warn("Rate limit exceeded for IP: {}, wait time: {} seconds",
+                    clientIp, rateLimitResult.getWaitTimeSeconds());
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(rateLimitResult.getWaitTimeSeconds()))
+                    .body("Troppe richieste. Riprova più tardi.");
+        }
+
         emailVerificationService.resendVerification(email);
         return ResponseEntity.ok("Email di verifica inviata con successo");
     }
@@ -81,7 +105,7 @@ public class AuthController {
      * Registers a new user in the system.
      *
      * @param registerRequest the user registration information
-     * @return ResponseEntity with a success message and HTTP 201 status
+     * @return ResponseEntity with a success message and HTTP 201 status,
      */
     @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest registerRequest) {
