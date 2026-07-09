@@ -15,6 +15,8 @@ public interface TokenForVerificationRepository extends JpaRepository<EmailVerif
 
     @Query("SELECT count(t) FROM EmailVerificationToken t WHERE t.email = :email AND t.createdAt >= :since")
     long countRecnetTokensByEmail(@Param("email") String email, @Param("since") LocalDateTime since);
+    
+    EmailVerificationToken findByToken(String token);
 
     @Query("SELECT t FROM EmailVerificationToken t WHERE t.tokenStatus = :status AND t.expiredDate < :currentTime")
     List<EmailVerificationToken> findExpiredActiveTokens(@Param("status") TokenStatus status, @Param("currentTime") LocalDateTime currentTime);

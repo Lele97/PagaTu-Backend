@@ -26,7 +26,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -368,13 +367,9 @@ public class AuthService {
             throw new InvalidTokenException("Token has already been used", "RESET_TOKEN");
         }
 
-        if (resetToken.getExpiredDate().isBefore(LocalDateTime.now())) {
+        if (resetToken.getTokenStatus() == TokenStatus.EXPIRED) {
             log.warn("Token has expired for email: {}", email);
-            resetToken.setTokenStatus(TokenStatus.EXPIRED);
-
-            tokenForUserPasswordResetRepository.save(resetToken);
             throw new TokenExpiredException("Token has expired", "RESET_TOKEN");
-
         }
     }
 
