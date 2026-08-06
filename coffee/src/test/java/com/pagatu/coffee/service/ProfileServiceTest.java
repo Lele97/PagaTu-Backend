@@ -40,34 +40,29 @@ class ProfileServiceTest {
         user.setName("Mario");
         user.setLastname("Rossi");
         user.setAvatarKey("default");
-        user.setThemeKey("classic");
     }
 
     @Test
     void getProfile_returnsDefaultsWhenNull() {
         user.setAvatarKey(null);
-        user.setThemeKey(null);
         when(baseUserService.findUserByAuthId(100L)).thenReturn(user);
 
         UserProfileDto result = profileService.getProfile(100L);
 
         assertEquals("default", result.getAvatarKey());
-        assertEquals("classic", result.getThemeKey());
     }
 
     @Test
-    void updateProfile_validAvatarAndTheme() {
+    void updateProfile_validAvatar() {
         when(baseUserService.findUserByAuthId(100L)).thenReturn(user);
         when(coffeeUserRepository.save(any(CoffeeUser.class))).thenAnswer(inv -> inv.getArgument(0));
 
         UserProfileRequest request = new UserProfileRequest();
         request.setAvatarKey("cup");
-        request.setThemeKey("espresso");
 
         UserProfileDto result = profileService.updateProfile(100L, request);
 
         assertEquals("cup", result.getAvatarKey());
-        assertEquals("espresso", result.getThemeKey());
     }
 
     @Test
@@ -76,16 +71,6 @@ class ProfileServiceTest {
 
         UserProfileRequest request = new UserProfileRequest();
         request.setAvatarKey("invalid");
-
-        assertThrows(ValidationException.class, () -> profileService.updateProfile(100L, request));
-    }
-
-    @Test
-    void updateProfile_invalidTheme_throwsValidationException() {
-        when(baseUserService.findUserByAuthId(100L)).thenReturn(user);
-
-        UserProfileRequest request = new UserProfileRequest();
-        request.setThemeKey("neon");
 
         assertThrows(ValidationException.class, () -> profileService.updateProfile(100L, request));
     }

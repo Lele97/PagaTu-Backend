@@ -165,14 +165,6 @@ public class GroupController {
     }
 
     /**
-     * Retrieves all groups that a user is member of.
-     *
-     * @param username   the username of the user whose groups are being retrieved
-     * @param authHeader the JWT authorization header containing the bearer token
-     * @return ResponseEntity containing the list of groups or appropriate error
-     * response
-     */
-    /**
      * Returns a rich summary for a single group (members, turn, skips remaining).
      */
     @GetMapping("/summary")
@@ -185,7 +177,7 @@ public class GroupController {
 
     @PostMapping("/get/{username}")
     public ResponseEntity<Object> getGroupsByUsernamePost(
-            @PathVariable("username") String username,
+            @PathVariable String username,
             @RequestHeader("Authorization") String authHeader) {
         try {
 

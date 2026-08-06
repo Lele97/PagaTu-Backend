@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 public class UserProfileRequest {
 
     private String avatarKey;
-    private String themeKey;
     private String satispayLink;
     private String revolutLink;
 }

@@ -26,7 +26,7 @@ public class ProfileService {
 
     @Transactional
     public UserProfileDto updateProfile(Long userId, UserProfileRequest request) {
-        if (request.getAvatarKey() == null && request.getThemeKey() == null
+        if (request.getAvatarKey() == null
                 && request.getSatispayLink() == null && request.getRevolutLink() == null) {
             throw new ValidationException("At least one field must be provided");
         }
@@ -38,12 +38,6 @@ public class ProfileService {
                 throw new ValidationException("Invalid avatar key: " + request.getAvatarKey());
             }
             user.setAvatarKey(request.getAvatarKey());
-        }
-        if (request.getThemeKey() != null) {
-            if (!ProfileKeys.isValidTheme(request.getThemeKey())) {
-                throw new ValidationException("Invalid theme key: " + request.getThemeKey());
-            }
-            user.setThemeKey(request.getThemeKey());
         }
         if (request.getSatispayLink() != null) {
             user.setSatispayLink(sanitizeLink(request.getSatispayLink()));
@@ -78,7 +72,6 @@ public class ProfileService {
                 user.getName(),
                 user.getLastname(),
                 user.getAvatarKey() != null ? user.getAvatarKey() : ProfileKeys.DEFAULT_AVATAR,
-                user.getThemeKey() != null ? user.getThemeKey() : ProfileKeys.DEFAULT_THEME,
                 user.getSatispayLink(),
                 user.getRevolutLink());
     }

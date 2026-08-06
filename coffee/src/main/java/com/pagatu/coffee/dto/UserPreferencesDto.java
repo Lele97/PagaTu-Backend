@@ -10,5 +10,4 @@ import lombok.NoArgsConstructor;
 public class UserPreferencesDto {
 
     private Boolean emailTurnReminders;
-    private String themeKey;
 }

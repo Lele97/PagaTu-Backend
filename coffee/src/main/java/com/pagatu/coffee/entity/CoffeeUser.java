@@ -50,9 +50,6 @@ public class CoffeeUser {
     @Column(name = "avatar_key")
     private String avatarKey = "default";
 
-    @Column(name = "theme_key")
-    private String themeKey = "classic";
-
     @Column(name = "email_turn_reminders")
     private Boolean emailTurnReminders = true;
 
