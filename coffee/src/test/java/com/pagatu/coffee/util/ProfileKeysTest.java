@@ -14,21 +14,9 @@ class ProfileKeysTest {
         assertTrue(ProfileKeys.isValidAvatar(key));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"classic", "espresso", "latte", "office"})
-    void isValidTheme_acceptsAllowedKeys(String key) {
-        assertTrue(ProfileKeys.isValidTheme(key));
-    }
-
     @Test
     void isValidAvatar_rejectsUnknownKey() {
         assertFalse(ProfileKeys.isValidAvatar("custom"));
         assertFalse(ProfileKeys.isValidAvatar(null));
-    }
-
-    @Test
-    void isValidTheme_rejectsUnknownKey() {
-        assertFalse(ProfileKeys.isValidTheme("dark"));
-        assertFalse(ProfileKeys.isValidTheme(null));
     }
 }

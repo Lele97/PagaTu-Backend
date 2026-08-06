@@ -5,7 +5,6 @@ import com.pagatu.coffee.dto.UserPreferencesRequest;
 import com.pagatu.coffee.entity.CoffeeUser;
 import com.pagatu.coffee.exception.ValidationException;
 import com.pagatu.coffee.repository.CoffeeUserRepository;
-import com.pagatu.coffee.util.ProfileKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +23,7 @@ public class PreferencesService {
 
     @Transactional
     public UserPreferencesDto updatePreferences(Long userId, UserPreferencesRequest request) {
-        if (request.getEmailTurnReminders() == null && request.getThemeKey() == null) {
+        if (request.getEmailTurnReminders() == null) {
             throw new ValidationException("At least one field must be provided");
         }
 
@@ -33,12 +32,6 @@ public class PreferencesService {
         if (request.getEmailTurnReminders() != null) {
             user.setEmailTurnReminders(request.getEmailTurnReminders());
         }
-        if (request.getThemeKey() != null) {
-            if (!ProfileKeys.isValidTheme(request.getThemeKey())) {
-                throw new ValidationException("Invalid theme key: " + request.getThemeKey());
-            }
-            user.setThemeKey(request.getThemeKey());
-        }
 
         CoffeeUser saved = coffeeUserRepository.save(user);
         return toDto(saved);
@@ -46,7 +39,6 @@ public class PreferencesService {
 
     private UserPreferencesDto toDto(CoffeeUser user) {
         return new UserPreferencesDto(
-                user.getEmailTurnReminders() != null ? user.getEmailTurnReminders() : true,
-                user.getThemeKey() != null ? user.getThemeKey() : ProfileKeys.DEFAULT_THEME);
+                user.getEmailTurnReminders() != null ? user.getEmailTurnReminders() : true);
     }
 }

@@ -3,7 +3,6 @@ package com.pagatu.coffee.service;
 import com.pagatu.coffee.dto.UserPreferencesDto;
 import com.pagatu.coffee.dto.UserPreferencesRequest;
 import com.pagatu.coffee.entity.CoffeeUser;
-import com.pagatu.coffee.exception.ValidationException;
 import com.pagatu.coffee.repository.CoffeeUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +34,6 @@ class PreferencesServiceTest {
         user = new CoffeeUser();
         user.setAuthId(100L);
         user.setEmailTurnReminders(true);
-        user.setThemeKey("classic");
     }
 
     @Test
@@ -52,25 +50,12 @@ class PreferencesServiceTest {
     }
 
     @Test
-    void updatePreferences_invalidTheme_throwsValidationException() {
-        when(baseUserService.findUserByAuthId(100L)).thenReturn(user);
-
-        UserPreferencesRequest request = new UserPreferencesRequest();
-        request.setThemeKey("invalid");
-
-        assertThrows(ValidationException.class,
-                () -> preferencesService.updatePreferences(100L, request));
-    }
-
-    @Test
     void getPreferences_defaultsWhenNull() {
         user.setEmailTurnReminders(null);
-        user.setThemeKey(null);
         when(baseUserService.findUserByAuthId(100L)).thenReturn(user);
 
         UserPreferencesDto result = preferencesService.getPreferences(100L);
 
         assertTrue(result.getEmailTurnReminders());
-        assertEquals("classic", result.getThemeKey());
     }
 }

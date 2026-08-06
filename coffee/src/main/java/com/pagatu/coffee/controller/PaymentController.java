@@ -39,7 +39,7 @@ public class PaymentController {
 
     /**
      * @param paymentService payment business logic
-     * @param jwtService     JWT extraction from Authorization header
+     * @param jwtService JWT extraction from Authorization header
      */
     public PaymentController(PaymentService paymentService, JwtService jwtService) {
         this.paymentService = paymentService;
@@ -117,7 +117,6 @@ public class PaymentController {
     /**
      * Retrieves the recent payment history for a specific user.
      *
-     * @param username   the username for which to retrieve payment history
      * @param authHeader the JWT authorization header containing the user token
      * @return ResponseEntity containing the user's payment history or appropriate
      *         error response
@@ -132,7 +131,7 @@ public class PaymentController {
 
     @PostMapping("/ultimi/pagamenti/{username}")
     public ResponseEntity<Object> getLatestPayments(
-            @PathVariable("username") String username,
+            @PathVariable String username,
             @RequestHeader("Authorization") String authHeader) {
 
         try {

@@ -14,7 +14,6 @@ public class UserProfileDto {
     private String name;
     private String lastname;
     private String avatarKey;
-    private String themeKey;
     private String satispayLink;
     private String revolutLink;
 }
