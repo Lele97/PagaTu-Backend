@@ -36,4 +36,7 @@ public interface UserGroupMembershipRepository extends JpaRepository<UserGroupMe
     List<UserGroupMembership> findActiveTurnsByUser(@Param("user") CoffeeUser user);
 
     Optional<UserGroupMembership> findByCoffeeUserAndGroup(CoffeeUser coffeeUser, Group group);
+
+    @Query("SELECT ugm FROM UserGroupMembership ugm JOIN FETCH ugm.group WHERE ugm.coffeeUser = :user")
+    List<UserGroupMembership> findByCoffeeUserWithGroup(@Param("user") CoffeeUser user);
 }

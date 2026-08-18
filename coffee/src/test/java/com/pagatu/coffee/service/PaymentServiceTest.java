@@ -61,6 +61,9 @@ class PaymentServiceTest {
     @Mock
     private GroupRepository groupRepository;
 
+    @Mock
+    private AwardService awardService;
+
     @InjectMocks
     private PaymentService paymentService;
 
@@ -99,6 +102,7 @@ class PaymentServiceTest {
         savedPayment.setAmount(2.5);
         savedPayment.setDescription("Caffè");
         savedPayment.setPaymentDate(LocalDateTime.now());
+        savedPayment.setBeneficiaryUsername("frienduser");
 
         paymentDto = new PaymentDto();
         paymentDto.setId(100L);
@@ -338,6 +342,7 @@ class PaymentServiceTest {
         assertEquals(100L, result.get(0).getId());
         assertEquals("testuser", result.get(0).getUsername());
         assertEquals("testgroup", result.get(0).getGroupName());
+        assertEquals("frienduser", result.get(0).getBeneficiaryUsername());
     }
 
     @Test
