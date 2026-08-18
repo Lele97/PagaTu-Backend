@@ -71,6 +71,7 @@ public class PaymentService {
     private final BaseUserService baseUserService;
     private final GroupRulesService groupRulesService;
     private final GroupRepository groupRepository;
+    private final AwardService awardService;
 
     public PaymentService(OutboxService outboxService, PaymentRepository paymentRepository,
             PaymentMapper paymentMapper,
@@ -78,7 +79,8 @@ public class PaymentService {
             CoffeeUserRepository coffeeUserRepository,
             BaseUserService baseUserService,
             GroupRulesService groupRulesService,
-            GroupRepository groupRepository) {
+            GroupRepository groupRepository,
+            AwardService awardService) {
         this.outboxService = outboxService;
         this.paymentRepository = paymentRepository;
         this.paymentMapper = paymentMapper;
@@ -87,6 +89,7 @@ public class PaymentService {
         this.baseUserService = baseUserService;
         this.groupRulesService = groupRulesService;
         this.groupRepository = groupRepository;
+        this.awardService = awardService;
     }
 
     /**
@@ -138,6 +141,8 @@ public class PaymentService {
         outboxService.saveEvent(natsSubjectNextPayment, event);
 
         log.info("Pagamento registrato: {} - Prossimo pagatore: {}", savedPayment.getId(), nextPayment.getUsername());
+
+        awardService.evaluateForUser(coffeeUser);
 
         return paymentMapper.toDto(savedPayment);
     }
@@ -220,6 +225,8 @@ public class PaymentService {
 
         log.info("Pagato per: {} - Pagamento registrato: {} - Prossimo pagatore: {}",
                 friend.getAuthId(), savedPayment.getId(), nextPayment.getUsername());
+
+        awardService.evaluateForUser(payingUser);
 
         return paymentMapper.toDto(savedPayment);
     }
@@ -538,6 +545,7 @@ public class PaymentService {
         dto.setPaymentDate(payment.getPaymentDate());
         dto.setGroupId(payment.getUserGroupMembership().getGroup().getId());
         dto.setGroupName(payment.getUserGroupMembership().getGroup().getName());
+        dto.setBeneficiaryUsername(payment.getBeneficiaryUsername());
         return dto;
     }
 }

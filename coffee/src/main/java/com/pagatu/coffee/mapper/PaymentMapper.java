@@ -79,6 +79,7 @@ public class PaymentMapper {
         dto.setPaymentDate(payment.getPaymentDate());
         dto.setAmount(payment.getAmount());
         dto.setDescription(payment.getDescription());
+        dto.setBeneficiaryUsername(payment.getBeneficiaryUsername());
 
         return dto;
     }
@@ -122,6 +123,7 @@ public class PaymentMapper {
         payment.setPaymentDate(dto.getPaymentDate());
         payment.setAmount(dto.getAmount());
         payment.setDescription(dto.getDescription());
+        payment.setBeneficiaryUsername(dto.getBeneficiaryUsername());
 
         return payment;
     }

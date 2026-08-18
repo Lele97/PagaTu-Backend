@@ -59,6 +59,7 @@ public class GroupService {
     private final BaseUserService baseUserService;
     private final PaymentService paymentService;
     private final MembershipDtoFactory membershipDtoFactory;
+    private final AwardService awardService;
 
     private static final int INVITATION_VALIDITY_DAYS = 7;
 
@@ -76,7 +77,8 @@ public class GroupService {
                         InvitationUserToGroupInformationRepository invitationUserToGroupInformationRepository,
                         BaseUserService baseUserService,
                         PaymentService paymentService,
-                        MembershipDtoFactory membershipDtoFactory) {
+                        MembershipDtoFactory membershipDtoFactory,
+                        AwardService awardService) {
         this.outboxService = outboxService;
         this.groupRepository = groupRepository;
         this.userGroupMembershipRepository = userGroupMembershipRepository;
@@ -84,6 +86,7 @@ public class GroupService {
         this.baseUserService = baseUserService;
         this.paymentService = paymentService;
         this.membershipDtoFactory = membershipDtoFactory;
+        this.awardService = awardService;
     }
 
     /**
@@ -117,6 +120,7 @@ public class GroupService {
         group.getUserMemberships().add(membership);
 
         Group savedGroup = groupRepository.save(group);
+        awardService.grantGroupCreated(coffeeUser, savedGroup.getName());
 
         return mapToDto(savedGroup);
     }

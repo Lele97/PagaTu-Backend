@@ -15,4 +15,5 @@ public class PaymentDto {
     private LocalDateTime paymentDate;
     private Long groupId;
     private String groupName;
+    private String beneficiaryUsername;
 }

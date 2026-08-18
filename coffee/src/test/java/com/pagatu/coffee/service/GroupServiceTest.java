@@ -55,6 +55,9 @@ class GroupServiceTest {
     @Mock
     private MembershipDtoFactory membershipDtoFactory;
 
+    @Mock
+    private AwardService awardService;
+
     @InjectMocks
     private GroupService groupService;
 
