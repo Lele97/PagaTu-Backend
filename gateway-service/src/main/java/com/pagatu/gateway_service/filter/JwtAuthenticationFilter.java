@@ -67,7 +67,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
         ServerHttpRequest request = exchange.getRequest();
-        String path = request.getPath().toString();
+        String path = request.getURI().getPath();
         HttpMethod method = request.getMethod();
 
         log.debug("Processing request: {} {}", method, path);
@@ -179,7 +179,12 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      */
     @PostConstruct
     public void logJwtKeyLength() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
-        System.out.println("JWT secret length: " + keyBytes.length + " bytes (" + (keyBytes.length * 8) + " bits)");
+        try {
+            byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+            log.info("JWT secret length: {} bytes ({} bits)", keyBytes.length, keyBytes.length * 8);
+        } catch (Exception e) {
+            log.error("JWT secret is not valid Base64. Gateway JWT filter cannot start: {}", e.getMessage());
+            throw new IllegalStateException("Invalid JWT_SECRET: must be a Base64-encoded key", e);
+        }
     }
 }

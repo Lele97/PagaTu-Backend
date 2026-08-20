@@ -28,7 +28,7 @@ services:
       - "8081:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SERVER_PORT=${AUTH_PORT:-8080}
+      - SERVER_PORT=8080
       - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST:-pg-pagatu}:${DB_PORT:-5432}/${DB_NAME_AUTH:-auth}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
@@ -36,7 +36,8 @@ services:
       - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
       - COFFEE_SERVICE_URL=lb://coffee
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
-      - EUREKA_INSTANCE_PREFER_IP=true
+      - EUREKA_INSTANCE_PREFER_IP=false
+      - EUREKA_INSTANCE_HOSTNAME=auth
       - NATS_SERVER=nats://nats:4222
     depends_on:
       - pg-pagatu
@@ -50,13 +51,14 @@ services:
       - "8082:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SERVER_PORT=${COFFEE_PORT:-8080}
+      - SERVER_PORT=8080
       - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST:-pg-pagatu}:${DB_PORT:-5432}/${DB_NAME_COFFEE:-coffee}
       - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
-      - EUREKA_INSTANCE_PREFER_IP=true
+      - EUREKA_INSTANCE_PREFER_IP=false
+      - EUREKA_INSTANCE_HOSTNAME=coffee
       - NATS_SERVER=nats://nats:4222
     depends_on:
       - pg-pagatu
@@ -70,22 +72,33 @@ services:
       - "8083:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-      - SERVER_PORT=${MAIL_PORT:-8080}
-      - SPRING_MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
-      - SPRING_MAIL_PORT=${MAIL_PORT:-587}
+      - SERVER_PORT=8080
+      - SPRING_MAIL_HOST=${MAIL_HOST:-mailpit}
+      - SPRING_MAIL_PORT=${MAIL_SMTP_PORT:-1025}
       - DOMAIN_URL=${DOMAIN_URL:-http://localhost:8888}
-      - SPRING_MAIL_USERNAME=${MAIL_USERNAME}
-      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD}
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME:-noreply@pagatu.local}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD:-pagatu}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=${MAIL_SMTP_AUTH:-false}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=${MAIL_SMTP_STARTTLS:-false}
       - NATS_SERVER=nats://nats:4222
       - JWT_SECRET=${JWT_SECRET}
       - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
-      - EUREKA_INSTANCE_PREFER_IP=true
+      - EUREKA_INSTANCE_PREFER_IP=false
+      - EUREKA_INSTANCE_HOSTNAME=mail
       - COFFEE_SERVICE_URL=lb://coffee
       - AUTH_SERVICE_URL=lb://auth
     depends_on:
       - nats
+      - mailpit
+    networks:
+      - pagatu-network
+
+  # Inbox locale per le email di sviluppo (UI: http://localhost:8025)
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
     networks:
       - pagatu-network
 
