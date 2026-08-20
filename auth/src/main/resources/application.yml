@@ -85,9 +85,8 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
   instance:
-    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP:false}
-    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
-    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP:true}
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:}
     instance-id: ${spring.application.name}:${random.value}
     lease-renewal-interval-in-seconds: 10
     lease-expiration-duration-in-seconds: 30

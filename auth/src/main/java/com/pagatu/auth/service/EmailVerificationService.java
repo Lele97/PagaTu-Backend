@@ -35,7 +35,6 @@ public class EmailVerificationService {
     private final UserRepository userRepository;
     private final OutboxService outboxService;
     private static final int LIMITER = 10;
-    private static final int TOKEN_EXPIRY_MINUTES = 30;
 
 
     @Transactional
@@ -66,7 +65,7 @@ public class EmailVerificationService {
         token.setEmail(user.getEmail());
         token.setToken("Paga_Tu_Verify_" + UUID.randomUUID());
         token.setCreatedAt(LocalDateTime.now());
-        token.setExpiredDate(LocalDateTime.now().plusMinutes(TOKEN_EXPIRY_MINUTES));
+        token.setExpiredDate(LocalDateTime.now().plusHours(TOKEN_EXPIRY_HOURS));
         token.setTokenStatus(TokenStatus.ACTIVE);
 
         EmailVerificationToken saved = tokenRepository.save(token);
