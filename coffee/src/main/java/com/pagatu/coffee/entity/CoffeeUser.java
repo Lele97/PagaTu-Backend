@@ -53,7 +53,24 @@ public class CoffeeUser {
     @Column(name = "email_turn_reminders")
     private Boolean emailTurnReminders = true;
 
+    @Column(name = "coffee_karma")
+    private Integer coffeeKarma = 50;
+
     @OneToMany(mappedBy = "coffeeUser", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UserGroupMembership> groupMemberships;
+
+    @PrePersist
+    void onCreate() {
+        if (coffeeKarma == null) {
+            coffeeKarma = 50;
+        }
+    }
+
+    @PostLoad
+    void onLoad() {
+        if (coffeeKarma == null) {
+            coffeeKarma = 50;
+        }
+    }
 }

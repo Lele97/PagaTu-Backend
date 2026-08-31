@@ -92,4 +92,8 @@ public class BaseUserService {
         return coffeeUserRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("Utente non trovato con email: " + email));
     }
+
+    public void updateUser(CoffeeUser user) {
+        coffeeUserRepository.save(user);
+    }
 }
