@@ -1,11 +1,7 @@
 package com.pagatu.coffee.controller;
 
 import com.pagatu.coffee.dto.*;
-import com.pagatu.coffee.service.GamificationService;
-import com.pagatu.coffee.service.GroupBalanceService;
-import com.pagatu.coffee.service.GroupRulesService;
-import com.pagatu.coffee.service.JwtService;
-import com.pagatu.coffee.service.ProfileService;
+import com.pagatu.coffee.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +17,7 @@ public class ExpansionController {
     private final GamificationService gamificationService;
     private final ProfileService profileService;
     private final JwtService jwtService;
+    private final UserStatisticsService userStatisticsService;
 
     @PostMapping("/bilancio/gruppo")
     public ResponseEntity<GroupBalanceDto> getGroupBalance(
@@ -67,5 +64,12 @@ public class ExpansionController {
             @RequestBody PaymentLinksRequest request) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         return ResponseEntity.ok(profileService.updatePaymentLinks(userId, request));
+    }
+
+    @PutMapping("/user/coffeekarma")
+    public ResponseEntity<String> coffe_karma_update(@RequestHeader("Authorization") String authHeader, @RequestBody CoffeeKarmaRequest request){
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        userStatisticsService.computeKarma(userId, request);
+        return ResponseEntity.ok("Il valore coffee karma dell'utente è stato aggiornato");
     }
 }
