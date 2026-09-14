@@ -1,5 +1,6 @@
 package com.pagatu.auth.repository;
 
+import com.pagatu.auth.dto.UserDto;
 import com.pagatu.auth.entity.AuthProvider;
 import com.pagatu.auth.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -25,6 +26,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(@Param("email") String email);
 
     Optional<User> getByEmail(String email);
+
+    Optional<UserDto> getDtoByEmail(String email);
 
     Optional<User> findByProviderIdAndAuthProvider(String providerId, AuthProvider authProvider);
 }

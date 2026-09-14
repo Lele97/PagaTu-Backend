@@ -174,7 +174,7 @@ public class AuthController {
      * @param token                the reset token obtained from the email link
      * @return ResponseEntity with success message or error if token is invalid
      */
-    @PutMapping("/resetPassword")
+ @PutMapping("/resetPassword")
     public ResponseEntity<String> resetPassword(
             @Valid @RequestBody ResetPasswordRequest resetPasswordRequest,
             @RequestHeader("X-Reset-Token") String token) {
@@ -187,7 +187,6 @@ public class AuthController {
         authService.resetPassword(resetPasswordRequest, token);
         return ResponseEntity.ok("Password reimpostata con successo");
     }
-
     /**
      * Retrieves user information by email address.
      *
@@ -195,9 +194,9 @@ public class AuthController {
      * @return ResponseEntity with user information or 404 status if user not found
      */
     @GetMapping("/user/get")
-    public ResponseEntity<User> getUser(@RequestParam("email") String email) {
+    public ResponseEntity<UserDto> getUser(@RequestParam("email") String email) {
         try {
-            User user = authService.getUserByEmail(email);
+            UserDto user = authService.getUserDtoByEmail(email);
             return ResponseEntity.ok(user);
         } catch (UserNotFoundException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
