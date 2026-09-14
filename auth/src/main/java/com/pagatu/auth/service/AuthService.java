@@ -15,6 +15,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -65,13 +66,13 @@ public class AuthService {
             @Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            WebClient.Builder webClientBuilder,
+            @Qualifier("directWebClientBuilder") WebClient.Builder directWebClientBuilder,
             @Value("${coffee.service.url}") String coffeeServiceUrl,
             OutboxService outboxService,
             EmailVerificationService emailVerificationService) {
         this.passwordEncoder = passwordEncoder;
         this.outboxService = outboxService;
-        this.webClient = webClientBuilder.baseUrl(coffeeServiceUrl).build();
+        this.webClient = directWebClientBuilder.baseUrl(coffeeServiceUrl).build();
         this.tokenForUserPasswordResetRepository = tokenForUserPasswordResetRepository;
         this.userRepository = userRepository;
         this.emailVerificationService = emailVerificationService;
@@ -183,6 +184,21 @@ public class AuthService {
     public User getUserByEmail(String email) {
 
         Optional<User> userOpt = userRepository.getByEmail(email);
+
+        return userOpt
+                .orElseThrow(() -> new UserNotFoundException("User not found", email, Constants.EMAIL_EXCEPRION_VALUE));
+    }
+
+    /**
+     * Retrieves a user by their email address.
+     *
+     * @param email the email address of the user to retrieve
+     * @return the User entity associated with the email
+     * @throws UserNotFoundException if no user exists with the provided email
+     */
+    public UserDto getUserDtoByEmail(String email) {
+
+        Optional<UserDto> userOpt = userRepository.getDtoByEmail(email);
 
         return userOpt
                 .orElseThrow(() -> new UserNotFoundException("User not found", email, Constants.EMAIL_EXCEPRION_VALUE));

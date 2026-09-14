@@ -58,6 +58,7 @@ public class InvitationUserToGroupInformation {
     private LocalDateTime expiredDate;
 
     /** Current invitation lifecycle status. */
+    @Enumerated(EnumType.STRING)
     @Column(name = "invitation_status")
     private InvitationStatus invitationStatus;
 }

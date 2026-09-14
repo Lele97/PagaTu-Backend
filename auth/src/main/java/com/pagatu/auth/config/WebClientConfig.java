@@ -13,6 +13,11 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Configuration
 public class WebClientConfig {
 
+    @Bean
+    public WebClient.Builder directWebClientBuilder() {
+        return WebClient.builder();
+    }
+
     /**
      * Creates a WebClient builder bean for building WebClient instances.
      *
