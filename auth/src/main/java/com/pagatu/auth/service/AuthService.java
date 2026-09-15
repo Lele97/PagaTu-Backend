@@ -66,13 +66,15 @@ public class AuthService {
             @Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            @Qualifier("directWebClientBuilder") WebClient.Builder directWebClientBuilder,
+            // @Qualifier("directWebClientBuilder") WebClient.Builder
+            // directWebClientBuilder,+
+            WebClient.Builder webClientBuilder,
             @Value("${coffee.service.url}") String coffeeServiceUrl,
             OutboxService outboxService,
             EmailVerificationService emailVerificationService) {
         this.passwordEncoder = passwordEncoder;
         this.outboxService = outboxService;
-        this.webClient = directWebClientBuilder.baseUrl(coffeeServiceUrl).build();
+        this.webClient = webClientBuilder.baseUrl(coffeeServiceUrl).build();
         this.tokenForUserPasswordResetRepository = tokenForUserPasswordResetRepository;
         this.userRepository = userRepository;
         this.emailVerificationService = emailVerificationService;
@@ -422,7 +424,6 @@ public class AuthService {
      */
     private String generateToken(User user) {
 
-
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         SecretKey key = Keys.hmacShaKeyFor(keyBytes);
 
@@ -458,7 +459,8 @@ public class AuthService {
     }
 
     /**
-     * Synchronizes user information with an external coffee service (fire-and-forget).
+     * Synchronizes user information with an external coffee service
+     * (fire-and-forget).
      *
      * @param user the user entity to synchronize
      */

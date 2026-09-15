@@ -80,21 +80,23 @@ public class EmailService {
     private String company;
 
     /**
-     * @param mailSender         Spring JavaMail sender
-     * @param templateEngine     Thymeleaf engine for HTML templates
-     * @param webClientBuilder   builder used to call coffee and auth services
+     * @param mailSender           Spring JavaMail sender
+     * @param templateEngine       Thymeleaf engine for HTML templates
+     * @param webClientBuilder     builder used to call coffee and auth services
      * @param coffeeServiceBaseUrl base URL of the coffee service
      * @param authServiceBaseUrl   base URL of the auth service
      */
     public EmailService(JavaMailSender mailSender,
             TemplateEngine templateEngine,
-            @Qualifier("directWebClientBuilder") WebClient.Builder directWebClientBuilder,
+            // @Qualifier("directWebClientBuilder") WebClient.Builder
+            // directWebClientBuilder,
+            WebClient.Builder webClientBuilder,
             @Value("${coffee.service.base-url}") String coffeeServiceBaseUrl,
             @Value("${auth.service.base-url}") String authServiceBaseUrl) {
         this.mailSender = mailSender;
         this.templateEngine = templateEngine;
-        this.webClientCoffee = directWebClientBuilder.baseUrl(coffeeServiceBaseUrl).build();
-        this.webClientAuth = directWebClientBuilder.baseUrl(authServiceBaseUrl).build();
+        this.webClientCoffee = webClientBuilder.baseUrl(coffeeServiceBaseUrl).build();
+        this.webClientAuth = webClientBuilder.baseUrl(authServiceBaseUrl).build();
     }
 
     /**
@@ -246,7 +248,8 @@ public class EmailService {
      * Sends an invitation response notification email to the group admin.
      * <p>
      * Uses dedicated Thymeleaf templates for accepted and rejected responses:
-     * {@code invitation-response-accepted} and {@code invitation-response-rejected}.
+     * {@code invitation-response-accepted} and
+     * {@code invitation-response-rejected}.
      * </p>
      *
      * @param event the event containing invitation response details
@@ -262,7 +265,6 @@ public class EmailService {
             context.setVariable("userSendInvitation", event.getUserWhoSentTheInvitation());
 
             String statusStr = event.getAccepted() ? "accettato" : "rifiutato";
-
 
             switch (statusStr) {
                 case "accettato":
@@ -282,8 +284,6 @@ public class EmailService {
                             context);
                     break;
             }
-
-
 
         }).then();
     }
