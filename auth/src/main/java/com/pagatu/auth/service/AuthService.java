@@ -199,11 +199,9 @@ public class AuthService {
      * @throws UserNotFoundException if no user exists with the provided email
      */
     public UserDto getUserDtoByEmail(String email) {
-
-        Optional<UserDto> userOpt = userRepository.getDtoByEmail(email);
-
-        return userOpt
+        User user = userRepository.getByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException("User not found", email, Constants.EMAIL_EXCEPRION_VALUE));
+        return buildCoffeeUserDto(user);
     }
 
     /**

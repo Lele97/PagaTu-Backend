@@ -1,9 +1,13 @@
 package com.pagatu.mail.config;
 
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cloud.client.loadbalancer.reactive.ReactorLoadBalancerExchangeFilterFunction;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.web.reactive.function.client.WebClient;
+
+import java.net.URI;
 
 /**
  * Configuration class for WebClient beans.
@@ -12,10 +16,6 @@ import org.springframework.web.reactive.function.client.WebClient;
  * that can be used throughout the application for making HTTP requests
  * to external services.
  * </p>
- * <p>
- * The WebClient.Builder is configured as a bean to allow for potential
- * customization and to ensure consistent configuration across all
- * WebClient instances created in the application.
  */
 @Configuration
 public class WebClientConfig {
@@ -26,23 +26,32 @@ public class WebClientConfig {
     }
 
     /**
-     * Creates and configures a WebClient.Builder bean.
-     * <p>
-     * This builder can be used to create WebClient instances with
-     * custom configurations such as base URLs, timeouts, and other
-     * HTTP client settings.
-     * </p>
-     * <p>
-     * The builder is provided as a bean to enable dependency injection
-     * and to ensure consistent WebClient configuration across the
-     * application.
-     * </p>
+     * Creates and configures a smart WebClient.Builder bean.
+     * Supports both load-balanced service IDs (e.g. lb://coffee or http://coffee)
+     * and direct host URLs / IP addresses / FQDNs without requiring manual code edits across environments.
      *
+     * @param lbFilterProvider Spring Cloud LoadBalancer exchange filter function provider
      * @return a configured WebClient.Builder instance
      */
     @Bean
-    @LoadBalanced
-    public WebClient.Builder webClientBuilder() {
-        return WebClient.builder();
+    @Primary
+    public WebClient.Builder webClientBuilder(ObjectProvider<ReactorLoadBalancerExchangeFilterFunction> lbFilterProvider) {
+        ReactorLoadBalancerExchangeFilterFunction lbFilter = lbFilterProvider.getIfAvailable();
+        return WebClient.builder()
+                .filter((request, next) -> {
+                    URI uri = request.url();
+                    String host = uri.getHost();
+                    boolean isDirect = host == null
+                            || host.contains(".")
+                            || host.equalsIgnoreCase("localhost")
+                            || host.equalsIgnoreCase("127.0.0.1")
+                            || (uri.getPort() > 0 && uri.getPort() != 80 && uri.getPort() != 443);
+
+                    if (isDirect || lbFilter == null) {
+                        return next.exchange(request);
+                    } else {
+                        return lbFilter.filter(request, next);
+                    }
+                });
     }
-}
+}
