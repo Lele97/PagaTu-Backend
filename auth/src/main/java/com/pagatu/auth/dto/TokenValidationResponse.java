@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class TokenValidationResponse {
+public class TokenValidationResponse  {
 
     private boolean valid;
     private String email;
