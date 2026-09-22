@@ -1,0 +1,241 @@
+# PagaTu CI/CD Workflow
+# Simple, clean CI/CD that runs locally with `act`
+# - CI: Runs on every push/PR to develop and main
+# - CD: Creates release on push to main (after version tag)
+
+name: PagaTu CI/CD
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths-ignore:
+      - 'README.md'
+      - 'docs/**'
+      - '*.md'
+  pull_request:
+    branches:
+      - develop
+      - main
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:  # Allow manual trigger for Qodana
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRIBUTION: 'temurin'
+  MAVEN_OPTS: '-Dmaven.repo.local=.m2/repository'
+
+jobs:
+  # ==========================================
+  # CI: Build & Test all services in parallel
+  # ==========================================
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [auth, coffee, mail, gateway-service, eureka-server]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for version script to access git history
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+          cache-dependency-path: |
+            **/pom.xml
+
+      - name: Make version script executable
+        run: chmod +x script/version.sh
+
+      - name: Show current version
+        run: |
+          echo "📦 Current version: $(./script/version.sh show)"
+          echo "🚀 Next version: $(./script/version.sh next)"
+          echo "🌿 Release branch: $(./script/version.sh branch)"
+
+      - name: Build and Test ${{ matrix.service }}
+        run: |
+          ./mvnw -B -pl ${{ matrix.service }} -am clean verify
+          echo "✅ ${{ matrix.service }}: BUILD + TEST SUCCESS"
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ matrix.service }}
+          path: ${{ matrix.service }}/target/surefire-reports/
+          retention-days: 7
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.service }}
+          path: ${{ matrix.service }}/target/site/jacoco/
+          retention-days: 7
+
+  # ==========================================
+  # CI: Qodana Code Quality Analysis
+  # Runs in parallel with build-and-test
+  # ==========================================
+  qodana:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+      security-events: write  # For SARIF upload
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+          cache-dependency-path: |
+            **/pom.xml
+
+      - name: Qodana Scan
+        uses: JetBrains/qodana-action@v2026.1
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+        with:
+          # Analyze changed files only on PRs, full scan on push
+          pr-mode: ${{ github.event_name == 'pull_request' }}
+          use-caches: true
+          post-pr-comment: true
+          use-annotations: true
+          # Upload SARIF to GitHub Security tab
+          upload-result: true
+          # Don't auto-push fixes (requires Ultimate/Ultimate Plus)
+          push-fixes: 'none'
+          # Additional args
+          args: --show-report
+
+      - name: Upload Qodana SARIF results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: qodana.sarif.json
+          category: qodana
+
+      - name: Upload Qodana HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qodana-report
+          path: .qodana/report/
+          retention-days: 14
+
+  # ==========================================
+  # CD: Create Release (only on main branch)
+  # ==========================================
+  create-release:
+    needs: [build-and-test, qodana]  # Wait for both CI jobs
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Make version script executable
+        run: chmod +x script/version.sh
+
+      - name: Calculate release version
+        id: version
+        run: |
+          NEXT_VERSION=$(./script/version.sh next)
+          BRANCH_NAME=$(./script/version.sh branch)
+          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "🚀 Preparing release: $NEXT_VERSION"
+
+      - name: Update parent pom.xml version
+        run: |
+          ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
+          echo "✅ Updated all pom.xml files to ${{ steps.version.outputs.version }}"
+
+      - name: Create release branch
+        run: |
+          git checkout -b ${{ steps.version.outputs.branch }}
+          git add pom.xml */pom.xml
+          git commit -m "chore(release): prepare release ${{ steps.version.outputs.version }}"
+          echo "✅ Created release branch: ${{ steps.version.outputs.branch }}"
+
+      - name: Push release branch
+        run: |
+          git push origin ${{ steps.version.outputs.branch }}
+          echo "✅ Pushed release branch"
+
+      - name: Create Git tag
+        run: |
+          git tag -a "pagatu-v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+          git push origin "pagatu-v${{ steps.version.outputs.version }}"
+          echo "✅ Created tag: pagatu-v${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pagatu-v${{ steps.version.outputs.version }}
+          name: PagaTu ${{ steps.version.outputs.version }}
+          body: |
+            ## Release ${{ steps.version.outputs.version }}
+            
+            ### Changes
+            Automated release from develop branch.
+            
+            ### Services
+            - auth
+            - coffee
+            - mail
+            - gateway-service
+            - eureka-server
+            
+            ### Docker Images
+            Docker images will be available at: `ghcr.io/${{ github.repository }}/<service>:${{ steps.version.outputs.version }}`
+          draft: false
+          prerelease: false
+
+  # ==========================================
+  # Optional: Sync to GitLab (manual trigger)
+  # ==========================================
+  sync-to-gitlab:
+    needs: [build-and-test, qodana]
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync to GitLab
+        uses: keninkujovic/gitlab-sync@2.0.0
+        with:
+          gitlab_url: ${{ secrets.GIT_LAB_URI }}
+          username: ${{ secrets.GIT_LAB_USERNAME }}
+          gitlab_pat: ${{ secrets.GIT_LAB_TOKEN }}
+        env:
+          GITLAB_TOKEN: ${{ secrets.GIT_LAB_TOKEN }}
