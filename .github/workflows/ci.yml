@@ -19,7 +19,7 @@ on:
       - develop
       - main
     types: [opened, synchronize, reopened]
-  workflow_dispatch:  # Allow manual trigger for Qodana
+  workflow_dispatch:  # Allow manual trigger
 
 env:
   JAVA_VERSION: '17'
@@ -51,8 +51,10 @@ jobs:
           cache-dependency-path: |
             **/pom.xml
 
-      - name: Make version script executable
-        run: chmod +x script/version.sh
+      - name: Make scripts executable
+        run: |
+          chmod +x script/version.sh
+          chmod +x mvnw
 
       - name: Show current version
         run: |
@@ -82,7 +84,7 @@ jobs:
           retention-days: 7
 
   # ==========================================
-  # CI: Qodana Code Quality Analysis
+  # CI: Qodana Code Quality Analysis (optional)
   # Runs in parallel with build-and-test
   # ==========================================
   qodana:
@@ -91,7 +93,8 @@ jobs:
       contents: read
       pull-requests: write
       checks: write
-      security-events: write  # For SARIF upload
+      security-events: write
+    continue-on-error: true  # Don't block release if Qodana fails (e.g., no token)
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -112,27 +115,23 @@ jobs:
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
-          # Analyze changed files only on PRs, full scan on push
           pr-mode: ${{ github.event_name == 'pull_request' }}
           use-caches: true
           post-pr-comment: true
           use-annotations: true
-          # Upload SARIF to GitHub Security tab
           upload-result: true
-          # Don't auto-push fixes (requires Ultimate/Ultimate Plus)
           push-fixes: 'none'
-          # Additional args
           args: --show-report
 
       - name: Upload Qodana SARIF results
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: always() && success() && hashFiles('qodana.sarif.json') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: qodana.sarif.json
           category: qodana
 
       - name: Upload Qodana HTML report
-        if: always()
+        if: always() && hashFiles('.qodana/report/**') != ''
         uses: actions/upload-artifact@v4
         with:
           name: qodana-report
@@ -143,7 +142,7 @@ jobs:
   # CD: Create Release (only on main branch)
   # ==========================================
   create-release:
-    needs: [build-and-test, qodana]  # Wait for both CI jobs
+    needs: build-and-test  # Don't wait for qodana (optional)
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
@@ -160,8 +159,10 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-      - name: Make version script executable
-        run: chmod +x script/version.sh
+      - name: Make scripts executable
+        run: |
+          chmod +x script/version.sh
+          chmod +x mvnw
 
       - name: Calculate release version
         id: version
@@ -222,7 +223,7 @@ jobs:
   # Optional: Sync to GitLab (manual trigger)
   # ==========================================
   sync-to-gitlab:
-    needs: [build-and-test, qodana]
+    needs: build-and-test
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
