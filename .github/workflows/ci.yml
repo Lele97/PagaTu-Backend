@@ -71,6 +71,8 @@ jobs:
       pull-requests: write
       checks: write
       security-events: write
+    outputs:
+      status: ${{ steps.qodana-badge.outputs.qodana_status }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -88,15 +90,20 @@ jobs:
 
       - name: Qodana Scan
         uses: JetBrains/qodana-action@v2026.1
-        env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
         with:
           pr-mode: false
           use-caches: true
           post-pr-comment: false
           use-annotations: true
           upload-result: true
-          push-fixes: 'none'
+        env:
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
+
+      - name: Qodana Badge (Quality Gate Status)
+        if: always()
+        run: |
+          echo "qodana_status=${{ job.status }}" >> $GITHUB_OUTPUT
+        id: qodana-badge
 
   # ==========================================
   # CD: Create Release (only on main)
@@ -180,7 +187,7 @@ jobs:
   # CD: Create Release README.md (only on main)
   # ==========================================
   create-readme:
-    needs: create-release
+    needs: [create-release, qodana]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -204,7 +211,8 @@ jobs:
         run: |
           VERSION="${{ needs.create-release.outputs.version }}"
           BRANCH="${{ needs.create-release.outputs.branch }}"
-          ./script/create-version-readme.sh "$VERSION" "$BRANCH" RELEASE-README.md
+          QODANA_STATUS="${{ needs.qodana.outputs.status }}"
+          ./script/create-version-readme.sh "$VERSION" "$BRANCH" "$QODANA_STATUS" RELEASE-README.md
 
       - name: Commit README to release branch
         run: |
