@@ -1,0 +1,64 @@
+# Qodana Configuration for PagaTu
+# https://www.jetbrains.com/help/qodana/qodana-yaml.html
+
+version: "1.0"
+
+# Use Java community linter (free)
+# For Ultimate features, use: qodana-java-ultimate
+linter: qodana-java-community
+
+# Run on the whole project
+root: .
+
+# Include/exclude patterns
+include:
+  - "**/*.java"
+  - "**/*.xml"
+  - "**/*.yml"
+  - "**/*.yaml"
+  - "**/*.sh"
+  - "**/Dockerfile*"
+  - "**/Makefile*"
+
+exclude:
+  - "**/target/**"
+  - "**/.mvn/**"
+  - "**/mvnw*"
+  - "**/.git/**"
+  - "**/*.class"
+  - "**/*.jar"
+  - "**/RELEASE-README.md"
+
+# Profile settings
+profile:
+  name: qodana.java.recommended
+  # Add custom rules if needed
+  # include:
+  #   - UnusedDeclaration
+  #   - ConstantConditions
+
+# Baseline file for known issues (optional)
+# baseline: .qodana.baseline.json
+
+# IDE settings (optional)
+# ide: ideaIC-2024.2
+
+# Java-specific settings
+java:
+  # Java version for analysis
+  jdk: "17"
+  # Maven/Gradle settings
+  buildTool: maven
+  # Skip tests during analysis
+  skipTests: true
+
+# Timeout settings
+timeout: 30m
+
+# Resource limits
+resources:
+  memory: "4g"
+  cpu: "2"
+
+# Fail threshold (optional)
+# failThreshold: 10
