@@ -18,7 +18,7 @@ on:
     branches:
       - develop
       - main
-    types: [opened, synchronize, reopened]
+    types: [ opened, synchronize, reopened ]
   workflow_dispatch:  # Allow manual trigger
 
 env:
@@ -73,7 +73,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [auth, coffee, mail, gateway-service, eureka-server]
+        service: [ auth, coffee, mail, gateway-service, eureka-server ]
         include:
           - service: auth
             db_name: auth
@@ -95,7 +95,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Needed for version script to access git history
-
+      
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
@@ -104,18 +104,18 @@ jobs:
           cache: maven
           cache-dependency-path: |
             **/pom.xml
-
+      
       - name: Make scripts executable
         run: |
           chmod +x script/version.sh
           chmod +x mvnw
-
+      
       - name: Show current version
         run: |
           echo "📦 Current version: $(./script/version.sh show)"
           echo "🚀 Next version: $(./script/version.sh next)"
           echo "🌿 Release branch: $(./script/version.sh branch)"
-
+      
       - name: Initialize PostgreSQL databases
         if: matrix.db_name != ''
         run: |
@@ -125,7 +125,7 @@ jobs:
           psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE ${{ matrix.db_name }};"
         env:
           PGPASSWORD: postgres
-
+      
       - name: Build and Test ${{ matrix.service }}
         run: |
           ./mvnw -B -pl ${{ matrix.service }} -am clean verify
@@ -141,7 +141,7 @@ jobs:
           SPRING_MAIL_PASSWORD: pagatu
           JWT_SECRET: test-secret-key-for-ci-testing-only-32chars
           EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://localhost:8761/eureka/
-
+      
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -149,7 +149,7 @@ jobs:
           name: test-reports-${{ matrix.service }}
           path: ${{ matrix.service }}/target/surefire-reports/
           retention-days: 7
-
+      
       - name: Upload coverage reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -157,7 +157,7 @@ jobs:
           name: coverage-${{ matrix.service }}
           path: ${{ matrix.service }}/target/site/jacoco/
           retention-days: 7
-
+  
   # ==========================================
   # CI: Qodana Code Quality Analysis (optional)
   # Runs in parallel with build-and-test
@@ -175,7 +175,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+      
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
@@ -184,7 +184,7 @@ jobs:
           cache: maven
           cache-dependency-path: |
             **/pom.xml
-
+      
       - name: Qodana Scan
         uses: JetBrains/qodana-action@v2026.1
         env:
@@ -197,14 +197,14 @@ jobs:
           upload-result: true
           push-fixes: 'none'
           args: --show-report
-
+      
       - name: Upload Qodana SARIF results
         if: always() && success() && hashFiles('qodana.sarif.json') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: qodana.sarif.json
           category: qodana
-
+      
       - name: Upload Qodana HTML report
         if: always() && hashFiles('.qodana/report/**') != ''
         uses: actions/upload-artifact@v4
@@ -212,7 +212,7 @@ jobs:
           name: qodana-report
           path: .qodana/report/
           retention-days: 14
-
+  
   # ==========================================
   # CD: Create Release (only on main branch)
   # ==========================================
@@ -222,23 +222,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      branch: ${{ steps.version.outputs.branch }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
+      
       - name: Configure Git
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-
+      
       - name: Make scripts executable
         run: |
           chmod +x script/version.sh
           chmod +x mvnw
-
+      
       - name: Calculate release version
         id: version
         run: |
@@ -247,30 +250,30 @@ jobs:
           echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
           echo "🚀 Preparing release: $NEXT_VERSION"
-
+      
       - name: Update parent pom.xml version
         run: |
           ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.version }} -DgenerateBackupPoms=false
           echo "✅ Updated all pom.xml files to ${{ steps.version.outputs.version }}"
-
+      
       - name: Create release branch
         run: |
           git checkout -b ${{ steps.version.outputs.branch }}
           git add pom.xml */pom.xml
           git commit -m "chore(release): prepare release ${{ steps.version.outputs.version }}"
           echo "✅ Created release branch: ${{ steps.version.outputs.branch }}"
-
+      
       - name: Push release branch
         run: |
           git push origin ${{ steps.version.outputs.branch }}
           echo "✅ Pushed release branch"
-
+      
       - name: Create Git tag
         run: |
           git tag -a "pagatu-v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
           git push origin "pagatu-v${{ steps.version.outputs.version }}"
           echo "✅ Created tag: pagatu-v${{ steps.version.outputs.version }}"
-
+      
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -293,7 +296,60 @@ jobs:
             Docker images will be available at: `ghcr.io/${{ github.repository }}/<service>:${{ steps.version.outputs.version }}`
           draft: false
           prerelease: false
+  
+  
+  # ==========================================
+  # CD: Create Release README.md (only on main branch)
+  # ==========================================
+  create-readme:
+    needs: create-release
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Make scripts executable
+        run: chmod +x script/create-version-readme.sh
+
+      - name: Generate Release README
+        id: readme
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+          BRANCH="${{ needs.create-release.outputs.branch }}"
+          ./script/create-version-readme.sh "$VERSION" "$BRANCH" RELEASE-README.md
+          echo "readme_path=RELEASE-README.md" >> $GITHUB_OUTPUT
+
+      - name: Commit README to release branch
+        run: |
+          git checkout ${{ needs.create-release.outputs.branch }}
+          git add RELEASE-README.md
+          git commit -m "docs(release): add release README for ${{ needs.create-release.outputs.version }}"
+          git push origin ${{ needs.create-release.outputs.branch }}
+
+      - name: Upload README as Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pagatu-v${{ needs.create-release.outputs.version }}
+          files: RELEASE-README.md
+          body_path: RELEASE-README.md
+    
+    
+    
+    
+  
+  
+  
   # ==========================================
   # Optional: Sync to GitLab (manual trigger)
   # ==========================================
@@ -306,7 +362,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+      
       - name: Sync to GitLab
         uses: keninkujovic/gitlab-sync@2.0.0
         with:
