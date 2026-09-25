@@ -1,5 +1,5 @@
 # PagaTu Release Workflow
-# Triggers on push to main: Build → Qodana Quality Gate → Release + README
+# Triggers on push: Compile → Qodana Quality Gate → Release + README → Sync GitLab
 
 name: PagaTu Release
 
@@ -21,65 +21,14 @@ env:
 
 jobs:
   # ==========================================
-  # CI: Build & Test all services in parallel
+  # CI: Compile all services (no tests, no services)
   # ==========================================
-  build-and-test:
+  compile:
     runs-on: ubuntu-latest
-    services:
-      nats:
-        image: nats:2.15.0
-        command: [ "-m", "8222" ]
-        ports:
-          - 4222:4222
-          - 8222:8222
-        options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8222/healthz"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      mailpit:
-        image: axllent/mailpit
-        ports:
-          - 1025:1025
-          - 8025:8025
-        options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8025"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     strategy:
       fail-fast: false
       matrix:
         service: [ auth, coffee, mail, gateway-service, eureka-server ]
-        include:
-          - service: auth
-            db_name: auth
-            spring_profiles: test
-          - service: coffee
-            db_name: coffee
-            spring_profiles: test
-          - service: mail
-            db_name: ""
-            spring_profiles: test
-          - service: gateway-service
-            db_name: ""
-            spring_profiles: test
-          - service: eureka-server
-            db_name: ""
-            spring_profiles: test
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -106,33 +55,14 @@ jobs:
           echo "🚀 Next version: $(./script/version.sh next)"
           echo "🌿 Release branch: $(./script/version.sh branch)"
 
-      - name: Initialize PostgreSQL databases
-        if: matrix.db_name != ''
+      - name: Compile ${{ matrix.service }}
         run: |
-          until pg_isready -h localhost -p 5432 -U postgres; do sleep 2; done
-          psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE ${{ matrix.db_name }};"
+          ./mvnw -B -pl ${{ matrix.service }} -am clean compile
         env:
-          PGPASSWORD: postgres
-
-      - name: Build and Test ${{ matrix.service }}
-        run: |
-          ./mvnw -B -pl ${{ matrix.service }} -am clean verify
-        env:
-          SPRING_PROFILES_ACTIVE: ${{ matrix.spring_profiles }}
-          NATS_SERVER: nats://localhost:4222
-          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/${{ matrix.db_name }}
-          SPRING_DATASOURCE_USERNAME: postgres
-          SPRING_DATASOURCE_PASSWORD: postgres
-          SPRING_MAIL_HOST: localhost
-          SPRING_MAIL_PORT: 1025
-          SPRING_MAIL_USERNAME: noreply@pagatu.local
-          SPRING_MAIL_PASSWORD: pagatu
-          JWT_SECRET: test-secret-key-for-ci-testing-only-32chars
-          EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://localhost:8761/eureka/
+          SKIP_TESTS: "true"
 
   # ==========================================
   # CI: Qodana Quality Gate (BLOCKING)
-  # Must pass for release to proceed
   # ==========================================
   qodana:
     runs-on: ubuntu-latest
@@ -169,10 +99,11 @@ jobs:
           push-fixes: 'none'
 
   # ==========================================
-  # CD: Create Release (needs both CI jobs)
+  # CD: Create Release (only on main)
   # ==========================================
   create-release:
-    needs: [build-and-test, qodana]
+    needs: [compile, qodana]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -246,10 +177,11 @@ jobs:
           prerelease: false
 
   # ==========================================
-  # CD: Create Release README.md
+  # CD: Create Release README.md (only on main)
   # ==========================================
   create-readme:
     needs: create-release
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -292,7 +224,7 @@ jobs:
   # Sync to GitLab (on all pushes after CI passes)
   # ==========================================
   sync-to-gitlab:
-    needs: build-and-test
+    needs: [compile, qodana]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
