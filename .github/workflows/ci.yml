@@ -60,9 +60,9 @@ jobs:
           ./mvnw -B -pl ${{ matrix.service }} -am clean compile
         env:
           SKIP_TESTS: "true"
-
-  # ==========================================
-  # CI: Qodana Quality Gate (non-blocking until token fixed)
+    
+    # ==========================================
+  # CI: Qodana Quality Gate
   # ==========================================
   qodana:
     runs-on: ubuntu-latest
@@ -71,7 +71,6 @@ jobs:
       pull-requests: write
       checks: write
       security-events: write
-    continue-on-error: true
     outputs:
       status: ${{ steps.qodana-badge.outputs.qodana_status }}
     steps:
@@ -79,7 +78,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+      
       - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
@@ -88,8 +87,10 @@ jobs:
           cache: maven
           cache-dependency-path: |
             **/pom.xml
-
+      
       - name: Qodana Scan
+        id: scan
+        continue-on-error: true
         uses: JetBrains/qodana-action@v2026.1
         with:
           pr-mode: false
@@ -99,12 +100,11 @@ jobs:
           upload-result: true
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
-
+      
       - name: Qodana Badge (Quality Gate Status)
-        if: always()
-        run: |
-          echo "qodana_status=${{ job.status }}" >> $GITHUB_OUTPUT
         id: qodana-badge
+        if: always()
+        run: echo "qodana_status=${{ steps.scan.outcome }}" >> "$GITHUB_OUTPUT"
 
   # ==========================================
   # CD: Create Release (only on main)
