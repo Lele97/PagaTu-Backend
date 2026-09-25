@@ -97,7 +97,7 @@ jobs:
           post-pr-comment: false
           use-annotations: true
           upload-result: true
-          args: --linter qodana-java-community --config .qodana.yaml
+          args: --image qodana-java-community --config .qodana.yaml
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
 
