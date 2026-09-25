@@ -41,7 +41,7 @@ jobs:
           - 4222:4222
           - 8222:8222
         options: >-
-          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:8222/healthz"
+          --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:4222"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -297,7 +297,6 @@ jobs:
           draft: false
           prerelease: false
   
-  
   # ==========================================
   # CD: Create Release README.md (only on main branch)
   # ==========================================
@@ -313,15 +312,15 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
-
+      
       - name: Configure Git
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-
+      
       - name: Make scripts executable
         run: chmod +x script/create-version-readme.sh
-
+      
       - name: Generate Release README
         id: readme
         run: |
@@ -329,26 +328,20 @@ jobs:
           BRANCH="${{ needs.create-release.outputs.branch }}"
           ./script/create-version-readme.sh "$VERSION" "$BRANCH" RELEASE-README.md
           echo "readme_path=RELEASE-README.md" >> $GITHUB_OUTPUT
-
+      
       - name: Commit README to release branch
         run: |
           git checkout ${{ needs.create-release.outputs.branch }}
           git add RELEASE-README.md
           git commit -m "docs(release): add release README for ${{ needs.create-release.outputs.version }}"
           git push origin ${{ needs.create-release.outputs.branch }}
-
+      
       - name: Upload README as Release Asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: pagatu-v${{ needs.create-release.outputs.version }}
           files: RELEASE-README.md
           body_path: RELEASE-README.md
-    
-    
-    
-    
-  
-  
   
   # ==========================================
   # Optional: Sync to GitLab (manual trigger)
