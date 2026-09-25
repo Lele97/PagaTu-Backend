@@ -1,7 +1,7 @@
 # PagaTu Release Workflow
 # Triggers on push: Compile → Qodana Quality Gate → Release + README → Sync GitLab
 
-name: PagaTu Release
+name: PagaTu Release 
 
 on:
   push:
