@@ -21,17 +21,19 @@ NC='\033[0m'
 # Usage
 usage() {
     cat << EOF
-Usage: $0 <version> <branch_name> [output_file]
+Usage: $0 <version> <branch_name> [qodana_status] [output_file]
 
 Generates a release README.md with badges and version info.
 
 Arguments:
-  version       Release version (e.g., 1.0.5)
-  branch_name   Release branch name (e.g., release/pagatu-v1.0.5)
-  output_file   Optional output file (default: RELEASE-README.md)
+  version         Release version (e.g., 1.0.5)
+  branch_name     Release branch name (e.g., release/pagatu-v1.0.5)
+  qodana_status   Qodana quality gate status: success/failure (default: success)
+  output_file     Optional output file (default: RELEASE-README.md)
 
 Example:
-  $0 1.0.5 release/pagatu-v1.0.5
+  $0 1.0.5 release/pagatu-v1.0.5 success
+  $0 1.0.5 release/pagatu-v1.0.5 failure RELEASE-README.md
 EOF
 }
 
@@ -43,7 +45,17 @@ fi
 
 VERSION="$1"
 BRANCH_NAME="$2"
-OUTPUT_FILE="${3:-RELEASE-README.md}"
+QODANA_STATUS="${3:-success}"
+OUTPUT_FILE="${4:-RELEASE-README.md}"
+
+# Determine Qodana badge
+if [ "$QODANA_STATUS" = "success" ]; then
+    QODANA_BADGE="![Qodana Quality Gate](https://img.shields.io/badge/Qodana-Passed-brightgreen?style=flat-square&logo=jetbrains&logoColor=white)"
+    QODANA_STATUS_TEXT="✅ Passed"
+else
+    QODANA_BADGE="![Qodana Quality Gate](https://img.shields.io/badge/Qodana-Failed-red?style=flat-square&logo=jetbrains&logoColor=white)"
+    QODANA_STATUS_TEXT="❌ Failed"
+fi
 
 # Get current date
 RELEASE_DATE=$(date -u +"%Y-%m-%d")
@@ -73,7 +85,8 @@ cat > "$OUTPUT_FILE" << EOF
 
 > **Release Date:** ${RELEASE_DATE}  
 > **Branch:** [${BRANCH_NAME}](${BRANCH_URL})  
-> **Tag:** [pagatu-v${VERSION}](${GITHUB_URL}/releases/tag/pagatu-v${VERSION})
+> **Tag:** [pagatu-v${VERSION}](${GITHUB_URL}/releases/tag/pagatu-v${VERSION})  
+> **Qodana Quality Gate:** ${QODANA_STATUS_TEXT}
 
 ---
 
@@ -103,7 +116,7 @@ This release includes updates to all PagaTu microservices with bug fixes, improv
 ### CI/CD Status
 ![Build Status](https://img.shields.io/github/actions/workflow/status/${REPO_OWNER}/${REPO_NAME}/ci.yml?branch=main&label=Build&style=flat-square)
 ![Tests](https://img.shields.io/github/actions/workflow/status/${REPO_OWNER}/${REPO_NAME}/ci.yml?branch=main&label=Tests&style=flat-square)
-![Qodana](https://img.shields.io/github/actions/workflow/status/${REPO_OWNER}/${REPO_NAME}/ci.yml?branch=main&label=Qodana&style=flat-square)
+${QODANA_BADGE}
 
 ### Code Quality
 ![Code Coverage](https://img.shields.io/codecov/c/github/${REPO_OWNER}/${REPO_NAME}?style=flat-square)
