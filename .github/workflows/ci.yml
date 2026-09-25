@@ -97,7 +97,6 @@ jobs:
           post-pr-comment: false
           use-annotations: true
           upload-result: true
-          args: --image jetbrains/qodana-java-community:2026.1 --config .qodana.yaml
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
 
