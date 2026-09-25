@@ -96,7 +96,7 @@ jobs:
           post-pr-comment: false
           use-annotations: true
           upload-result: true
-          linter: qodana-java-community
+          image: jetbrains/qodana-java-community:2026.1
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
 
