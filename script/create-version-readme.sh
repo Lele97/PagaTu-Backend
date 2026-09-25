@@ -5,6 +5,13 @@
 
 set -e
 
+# Helper: compute previous patch version
+prev_version() {
+    local v="$1"
+    IFS='.' read -r major minor patch <<< "$v"
+    echo "${major}.${minor}.$((patch - 1))"
+}
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -260,7 +267,7 @@ Distributed under the MIT License. See \`LICENSE\` for more information.
 
 ---
 
-**Full Changelog:** [${GITHUB_URL}/compare/pagatu-v$(echo ${VERSION} | awk -F. '{print $1"."$2"."$3-1}')...pagatu-v${VERSION}](${GITHUB_URL}/compare/pagatu-v$(echo ${VERSION} | awk -F. '{print $1"."$2"."$3-1}')...pagatu-v${VERSION})
+**Full Changelog:** [${GITHUB_URL}/compare/pagatu-v$(prev_version ${VERSION})...pagatu-v${VERSION}](${GITHUB_URL}/compare/pagatu-v$(prev_version ${VERSION})...pagatu-v${VERSION})
 
 ---
 
