@@ -289,11 +289,11 @@ jobs:
           body_path: RELEASE-README.md
 
   # ==========================================
-  # Optional: Sync to GitLab (on develop push or manual)
+  # Sync to GitLab (on all pushes after CI passes)
   # ==========================================
   sync-to-gitlab:
     needs: build-and-test
-    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
