@@ -62,7 +62,7 @@ jobs:
           SKIP_TESTS: "true"
 
   # ==========================================
-  # CI: Qodana Quality Gate (BLOCKING)
+  # CI: Qodana Quality Gate (non-blocking until token fixed)
   # ==========================================
   qodana:
     runs-on: ubuntu-latest
@@ -71,6 +71,7 @@ jobs:
       pull-requests: write
       checks: write
       security-events: write
+    continue-on-error: true
     outputs:
       status: ${{ steps.qodana-badge.outputs.qodana_status }}
     steps:
@@ -96,7 +97,7 @@ jobs:
           post-pr-comment: false
           use-annotations: true
           upload-result: true
-          image: jetbrains/qodana-java-community:2026.1
+          linter: qodana-java-community
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
 
