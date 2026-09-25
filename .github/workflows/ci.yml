@@ -7,10 +7,12 @@ on:
   push:
     branches:
       - main
+      - develop
     paths-ignore:
       - 'README.md'
       - 'docs/**'
       - '*.md'
+  workflow_dispatch:
 
 env:
   JAVA_VERSION: '17'
@@ -285,3 +287,25 @@ jobs:
           tag_name: pagatu-v${{ needs.create-release.outputs.version }}
           files: RELEASE-README.md
           body_path: RELEASE-README.md
+
+  # ==========================================
+  # Optional: Sync to GitLab (on develop push or manual)
+  # ==========================================
+  sync-to-gitlab:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync to GitLab
+        uses: keninkujovic/gitlab-sync@2.0.0
+        with:
+          gitlab_url: ${{ secrets.GIT_LAB_URI }}
+          username: ${{ secrets.GIT_LAB_USERNAME }}
+          gitlab_pat: ${{ secrets.GIT_LAB_TOKEN }}
+        env:
+          GITLAB_TOKEN: ${{ secrets.GIT_LAB_TOKEN }}
