@@ -6,7 +6,7 @@
 
     <groupId>com.pagatu</groupId>
     <artifactId>pagatu-parent</artifactId>
-    <version>1.0.4-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>pom</packaging>
     <name>PagaTu Parent</name>
     <description>Parent POM for all PagaTu microservices</description>
