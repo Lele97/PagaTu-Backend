@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Qodana Configuration Uploader
-        if: ${{ secrets.QODANA_CONFIGURATIONS_TOKEN != '' }}
+        if: secrets.QODANA_CONFIGURATIONS_TOKEN != ''
         env:
           QODANA_CONFIGURATIONS_TOKEN: ${{ secrets.QODANA_CONFIGURATIONS_TOKEN }}
         run: |
