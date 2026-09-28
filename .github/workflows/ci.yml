@@ -193,7 +193,7 @@ jobs:
   # CD: Create Release README.md (only on main)
   # ==========================================
   create-readme:
-    needs: [ create-release, qodana ]
+    needs: create-release
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
