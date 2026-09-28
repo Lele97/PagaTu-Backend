@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # PagaTu Version Derivation Script
-# Derives version from git tags (release branches) - no versions.json needed
+# Derives version from git tags and release branches - no versions.json needed
 
 set -e
 
@@ -12,53 +12,91 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-# Get latest release tag (format: release/pagatu-vX.Y.Z or pagatu-vX.Y.Z)
-get_latest_release_tag() {
-    # Try to get tags first, then release branches
-    git tag -l "pagatu-v*" --sort=-v:refname 2>/dev/null | head -1 || \
-    git branch -r -l "origin/release/pagatu-v*" --sort=-v:refname 2>/dev/null | head -1 | sed 's|origin/||' || \
-    git branch -l "release/pagatu-v*" --sort=-v:refname 2>/dev/null | head -1
+# Ensure tags and release branches are available from origin if possible
+fetch_git_metadata() {
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        git fetch --tags origin 2>/dev/null || true
+        git fetch origin '+refs/heads/release/*:refs/remotes/origin/release/*' 2>/dev/null || true
+    fi
 }
 
-# Extract version from tag/branch name
+# Get latest release tag or branch name
+get_latest_release_ref() {
+    # Combine tags and release branches (both remote and local)
+    local refs
+    refs=$( (
+        git tag -l "pagatu-v*" 2>/dev/null || true
+        git branch -r --list "origin/release/pagatu-v*" 2>/dev/null | sed -e 's|.*release/||' -e 's/^[ *]*//' || true
+        git branch --list "release/pagatu-v*" 2>/dev/null | sed -e 's|.*release/||' -e 's/^[ *]*//' || true
+    ) | sed -e 's/^[ *]*//' -e 's|remotes/origin/||' | grep -E '^pagatu-v[0-9]+\.[0-9]+\.[0-9]+' | sort -V -u )
+
+    if [ -n "$refs" ]; then
+        echo "$refs" | tail -1
+    fi
+}
+
+# Resolve git commit ref for a release tag or branch
+resolve_git_ref() {
+    local target="$1"
+    local candidates=(
+        "refs/tags/$target"
+        "$target"
+        "origin/release/$target"
+        "release/$target"
+        "origin/$target"
+    )
+    for ref in "${candidates[@]}"; do
+        if git rev-parse --verify "$ref" >/dev/null 2>&1; then
+            echo "$ref"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Extract semver version (X.Y.Z) from tag/branch name
 extract_version() {
     local ref="$1"
     echo "$ref" | sed -E 's/.*pagatu-v([0-9]+\.[0-9]+\.[0-9]+).*/\1/'
 }
 
-# Calculate next version based on commits since last release (quiet - only outputs version)
-calculate_next_version_quiet() {
-    local latest_tag="$1"
-    local current_version=$(extract_version "$latest_tag")
+# Calculate next version based on commits since last release
+# Informational messages go to stderr (>&2); only the version number goes to stdout
+calculate_next_version() {
+    local latest_ref="$1"
+    local current_version=$(extract_version "$latest_ref")
+
+    if [ -z "$current_version" ]; then
+        current_version="1.0.0"
+    fi
 
     IFS='.' read -ra VERSION_PARTS <<< "$current_version"
-    local major=${VERSION_PARTS[0]}
-    local minor=${VERSION_PARTS[1]}
-    local patch=${VERSION_PARTS[2]}
+    local major=${VERSION_PARTS[0]:-1}
+    local minor=${VERSION_PARTS[1]:-0}
+    local patch=${VERSION_PARTS[2]:-0}
 
-    # Count commits since last release
+    # Find the git commit ref for latest_ref
+    local resolved_ref
+    resolved_ref=$(resolve_git_ref "$latest_ref" || echo "")
+
     local commit_count=0
-    if git rev-parse "$latest_tag" >/dev/null 2>&1; then
-        commit_count=$(git rev-list --count "${latest_tag}..HEAD" 2>/dev/null || echo 0)
-    else
-        # If tag doesn't exist locally, try remote
-        commit_count=$(git rev-list --count "origin/${latest_tag}..HEAD" 2>/dev/null || echo 0)
+    local commits=""
+
+    if [ -n "$resolved_ref" ]; then
+        commit_count=$(git rev-list --count "${resolved_ref}..HEAD" 2>/dev/null || echo 0)
+        if [ "$commit_count" -gt 0 ]; then
+            commits=$(git log --oneline "${resolved_ref}..HEAD" 2>/dev/null || echo "")
+        fi
     fi
+
+    echo -e "${BLUE}📊 Commits since $latest_ref: $commit_count${NC}" >&2
 
     # Determine bump type based on commit messages
     local has_breaking=false
     local has_feature=false
     local has_fix=false
 
-    if [ "$commit_count" -gt 0 ]; then
-        # Check commit messages since last release
-        local commits
-        if git rev-parse "$latest_tag" >/dev/null 2>&1; then
-            commits=$(git log --oneline "${latest_tag}..HEAD" 2>/dev/null || echo "")
-        else
-            commits=$(git log --oneline "origin/${latest_tag}..HEAD" 2>/dev/null || echo "")
-        fi
-
+    if [ "$commit_count" -gt 0 ] && [ -n "$commits" ]; then
         if echo "$commits" | grep -qi "BREAKING CHANGE\|breaking:"; then
             has_breaking=true
         fi
@@ -70,80 +108,21 @@ calculate_next_version_quiet() {
         fi
     fi
 
-    # Decide bump type
+    # Decide bump type safely without ((var++)) exit code traps under set -e
     if [ "$has_breaking" = true ]; then
-        ((major++))
+        major=$((major + 1))
         minor=0
         patch=0
+        echo -e "${YELLOW}🔴 Breaking changes detected -> MAJOR bump${NC}" >&2
     elif [ "$has_feature" = true ]; then
-        ((minor++))
+        minor=$((minor + 1))
         patch=0
+        echo -e "${YELLOW}🟢 Features detected -> MINOR bump${NC}" >&2
     elif [ "$has_fix" = true ] || [ "$commit_count" -gt 0 ]; then
-        ((patch++))
-    fi
-
-    echo "$major.$minor.$patch"
-}
-
-# Verbose version of calculate_next_version
-calculate_next_version_verbose() {
-    local latest_tag="$1"
-    local current_version=$(extract_version "$latest_tag")
-
-    IFS='.' read -ra VERSION_PARTS <<< "$current_version"
-    local major=${VERSION_PARTS[0]}
-    local minor=${VERSION_PARTS[1]}
-    local patch=${VERSION_PARTS[2]}
-
-    # Count commits since last release
-    local commit_count=0
-    if git rev-parse "$latest_tag" >/dev/null 2>&1; then
-        commit_count=$(git rev-list --count "${latest_tag}..HEAD" 2>/dev/null || echo 0)
+        patch=$((patch + 1))
+        echo -e "${YELLOW}🟡 Fixes/changes detected -> PATCH bump${NC}" >&2
     else
-        commit_count=$(git rev-list --count "origin/${latest_tag}..HEAD" 2>/dev/null || echo 0)
-    fi
-
-    echo -e "${BLUE}📊 Commits since $latest_tag: $commit_count${NC}"
-
-    # Determine bump type based on commit messages
-    local has_breaking=false
-    local has_feature=false
-    local has_fix=false
-
-    if [ "$commit_count" -gt 0 ]; then
-        local commits
-        if git rev-parse "$latest_tag" >/dev/null 2>&1; then
-            commits=$(git log --oneline "${latest_tag}..HEAD" 2>/dev/null || echo "")
-        else
-            commits=$(git log --oneline "origin/${latest_tag}..HEAD" 2>/dev/null || echo "")
-        fi
-
-        if echo "$commits" | grep -qi "BREAKING CHANGE\|breaking:"; then
-            has_breaking=true
-        fi
-        if echo "$commits" | grep -qi "^feat\|^feature:"; then
-            has_feature=true
-        fi
-        if echo "$commits" | grep -qi "^fix\|^bug:"; then
-            has_fix=true
-        fi
-    fi
-
-    # Decide bump type
-    if [ "$has_breaking" = true ]; then
-        ((major++))
-        minor=0
-        patch=0
-        echo -e "${YELLOW}🔴 Breaking changes detected -> MAJOR bump${NC}"
-    elif [ "$has_feature" = true ]; then
-        ((minor++))
-        patch=0
-        echo -e "${YELLOW}🟢 Features detected -> MINOR bump${NC}"
-    elif [ "$has_fix" = true ] || [ "$commit_count" -gt 0 ]; then
-        ((patch++))
-        echo -e "${YELLOW}🟡 Fixes/changes detected -> PATCH bump${NC}"
-    else
-        echo -e "${GREEN}✅ No changes since last release${NC}"
+        echo -e "${GREEN}✅ No changes since last release${NC}" >&2
     fi
 
     echo "$major.$minor.$patch"
@@ -153,36 +132,37 @@ calculate_next_version_verbose() {
 main() {
     local command="${1:-show}"
 
+    fetch_git_metadata
+
     case "$command" in
         "show"|"current")
-            local latest_tag=$(get_latest_release_tag)
-            if [ -z "$latest_tag" ]; then
-                echo -e "${RED}❌ No release tags found. Starting from v1.0.0${NC}"
+            local latest_ref=$(get_latest_release_ref)
+            if [ -z "$latest_ref" ]; then
+                echo -e "${RED}❌ No release tags found. Starting from v1.0.0${NC}" >&2
                 echo "1.0.0"
             else
-                local current_version=$(extract_version "$latest_tag")
-                echo -e "${GREEN}✅ Latest release: $latest_tag${NC}"
-                echo -e "${BLUE}📦 Current version: $current_version${NC}"
+                local current_version=$(extract_version "$latest_ref")
+                echo -e "${GREEN}✅ Latest release: $latest_ref${NC}" >&2
+                echo -e "${BLUE}📦 Current version: $current_version${NC}" >&2
                 echo "$current_version"
             fi
             ;;
         "next"|"bump")
-            local latest_tag=$(get_latest_release_tag)
-            if [ -z "$latest_tag" ]; then
+            local latest_ref=$(get_latest_release_ref)
+            if [ -z "$latest_ref" ]; then
                 echo -e "${YELLOW}⚠️  No release tags found. Starting from v1.0.0${NC}" >&2
                 echo "1.0.0"
             else
-                local next_version=$(calculate_next_version_verbose "$latest_tag")
-                # next_version already contains the version as last line
+                local next_version
+                next_version=$(calculate_next_version "$latest_ref")
                 echo "$next_version"
             fi
             ;;
         "branch")
-            local latest_tag=$(get_latest_release_tag)
-            if [ -z "$latest_tag" ]; then
-                local version="1.0.0"
-            else
-                local version=$(calculate_next_version_quiet "$latest_tag")
+            local latest_ref=$(get_latest_release_ref)
+            local version="1.0.0"
+            if [ -n "$latest_ref" ]; then
+                version=$(calculate_next_version "$latest_ref" 2>/dev/null)
             fi
             local branch_name="release/pagatu-v$version"
             echo "$branch_name"
