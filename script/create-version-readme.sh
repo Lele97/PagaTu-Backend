@@ -9,7 +9,11 @@ set -e
 prev_version() {
     local v="$1"
     IFS='.' read -r major minor patch <<< "$v"
-    echo "${major}.${minor}.$((patch - 1))"
+    if [ "${patch:-0}" -gt 0 ] 2>/dev/null; then
+        echo "${major}.${minor}.$((patch - 1))"
+    else
+        echo "${major}.${minor}.${patch:-0}"
+    fi
 }
 
 # Colors
@@ -291,4 +295,3 @@ echo -e "${GREEN}✅ Release README generated: ${OUTPUT_FILE}${NC}"
 echo -e "${YELLOW}📋 Preview:${NC}"
 head -50 "$OUTPUT_FILE"
 echo "..."
-EOF
