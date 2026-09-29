@@ -26,11 +26,7 @@ echo "INFO - You can pass the 'all' argument to build and push all the applicati
 
 cd ..
 
-#git pull origin develop
-
 export DOCKER_CLI_EXPERIMENTAL=enabled
-#docker buildx create --use --name multi-builder
-#docker buildx inspect --bootstrap
 
 docker login "$REGISTRY_URL" -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
 for var in "$@"

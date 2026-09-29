@@ -15,7 +15,6 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -66,8 +65,6 @@ public class AuthService {
             @Autowired(required = false) TokenForUserPasswordResetRepository tokenForUserPasswordResetRepository,
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            // @Qualifier("directWebClientBuilder") WebClient.Builder
-            // directWebClientBuilder,+
             WebClient.Builder webClientBuilder,
             @Value("${coffee.service.url}") String coffeeServiceUrl,
             OutboxService outboxService,
