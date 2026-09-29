@@ -7,7 +7,6 @@ import com.pagatu.auth.entity.User;
 import com.pagatu.auth.exception.AuthenticationException;
 import com.pagatu.auth.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,7 +14,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Slf4j

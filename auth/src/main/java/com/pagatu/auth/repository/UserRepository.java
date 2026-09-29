@@ -1,6 +1,5 @@
 package com.pagatu.auth.repository;
 
-import com.pagatu.auth.dto.UserDto;
 import com.pagatu.auth.entity.AuthProvider;
 import com.pagatu.auth.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
