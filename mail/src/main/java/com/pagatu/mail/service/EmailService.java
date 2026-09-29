@@ -17,7 +17,6 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.log4j.Log4j2;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -88,8 +87,6 @@ public class EmailService {
      */
     public EmailService(JavaMailSender mailSender,
             TemplateEngine templateEngine,
-            // @Qualifier("directWebClientBuilder") WebClient.Builder
-            // directWebClientBuilder,
             WebClient.Builder webClientBuilder,
             @Value("${coffee.service.base-url}") String coffeeServiceBaseUrl,
             @Value("${auth.service.base-url}") String authServiceBaseUrl) {
