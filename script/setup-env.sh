@@ -61,13 +61,33 @@ echo ""
 read -s -p "PostgreSQL Root Password: " POSTGRES_PASSWORD
 echo ""
 
-read -p "Gmail Username (e.g., your-email@gmail.com): " MAIL_USERNAME
-
-read -s -p "Gmail App Password (16-character password): " MAIL_PASSWORD
-echo ""
-
 read -p "Domain URL (default: http://localhost:8888): " DOMAIN_URL
 DOMAIN_URL=${DOMAIN_URL:-http://localhost:8888}
+
+# Email: di default Mailpit, nessuna credenziale.
+# L'SMTP reale e' facoltativo e va richiesto esplicitamente.
+echo ""
+read -p "Use a real SMTP server instead of local Mailpit? (y/N): " USE_REAL_SMTP
+MAIL_HOST=mailpit
+MAIL_PORT=1025
+MAIL_USERNAME=""
+MAIL_PASSWORD=""
+if [[ $USE_REAL_SMTP =~ ^[Yy]$ ]]; then
+    echo -e "${YELLOW}A real SMTP will be used. Credentials stay in .env only.${NC}"
+    read -p "  SMTP host (e.g. smtp.gmail.com): " MAIL_HOST
+    read -p "  SMTP port (587 for Gmail): " MAIL_PORT
+    read -p "  Username: " MAIL_USERNAME
+    if [[ $MAIL_HOST == *gmail.com* ]]; then
+        read -s -p "  Gmail app password (NOT your account password): " MAIL_PASSWORD
+        echo ""
+        echo -e "${YELLOW}  Create one at https://myaccount.google.com/apppasswords${NC}"
+    else
+        read -s -p "  Password: " MAIL_PASSWORD
+        echo ""
+    fi
+else
+    echo -e "${GREEN}Local Mailpit selected. Emails stay on this machine.${NC}"
+fi
 
 echo ""
 echo -e "${WHITE}🔄 Creating .env file...${NC}"
@@ -81,8 +101,10 @@ if command -v sed &> /dev/null; then
     sed -i.bak "s/CHANGE_ME_TO_SECURE_256_BIT_KEY/$JWT_SECRET/g" ".env"
     sed -i.bak "s/CHANGE_ME_TO_SECURE_DB_PASSWORD/$DB_PASSWORD/g" ".env"
     sed -i.bak "s/CHANGE_ME_TO_SECURE_ROOT_PASSWORD/$POSTGRES_PASSWORD/g" ".env"
-    sed -i.bak "s/your-email@gmail.com/$MAIL_USERNAME/g" ".env"
-    sed -i.bak "s/CHANGE_ME_TO_GMAIL_APP_PASSWORD/$MAIL_PASSWORD/g" ".env"
+    sed -i.bak "s|^MAIL_HOST=.*|MAIL_HOST=$MAIL_HOST|" ".env"
+    sed -i.bak "s|^MAIL_PORT=.*|MAIL_PORT=$MAIL_PORT|" ".env"
+    sed -i.bak "s|^MAIL_USERNAME=.*|MAIL_USERNAME=$MAIL_USERNAME|" ".env"
+    sed -i.bak "s|^MAIL_PASSWORD=.*|MAIL_PASSWORD=$MAIL_PASSWORD|" ".env"
     sed -i.bak "s|http://localhost:8888|$DOMAIN_URL|g" ".env"
     rm ".env.bak" 2>/dev/null || true
 else
@@ -96,15 +118,19 @@ echo ""
 echo -e "${CYAN}🔍 Security Verification:${NC}"
 echo -e "${GREEN}- JWT secret: 256-bit generated ✅${NC}"
 echo -e "${GREEN}- Database passwords: Set ✅${NC}"
-echo -e "${GREEN}- Gmail credentials: Set ✅${NC}"
+if [[ $USE_REAL_SMTP =~ ^[Yy]$ ]]; then
+    echo -e "${GREEN}- SMTP: $MAIL_HOST ✅${NC}"
+else
+    echo -e "${GREEN}- SMTP: local Mailpit, no credentials ✅${NC}"
+fi
 echo -e "${GREEN}- .env file created: ✅${NC}"
 
-# Check if .env is in .gitignore
-if grep -q "^\.env$" ".gitignore" 2>/dev/null; then
-    echo -e "${GREEN}- .env in .gitignore: ✅${NC}"
+# Check if .env is actually ignored by git
+if git check-ignore -q ".env" 2>/dev/null; then
+    echo -e "${GREEN}- .env ignored by git: ✅${NC}"
 else
-    echo -e "${YELLOW}- .env in .gitignore: ⚠️  Missing!${NC}"
-    echo -e "${YELLOW}  Add '.env' to your .gitignore file!${NC}"
+    echo -e "${YELLOW}- .env ignored by git: ⚠️  Missing!${NC}"
+    echo -e "${YELLOW}  Add '*.env' to your .gitignore file!${NC}"
 fi
 
 echo ""
@@ -113,12 +139,13 @@ echo -e "${WHITE}1. Review the .env file (but don't commit it!)${NC}"
 echo -e "${WHITE}2. Start your services: docker-compose up -d${NC}"
 echo -e "${WHITE}3. Check logs: docker-compose logs${NC}"
 echo ""
-echo -e "${CYAN}📖 Read SECURITY_SETUP.md for complete instructions${NC}"
+echo -e "${CYAN}📖 For the full explanation, see the Getting Started section of README.md${NC}"
 echo ""
 echo -e "${YELLOW}⚠️  IMPORTANT REMINDERS:${NC}"
-echo -e "${RED}- Revoke old Gmail app password: qoxy noqn dqrx kvmo${NC}"
-echo -e "${RED}- Change database passwords if using existing DB${NC}"
-echo -e "${RED}- NEVER commit .env file to version control${NC}"
+echo -e "${RED}- Revoke any Gmail app password you no longer use, and create a new one${NC}"
+echo -e "${RED}-  https://myaccount.google.com/apppasswords${NC}"
+echo -e "${RED}- Change database passwords if using an existing DB${NC}"
+echo -e "${RED}- NEVER commit the .env file to version control${NC}"
 
 # Clear sensitive variables
 unset DB_PASSWORD
