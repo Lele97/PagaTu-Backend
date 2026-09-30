@@ -27,16 +27,19 @@ spring:
   application:
     name: mail
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:grandinetti.gabriele.mail@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:usjq uqwd jgfi zupt}
+    # Default = Mailpit locale (docker-compose): nessuna credenziale, nessun TLS.
+    # Per Gmail o qualsiasi SMTP reale, imposta SPRING_MAIL_HOST / _PORT / _USERNAME / _PASSWORD
+    # tramite variabili d'ambiente. Non hardcodare mai credenziali qui.
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
-          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:false}
           starttls:
-            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:false}
 
   # NATS Configuration
   nats:
