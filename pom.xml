@@ -107,6 +107,12 @@
                     <configuration>
                         <source>${java.version}</source>
                         <target>${java.version}</target>
+                        <!-- spring-boot-starter-parent lo imposta di default. Da quando questo
+                             progetto ha il proprio parent pom, senza questo flag i parametri dei
+                             controller (@PathVariable / @RequestParam senza nome esplicito) non
+                             conservano il nome e Spring MVC non riesce a risolverli: la richiesta
+                             muore con "parameter name information not available via reflection". -->
+                        <parameters>true</parameters>
                         <annotationProcessorPaths>
                             <path>
                                 <groupId>org.projectlombok</groupId>

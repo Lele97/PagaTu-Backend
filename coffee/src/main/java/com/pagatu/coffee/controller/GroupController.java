@@ -75,7 +75,7 @@ public class GroupController {
      */
     @DeleteMapping("/delete/{groupName}")
     public ResponseEntity<String> deleteGroupByName(
-            @PathVariable String groupName,
+            @PathVariable("groupName") String groupName,
             @RequestHeader("Authorization") String authHeader) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         groupService.deleteGroupByName(groupName, userId);
@@ -177,7 +177,7 @@ public class GroupController {
 
     @PostMapping("/get/{username}")
     public ResponseEntity<Object> getGroupsByUsernamePost(
-            @PathVariable String username,
+            @PathVariable("username") String username,
             @RequestHeader("Authorization") String authHeader) {
         try {
 

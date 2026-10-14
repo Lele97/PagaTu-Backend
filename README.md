@@ -168,6 +168,10 @@ flowchart TB
 - Login e registrazione con **JWT** (JJWT, HS256, chiave Base64 da 256 bit, scadenza 24 h).
 - **OAuth2** con Google (Identity Services, validazione via `tokeninfo`) e Microsoft (Graph API), con
   generazione automatica dello username in caso di collisione.
+- **GitHub** via authorization code flow: il frontend riceve il `code` da GitHub e lo manda a
+  `POST /api/auth/oauth/github` (body `{"code": "...", "redirectUri": "..."}`); il backend lo scambia con
+  un access token usando `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, poi legge profilo ed email verificate
+  (scope `read:user user:email`), così l'utente non deve rendere pubblica la propria email.
 - **Verifica email** con token a 48 ore e **reset password** con token a 30 minuti.
 - **Rate limiting** con Bucket4j sugli endpoint sensibili (3 tentativi/ora per IP) più un limite su base dati
   (10 richieste/24 h per email).
@@ -343,7 +347,7 @@ raggiungibile l'`OutboxProcessor` **non entra neppure nel loop** e riprenderà a
 | Aspetto | Implementazione |
 |---|---|
 | **Autenticazione** | JWT firmato HS256 (JJWT), chiave da `JWT_SECRET` in Base64, 24 h di validità |
-| **Validazione al gateway** | filtro globale con allow-list di 13 path pubblici (login, register, OAuth, reset, verify, Swagger, actuator) |
+| **Validazione al gateway** | filtro globale con allow-list di 14 path pubblici (login, register, OAuth Google/Microsoft/GitHub, reset, verify, Swagger, actuator) |
 | **CORS** | `allowedOriginPatterns` da configurazione, `allowCredentials(true)`, preflight `OPTIONS` gestito dal filtro |
 | **Password** | BCrypt (`PasswordEncoder`); il cambio password è negato agli account OAuth |
 | **OAuth2** | Google (Identity Services) e Microsoft (Graph), con username generato e controllo di collisione |
@@ -358,7 +362,8 @@ raggiungibile l'`OutboxProcessor` **non entra neppure nel loop** e riprenderà a
 ```
 /api/auth/login              /api/auth/register
 /api/auth/oauth/google       /api/auth/oauth/microsoft
-/api/auth/verify-email       /api/auth/resend-verification
+/api/auth/oauth/github       /api/auth/verify-email
+/api/auth/resend-verification
 /api/auth/forgotPassword     /api/auth/reset-password
 /api/auth/resetPassword      /actuator     /swagger-ui
 /v3/api-docs                 /fallback

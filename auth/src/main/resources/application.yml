@@ -4,7 +4,7 @@ server:
 spring:
   config:
     import: "optional:configserver:"
-
+  
   nats:
     server: ${NATS_SERVER:nats://localhost:4222}
     connection-timeout: 5000
@@ -14,7 +14,7 @@ spring:
     subject:
       reset-password-mail: reset-password-mail
       verify-email-mail: verify-email-mail
-
+  
   # Outbox pattern configuration
   outbox:
     poll-interval: 5000        # Poll every 5 seconds
@@ -22,18 +22,18 @@ spring:
     batch-size: 100            # Process up to 100 events per poll
     cleanup-days: 7            # Keep processed events for 7 days
     cleanup-cron: "0 0 0 * * ?" # Cleanup at midnight
-
+  
   application:
     name: auth
-
+  
   profiles:
     active: dev
-
+  
   cache:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=35s
-
+  
   cloud:
     config:
       enabled: false
@@ -42,13 +42,13 @@ spring:
         enabled: true
         ttl: 35s
         capacity: 1000
-
+  
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/auth}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
-
+  
   jpa:
     hibernate:
       ddl-auto: update
@@ -59,14 +59,16 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: true
-
+  
   h2:
     console:
       enabled: false
       path: /h2-console
-
+  
   flyway:
-    enabled: false # Disabled in dev, Hibernate handles schema
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
 
 logging:
   level:
@@ -96,30 +98,30 @@ spring:
   config:
     activate:
       on-profile: prod
-
+  
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
-
+  
   cache:
     type: caffeine
     caffeine:
       spec: maximumSize=1000,expireAfterWrite=35s
-
+  
   cloud:
     loadbalancer:
       cache:
         enabled: true
         ttl: 35s
         capacity: 1000
-
+  
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/auth}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
-
+  
   jpa:
     hibernate:
       ddl-auto: validate
@@ -130,12 +132,12 @@ spring:
         format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
-
+  
   h2:
     console:
       enabled: false
       path: /h2-console
-
+  
   flyway:
     enabled: true
     baseline-on-migrate: true
@@ -170,6 +172,37 @@ management:
 coffee:
   service:
     url: ${COFFEE_SERVICE_URL:lb://coffee}
+
+# GitHub OAuth (authorization code flow).
+# The frontend obtains the "code" from GitHub and posts it to
+# POST /api/auth/oauth/github; the backend exchanges it for an access token.
+github:
+  oauth:
+    client-id: ${GITHUB_CLIENT_ID:Ov23liquV6rYpA9vRhut}
+    client-secret: ${GITHUB_CLIENT_SECRET:7f58c9a656d80245407e6df3a931260d01343e61}
+    redirect-uri: ${GITHUB_REDIRECT_URI:}
+    scope: ${GITHUB_SCOPE:read:user user:email}
+    access-token-url: https://github.com/login/oauth/access_token
+    user-url: https://api.github.com/user
+    user-emails-url: https://api.github.com/user/emails
+    api-version: "2022-11-28"
+
+discord:
+  oauth:
+    client-id: ${DISCORD_CLIENT_ID:1558613773181521982}
+    client-secret: ${DISCORD_CLIENT_SECRET:oAt8Oemb094qwR9sdX6wHDKRh_w1wa5E}
+    redirect-uri: ${DISCORD_REDIRECT_URI:http://localhost:8888/welcome}
+    scope: ${DISCORD_SCOPE:identify email}
+
+slack:
+  oauth:
+    client-id: ${SLACK_CLIENT_ID:10571569442017.12278869326727}
+    client-secret: ${SLACK_CLIENT_SECRET:57ae557ea29ffc0e2233321a0425ca58}
+    redirect-uri: ${SLACK_REDIRECT_URI:http://localhost:8888/welcome}
+    scope: ${SLACK_SCOPE:users:read identity:read users:read.email}
+    access-token-url: https://slack.com/api/oauth.v2.access
+    user-url: https://slack.com/api/users.identity
+
 
 springdoc:
   api-docs:

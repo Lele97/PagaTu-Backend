@@ -81,7 +81,7 @@ public class CoffeeUserController {
      * @return ResponseEntity containing optional user details
      */
     @PostMapping("/by-username")
-    public ResponseEntity<Optional<CoffeeUserDetailDto>> findUserByUsernamePostParam(@RequestParam String username) {
+    public ResponseEntity<Optional<CoffeeUserDetailDto>> findUserByUsernamePostParam(@RequestParam("username") String username) {
         return ResponseEntity.ok(coffeeUserService.findCoffeeUserByUsername(username));
     }
 

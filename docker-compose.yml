@@ -39,6 +39,10 @@ services:
       - EUREKA_INSTANCE_PREFER_IP=false
       - EUREKA_INSTANCE_HOSTNAME=auth
       - NATS_SERVER=nats://nats:4222
+      # GitHub OAuth (client secret: backend only)
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GITHUB_REDIRECT_URI=${GITHUB_REDIRECT_URI:-}
     depends_on:
       - pg-pagatu
       - nats

@@ -57,9 +57,19 @@ public class AuthController {
         return ResponseEntity.ok(oAuthService.loginWithGoogle(request));
     }
 
-    @PostMapping("/oauth/microsoft")
-    public ResponseEntity<LoginResponse> loginWithMicrosoft(@Valid @RequestBody OAuthTokenRequest request) {
-        return ResponseEntity.ok(oAuthService.loginWithMicrosoft(request));
+    @PostMapping("/oauth/discord")
+    public ResponseEntity<LoginResponse> loginWithDiscord(@Valid @RequestBody DiscordRequest request) {
+        return ResponseEntity.ok(oAuthService.loginWithDiscord(request));
+    }
+
+    @PostMapping("/oauth/slack")
+    public ResponseEntity<LoginResponse> loginWithSlack(@Valid @RequestBody SlackRequest slackRequest){
+        return ResponseEntity.ok(oAuthService.loginWithSlack(slackRequest));
+    }
+
+    @PostMapping("/oauth/github")
+    public ResponseEntity<LoginResponse> loginWithGithub (@Valid @RequestBody GithubRequest githubRequest){
+        return ResponseEntity.ok(oAuthService.loginWithGithub(githubRequest));
     }
 
     @GetMapping("/verify-email")
