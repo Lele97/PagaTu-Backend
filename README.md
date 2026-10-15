@@ -11,6 +11,11 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Branch-develop-f97583?logo=github&logoColor=white" alt="Branch: develop">
+  <img src="https://img.shields.io/badge/Status-In%20Development-f97583?logo=git&logoColor=white" alt="Status: In Development">
+</p>
+
+<p align="center">
   <a href="README.md"><img src="https://img.shields.io/badge/ARCHITETTURA-5_microservizi-6DB33F?style=flat-square" alt="Architettura"></a>
   <img src="https://img.shields.io/badge/Eventi-8_subject_NATS-27AAE1?style=flat-square" alt="Eventi">
   <img src="https://img.shields.io/badge/Test-102_JUnit_5-25A162?style=flat-square" alt="Test">
@@ -356,7 +361,7 @@ raggiungibile l'`OutboxProcessor` **non entra neppure nel loop** e riprenderà a
 | **Validazione al gateway** | filtro globale con allow-list di 14 path pubblici (login, register, OAuth GitHub/Discord/Slack/Google/Microsoft, reset, verify, Swagger, actuator) |
 | **CORS** | `allowedOriginPatterns` da configurazione, `allowCredentials(true)`, preflight `OPTIONS` gestito dal filtro |
 | **Password** | BCrypt (`PasswordEncoder`); il cambio password è negato agli account OAuth |
-| **OAuth2** | GitHub, Discord, Slack (auth code flow), Google (Identity Services), Microsoft (Graph) � username generato e controllo collisione |
+| **OAuth2** | GitHub, Discord, Slack (auth code flow), Google (Identity Services), Microsoft (Graph) � username generato e controllo collisione |
 | **Rate limiting** | Bucket4j su forgot-password e verifica email: 3 tentativi/ora per IP, con `429` e header `Retry-After` |
 | **Validazione input** | Bean Validation sui DTO, più vincoli custom (`@Age` sull'età minima) |
 | **Gestione errori** | `@ControllerAdvice` centralizzato: **20 handler** in `auth`, **11** in `coffee`, risposte JSON uniformi |
