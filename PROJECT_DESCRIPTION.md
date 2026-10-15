@@ -15,7 +15,7 @@ Designed and built a **production-grade, 5-service microservices platform** (Spr
 
 | Service | Responsibility | Key Technical Highlights |
 |---------|---------------|--------------------------|
-| **Auth** | Identity, JWT, OAuth2, email verification, password reset | Rate-limited reset (3/24h), token cleanup batch job, Caffeine L2 cache, WebClient sync to Coffee, **transactional outbox → NATS** for verification/reset emails, global exception hierarchy |
+| **Auth** | Identity, JWT, **OAuth2 (GitHub, Discord, Slack, Google, Microsoft)**, email verification, password reset | Rate-limited reset (3/24h), token cleanup batch job, Caffeine L2 cache, WebClient sync to Coffee, **transactional outbox → NATS** for verification/reset emails, global exception hierarchy |
 | **Coffee (Core Domain)** | Turn-tracking, groups, invitations, payments, skips, gamification | **11 Flyway migrations** (V1–V11) evolving schema from basic users/groups → round numbers, monthly skip counters, pay-for-admin-only, coffee_karma, awards; **PaymentService** orchestrates rotation logic (random selection, round reset, streak/skip stats, award evaluation); **GroupService** manages membership lifecycle (invite/accept/reject, admin transfer, leave/remove, turn reassignment on exit); **OutboxProcessor** (@Scheduled, configurable batch/retry/cleanup) guarantees at-least-once NATS delivery |
 | **Mail** | 9 transactional HTML emails via Thymeleaf | Reactive **WebClient** fan-out to Auth/Coffee for user data; consumes **7 NATS subjects** (next-payment, skip-payment, invitation, invitation-response, pay-for, turn-reminder, reset-password, verify-email); Italian locale, currency/date formatting, proper MIME headers (List-Unsubscribe, X-Priority) |
 | **Gateway** | Edge routing, JWT validation, resilience, observability | **Spring Cloud Gateway (reactive)**; **GlobalFilter (order=1)** validates JWT (JJWT, Base64-secret, HS256), exempts open endpoints; **Resilience4j circuit breakers** per downstream (sliding window, half-open probes); fallback controller; CORS with dynamic origins; aggregates OpenAPI via springdoc |
@@ -35,7 +35,7 @@ Designed and built a **production-grade, 5-service microservices platform** (Spr
 - **Event-Driven Decoupling** — Coffee publishes domain events (NextPaymentEvent, SkipPaymentEvent, PayForEvent, InvitationEvent, TurnReminderEvent); Mail consumes & sends emails; Auth publishes verification/reset events
 - **Distributed Rate Limiting** — Auth: password-reset limiter (3/24h, persisted tokens); Gateway-ready for Redis-backed Bucket4j (token-bucket, 429 + `X-RateLimit-*` headers)
 - **Centralized Security** — Gateway validates JWT on every protected request; services trust gateway (no redundant validation); public endpoints explicitly allow-listed
-- **Schema Evolution Discipline** — Flyway `validate-on-migrate: true` in prod; baseline-on-migrate; 16 total migrations across services
+- **Schema Evolution Discipline** — Flyway `validate-on-migrate: true` in prod; baseline-on-migrate; 19 total migrations across services (8 auth + 11 coffee)
 
 ---
 
@@ -100,10 +100,10 @@ Designed and built a **production-grade, 5-service microservices platform** (Spr
 | Category | Technologies |
 |----------|--------------|
 | **Language / Runtime** | Java 17, Spring Boot 3.4.5, Spring Cloud 2024.0.1 |
-| **Data & Persistence** | PostgreSQL 15, Flyway (16 migrations), Hibernate/JPA, H2 (test) |
+| **Data & Persistence** | PostgreSQL 15, Flyway (19 migrations), Hibernate/JPA, H2 (test) |
 | **Messaging** | NATS (JetStream-ready), Transactional Outbox Pattern |
 | **API & Docs** | REST/JSON, OpenAPI 3 / Swagger UI (springdoc), springdoc-openapi-starter-webmvc-ui |
-| **Security** | JWT (JJWT 0.11.5, HS256), Spring Security, OAuth2 (Google, Microsoft), BCrypt, Rate Limiting (Bucket4j + Redis-ready) |
+| **Security** | JWT (JJWT 0.11.5, HS256), Spring Security, **OAuth2 (GitHub, Discord, Slack, Google, Microsoft)**, BCrypt, Rate Limiting (Bucket4j + Redis-ready) |
 | **Resilience** | Resilience4j (CircuitBreaker, TimeLimiter), Retry (Spring Retry) |
 | **Caching** | Caffeine (L2, Auth service), Spring Cache abstraction |
 | **Observability** | Micrometer + Actuator (health, info, metrics, circuitbreakers), structured logging (SLF4J + Logback), correlation IDs (planned) |
