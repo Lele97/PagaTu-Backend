@@ -2,7 +2,10 @@ package com.pagatu.coffee.controller;
 
 import com.pagatu.coffee.dto.GroupDto;
 import com.pagatu.coffee.dto.InvitationRequest;
-import com.pagatu.coffee.dto.NuovoGruppoRequest;
+import com.pagatu.coffee.dto.NewGroupRequest;
+import com.pagatu.coffee.dto.RemoveMemberRequest;
+import com.pagatu.coffee.dto.TransferAdminRequest;
+import com.pagatu.coffee.exception.UserNotInGroup;
 import com.pagatu.coffee.service.GroupService;
 import com.pagatu.coffee.service.JwtService;
 import jakarta.validation.Valid;
@@ -13,6 +16,23 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * REST controller for managing coffee payment groups.
+ * <p>
+ * This controller provides endpoints for group management operations including:
+ * <ul>
+ * <li>Creating new coffee payment groups</li>
+ * <li>Deleting groups (with proper authorization)</li>
+ * <li>Adding users to existing groups</li>
+ * <li>Sending group invitations</li>
+ * <li>Retrieving user's group memberships</li>
+ * </ul>
+ * </p>
+ * <p>
+ * All endpoints require proper authentication and authorization.
+ * Group operations are restricted to authorized users only.
+ * </p>
+ */
 @Slf4j
 @RestController
 @RequestMapping("api/coffee/group")
@@ -21,44 +41,138 @@ public class GroupController {
     private final GroupService groupService;
     private final JwtService jwtService;
 
+    /**
+     * @param groupService group business logic
+     * @param jwtService   JWT extraction from Authorization header
+     */
     public GroupController(GroupService groupService, JwtService jwtService) {
         this.groupService = groupService;
         this.jwtService = jwtService;
     }
 
+    /**
+     * Creates a new coffee payment group.
+     *
+     * @param newGroupRequest the request containing group name and description
+     * @param authHeader      JWT authorization header
+     * @return ResponseEntity containing the created group information
+     */
     @PostMapping
     public ResponseEntity<GroupDto> createGroup(
-            @Valid @RequestBody NuovoGruppoRequest nuovoGruppoRequest,
+            @Valid @RequestBody NewGroupRequest newGroupRequest,
             @RequestHeader("Authorization") String authHeader) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
-        GroupDto group = groupService.createGroup(nuovoGruppoRequest, userId);
+        GroupDto group = groupService.createGroup(newGroupRequest, userId);
         return ResponseEntity.ok(group);
     }
 
+    /**
+     * Deletes a group by name.
+     *
+     * @param groupName  the name of the group to delete
+     * @param authHeader JWT authorization header
+     * @return ResponseEntity with success message
+     */
     @DeleteMapping("/delete/{groupName}")
     public ResponseEntity<String> deleteGroupByName(
-            @PathVariable String groupName,
+            @PathVariable("groupName") String groupName,
             @RequestHeader("Authorization") String authHeader) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         groupService.deleteGroupByName(groupName, userId);
-        return ResponseEntity.ok("Group '" + groupName + "' deleted successfully");
+        return ResponseEntity.ok("Gruppo '" + groupName + "' eliminato con successo");
     }
 
+    /**
+     * Accepts a group invitation and adds the user to the group.
+     *
+     * @param username     the username of the invited user
+     * @param groupName    the name of the group to join
+     * @param invitationId the identifier of the active invitation
+     * @return ResponseEntity with success message
+     */
     @PutMapping("/update/addtogroup")
     public ResponseEntity<String> addUserToGroup(
             @RequestParam("username") String username,
-            @RequestParam("groupName") String groupName) {
-        groupService.addUserToGroup(groupName, username);
-        return ResponseEntity.ok("User '" + username + "' added to group '" + groupName + "' successfully");
+            @RequestParam("groupName") String groupName,
+            @RequestParam("invitationId") Long invitationId,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.addUserToGroup(groupName, username, invitationId, userId);
+        return ResponseEntity.ok("Utente '" + username + "' aggiunto al gruppo '" + groupName + "' con successo");
     }
 
+    /**
+     * Rejects an invitation to join a group.
+     *
+     * @param username     the username of the user rejecting the invitation
+     * @param groupName    the name of the group
+     * @param invitationId the identifier of the active invitation
+     * @return ResponseEntity with success message
+     */
+    @PutMapping("/update/rejectinvitation")
+    public ResponseEntity<String> rejectInvitation(
+            @RequestParam("username") String username,
+            @RequestParam("groupName") String groupName,
+            @RequestParam("invitationId") Long invitationId,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.rejectInvitation(groupName, username, invitationId, userId);
+        return ResponseEntity.ok("Invito al gruppo '" + groupName + "' rifiutato con successo");
+    }
+
+    /**
+     * Sends an invitation to a user to join a group.
+     *
+     * @param invitationRequest the invitation details including username and group
+     * @param authHeader        JWT authorization header
+     * @return ResponseEntity with success message
+     */
     @PostMapping("/update/invitation")
     public ResponseEntity<String> sendInvitationToGroup(
-            @RequestBody InvitationRequest invitationRequest,
+            @Valid @RequestBody InvitationRequest invitationRequest,
             @RequestHeader("Authorization") String authHeader) {
         Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
         groupService.sendInvitationToGroup(userId, invitationRequest);
-        return ResponseEntity.ok("Invitation sent to user '" + invitationRequest.getUsername() + "' successfully");
+        String target = invitationRequest.getEmail() != null ? invitationRequest.getEmail() : invitationRequest.getUsername();
+        return ResponseEntity.ok("Invito inviato a '" + target + "' con successo");
+    }
+
+    @PutMapping("/update/leave")
+    public ResponseEntity<String> leaveGroup(
+            @RequestParam("groupName") String groupName,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.leaveGroup(groupName, userId);
+        return ResponseEntity.ok("Hai lasciato il gruppo '" + groupName + "' con successo");
+    }
+
+    @DeleteMapping("/update/member")
+    public ResponseEntity<String> removeMember(
+            @Valid @RequestBody RemoveMemberRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.removeMember(userId, request.getGroupName(), request.getUsername());
+        return ResponseEntity.ok("Membro '" + request.getUsername() + "' rimosso dal gruppo");
+    }
+
+    @PutMapping("/update/transfer-admin")
+    public ResponseEntity<String> transferAdmin(
+            @Valid @RequestBody TransferAdminRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        groupService.transferAdmin(userId, request.getGroupName(), request.getNewAdminUsername());
+        return ResponseEntity.ok("Admin del gruppo trasferito a '" + request.getNewAdminUsername() + "'");
+    }
+
+    /**
+     * Returns a rich summary for a single group (members, turn, skips remaining).
+     */
+    @GetMapping("/summary")
+    public ResponseEntity<GroupDto> getGroupSummary(
+            @RequestParam("groupName") String groupName,
+            @RequestHeader("Authorization") String authHeader) {
+        Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+        return ResponseEntity.ok(groupService.getGroupSummary(groupName, userId));
     }
 
     @PostMapping("/get/{username}")
@@ -66,29 +180,27 @@ public class GroupController {
             @PathVariable("username") String username,
             @RequestHeader("Authorization") String authHeader) {
         try {
-            // Verify token is valid by extracting user ID (throws exception if invalid)
+
             Long userId = jwtService.extractUserIdFromAuthHeader(authHeader);
+
             log.info("Token valid for user: '{}'", userId);
 
-            // Optional: Verify the requested username matches the token's username
             String tokenUsername = jwtService.extractUsernameFromAuthHeader(authHeader);
             if (!username.equals(tokenUsername)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body("Not authorized to access this user's groups");
+                        .body("Non autorizzato ad accedere ai gruppi di questo utente");
             }
 
             List<GroupDto> groups = groupService.getGroupsByUsername(username);
+
             if (groups.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                        .body("No groups found for username: " + username);
+                throw new UserNotInGroup("l'utente non è presente in nessun gruppo");
             }
             return ResponseEntity.ok(groups);
+
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid authorization token");
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Unable to retrieve groups for username: " + username);
+                    .body("Token di autorizzazione non valido");
         }
     }
 }

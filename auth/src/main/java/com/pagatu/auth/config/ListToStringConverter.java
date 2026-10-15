@@ -2,7 +2,6 @@ package com.pagatu.auth.config;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-
 import java.util.List;
 
 @Converter

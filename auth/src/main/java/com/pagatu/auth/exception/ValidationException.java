@@ -5,22 +5,20 @@ import lombok.Data;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Exception thrown when request validation fails with field-level errors.
+ */
 @Data
 public class ValidationException extends RuntimeException {
+
     private final Map<String, List<String>> fieldErrors;
 
-    public ValidationException(String message) {
-        super(message);
-        this.fieldErrors = null;
-    }
-
+    /**
+     * @param message     summary error message
+     * @param fieldErrors map of field names to validation error messages
+     */
     public ValidationException(String message, Map<String, List<String>> fieldErrors) {
         super(message);
         this.fieldErrors = fieldErrors;
-    }
-
-    public ValidationException(String message, Throwable cause) {
-        super(message, cause);
-        this.fieldErrors = null;
     }
 }

@@ -1,10 +1,14 @@
 package com.pagatu.auth.exception;
 
-public class AuthenticationException extends RuntimeException{
+/**
+ * Exception thrown when login credentials are invalid.
+ */
+public class AuthenticationException extends RuntimeException {
+
+    /**
+     * @param message authentication failure description
+     */
     public AuthenticationException(String message) {
         super(message);
     }
-
-    public AuthenticationException(String message, Throwable cause) {
-        super(message, cause);
-    }}
+}

@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TokenStatistics {
+
     private  long totalTokens;
     private  long activeTokens;
     private  long expiredTokens;

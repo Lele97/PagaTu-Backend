@@ -1,18 +1,21 @@
 server:
-  port: 8083
+  port: ${SERVER_PORT:8083}
 
 coffee:
   service:
-    base-url: http://localhost:8082
+    base-url: ${COFFEE_SERVICE_URL:lb://coffee}
 
-# For Email Service
+auth:
+  service:
+    base-url: ${AUTH_SERVICE_URL:lb://auth}
+
 app:
   frontend:
-    base-url: https://a547-83-225-26-26.ngrok-free.app
-    path: /update/addtogroup
-    resetPswPath: //reset-password
+    invitationPath: /invitation
+    resetPswPath: /resetPassword
+    verifyEmailPath: /verify-email
     company: Paga-Tu
-    domainUrl: http://localhost:8888
+    domainUrl: ${DOMAIN_URL:http://localhost:8888}
 
 spring:
   thymeleaf:
@@ -24,42 +27,49 @@ spring:
   application:
     name: mail
   mail:
-    host: ${SPRING_MAIL_HOST:smtp.gmail.com}
-    port: ${SPRING_MAIL_PORT:587}
-    username: ${SPRING_MAIL_USERNAME:grandinetti.gabriele.mail@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:kdwv jbec dnkh jkqz}
+    # Default = Mailpit locale (docker-compose): nessuna credenziale, nessun TLS.
+    # Per Gmail o qualsiasi SMTP reale, imposta SPRING_MAIL_HOST / _PORT / _USERNAME / _PASSWORD
+    # tramite variabili d'ambiente. Non hardcodare mai credenziali qui.
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
-          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:true}
+          auth: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH:false}
           starttls:
-            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:true}
+            enable: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE:false}
 
-  kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-    consumer:
-      group-id: email-service
-      auto-offset-reset: earliest
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: com.pagatu.coffee.event,com.pagatu.email.event,com.pagatu.auth.event
-        spring.json.use.type.headers: false
-        spring.json.type.mapping: >
-          prossimopagamento:com.pagatu.email.event.ProssimoPagamentoEvent,
-          invitation:com.pagatu.email.event.InvitationEvent,
-          saltapagamento:com.pagatu.email.event.SaltaPagamentoEvent
-          resetPasswordMail:com.pagatu.email.event.ResetPasswordMailEvent
-
-
-jwt:
-  secret: ${JWT_SECRET:pagatu_super_secure_secret_key_for_jwt_authentication_2025}
-
+  # NATS Configuration
+  nats:
+    subject:
+      next-payment: next-payment-subject
+      skip-payment: skip-payment-subject
+      invitation: invitation-subject
+      reset-password-mail: reset-password-mail
+      verify-email-mail: verify-email-mail
+      pay-for: pay-for-topic
+      invitation-response: invitation-response-subject
+      turn-reminder: turn-reminder-subject
+    server: ${NATS_SERVER:nats://localhost:4222}
+    connection-timeout: 5000
+    max-reconnect: -1
+    connection-name: mail-service
+  
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP:true}
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:}
 
 springdoc:
   api-docs:

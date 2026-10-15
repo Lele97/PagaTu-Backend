@@ -1,13 +1,20 @@
 services:
-  gateway-service:
+  gateway:
     build: ./gateway-service
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT:-8080}:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - AUTH_SERVICE_URL=http://auth:8081
-      - CAFFE_SERVICE_URL=http://coffee:8082
-      - EMAIL_SERVICE_URL=http://mail:8083
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
+      - SERVER_PORT=8080
+      - AUTH_SERVICE_URL=lb://auth
+      - COFFEE_SERVICE_URL=lb://coffee
+      - EMAIL_SERVICE_URL=lb://mail
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - JWT_SECRET=${JWT_SECRET}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - CORS_ALLOWED_METHODS=${CORS_ALLOWED_METHODS}
+      - CORS_ALLOWED_HEADERS=${CORS_ALLOWED_HEADERS}
+      - CORS_EXPOSED_HEADERS=${CORS_EXPOSED_HEADERS}
     depends_on:
       - auth
       - coffee
@@ -18,74 +25,127 @@ services:
   auth:
     build: ./auth
     ports:
-      - "8081:8081"
+      - "8081:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SERVER_PORT=8081
-      - SPRING_DATASOURCE_URL=jdbc:h2:mem:authdb
-      - SPRING_DATASOURCE_USERNAME=sa
-      - SPRING_DATASOURCE_PASSWORD=password
-      - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
-      - JWT_EXPIRATION=86400000
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SERVER_PORT=8080
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST:-pg-pagatu}:${DB_PORT:-5432}/${DB_NAME_AUTH:-auth}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - COFFEE_SERVICE_URL=lb://coffee
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - EUREKA_INSTANCE_PREFER_IP=false
+      - EUREKA_INSTANCE_HOSTNAME=auth
+      - NATS_SERVER=nats://nats:4222
+      # GitHub OAuth (client secret: backend only)
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GITHUB_REDIRECT_URI=${GITHUB_REDIRECT_URI:-}
+    depends_on:
+      - pg-pagatu
+      - nats
     networks:
       - pagatu-network
 
   coffee:
     build: ./coffee
     ports:
-      - "8082:8082"
+      - "8082:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SERVER_PORT=8082
-      - SPRING_DATASOURCE_URL=jdbc:h2:mem:caffedb
-      - SPRING_DATASOURCE_USERNAME=sa
-      - SPRING_DATASOURCE_PASSWORD=password
-      - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SERVER_PORT=8080
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST:-pg-pagatu}:${DB_PORT:-5432}/${DB_NAME_COFFEE:-coffee}
+      - SPRING_DATASOURCE_USERNAME=${DB_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - EUREKA_INSTANCE_PREFER_IP=false
+      - EUREKA_INSTANCE_HOSTNAME=coffee
+      - NATS_SERVER=nats://nats:4222
     depends_on:
-      - kafka
+      - pg-pagatu
+      - nats
     networks:
       - pagatu-network
 
   mail:
     build: ./mail
     ports:
-      - "8083:8083"
+      - "8083:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
-      - SERVER_PORT=8083
-      - SPRING_MAIL_HOST=smtp.gmail.com
-      - SPRING_MAIL_PORT=587
-      - SPRING_MAIL_USERNAME=grandinetti.gabriele.mail@gmail.com
-      - SPRING_MAIL_PASSWORD=kdwv jbec dnkh jkqz
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true
-      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true
-      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-      - JWT_SECRET=pagatu_super_secure_secret_key_for_jwt_authentication_2025
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - SERVER_PORT=8080
+      - SPRING_MAIL_HOST=${MAIL_HOST:-mailpit}
+      - SPRING_MAIL_PORT=${MAIL_SMTP_PORT:-1025}
+      - DOMAIN_URL=${DOMAIN_URL:-http://localhost:8888}
+      - SPRING_MAIL_USERNAME=${MAIL_USERNAME:-noreply@pagatu.local}
+      - SPRING_MAIL_PASSWORD=${MAIL_PASSWORD:-pagatu}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=${MAIL_SMTP_AUTH:-false}
+      - SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=${MAIL_SMTP_STARTTLS:-false}
+      - NATS_SERVER=nats://nats:4222
+      - JWT_SECRET=${JWT_SECRET}
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=${EUREKA_URL:-http://eureka:8080/eureka/}
+      - EUREKA_INSTANCE_PREFER_IP=false
+      - EUREKA_INSTANCE_HOSTNAME=mail
+      - COFFEE_SERVICE_URL=lb://coffee
+      - AUTH_SERVICE_URL=lb://auth
     depends_on:
-      - kafka
+      - nats
+      - mailpit
     networks:
       - pagatu-network
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.3.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
+  # Inbox locale per le email di sviluppo (UI: http://localhost:8025)
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"
+      - "1025:1025"
     networks:
       - pagatu-network
 
-  kafka:
-    image: confluentinc/cp-kafka:7.3.0
-    depends_on:
-      - zookeeper
+  eureka:
+    build: ./eureka-server
+    ports:
+      - "8761:8080"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      - SPRING_PROFILES_ACTIVE=dev
+      - EUREKA_SERVER_PORT=8080
+      - EUREKA_ENVIRONMENT=dev
+      - EUREKA_DATACENTER=PagaTu-local
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka:8080/eureka/
+    networks:
+      - pagatu-network
+
+  # NATS - Lightweight messaging (replaces Kafka)
+  nats:
+    image: nats:latest
+    ports:
+      - "4222:4222"   # Client connections
+      - "8222:8222"   # HTTP monitoring
+    command: ["--http_port", "8222"]
+    networks:
+      - pagatu-network
+
+  pg-pagatu:
+    image: postgres:15
+    container_name: pg-pagatu
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
     networks:
       - pagatu-network
 
 networks:
   pagatu-network:
     driver: bridge
+
+volumes:
+  pg_data:

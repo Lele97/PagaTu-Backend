@@ -11,6 +11,6 @@ RUN mkdir -p /app/templates
 # Copia esplicitamente i template (se necessario)
 COPY src/main/resources/templates /app/templates
 
-EXPOSE 8083
+EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

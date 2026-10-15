@@ -10,8 +10,19 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GroupDto {
+
     private Long id;
     private String name;
     private String description;
     private List<UserMembershipDto> userMembershipsdto;
+    private Integer memberCount;
+    private String currentTurnUsername;
+    private Integer maxSkipPerRound;
+    private Boolean payForEnabled;
+    private Boolean payForAdminOnly;
+    private Integer roundPaidCount;
+    private Integer roundPendingCount;
+    private Integer currentRoundNumber;
+    private Integer maxSkipPerMonth;
+    private Integer maxPayForPerMonth;
 }

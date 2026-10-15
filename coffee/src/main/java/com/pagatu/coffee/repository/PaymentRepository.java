@@ -1,0 +1,91 @@
+package com.pagatu.coffee.repository;
+
+import com.pagatu.coffee.dto.GroupPaymentRankingDto;
+import com.pagatu.coffee.entity.Payment;
+import com.pagatu.coffee.entity.CoffeeUser;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+/**
+ * Repository interface for Payment entity operations.
+ */
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, Long> {
+
+    @Query("SELECT p FROM Payment p WHERE p.userGroupMembership.coffeeUser = :coffeeUser ORDER BY p.paymentDate DESC")
+    List<Payment> findByCoffeeUserOrderByPaymentDateDesc(@Param("coffeeUser") CoffeeUser coffeeUser);
+
+    @Query("SELECT p FROM Payment p " +
+            "LEFT JOIN FETCH p.userGroupMembership ugm " +
+            "LEFT JOIN FETCH ugm.coffeeUser " +
+            "LEFT JOIN FETCH ugm.group " +
+            "WHERE p.userGroupMembership.coffeeUser = :coffeeUser " +
+            "ORDER BY p.paymentDate DESC")
+    List<Payment> findWithUserGroupMembershipByCoffeeUserOrderByPaymentDateDesc(
+            @Param("coffeeUser") CoffeeUser coffeeUser);
+
+    @Query("""
+                SELECT new com.pagatu.coffee.dto.GroupPaymentRankingDto(u.username,
+                    SUM(p.amount),
+                    COUNT(p.id)
+                )
+                FROM Payment p
+                JOIN p.userGroupMembership ugm
+                JOIN ugm.group g
+                JOIN ugm.coffeeUser u
+                WHERE g.name = :groupName
+                GROUP BY u.username
+                ORDER BY SUM(p.amount) DESC
+                limit 5
+            """)
+    List<GroupPaymentRankingDto> getGroupPaymentRanking(@Param("groupName") String groupName);
+
+    @Query("SELECT p FROM Payment p " +
+            "JOIN FETCH p.userGroupMembership ugm " +
+            "JOIN FETCH ugm.coffeeUser " +
+            "JOIN FETCH ugm.group g " +
+            "WHERE g.name = :groupName " +
+            "AND (:year IS NULL OR YEAR(p.paymentDate) = :year) " +
+            "AND (:month IS NULL OR MONTH(p.paymentDate) = :month) " +
+            "ORDER BY p.paymentDate DESC")
+    List<Payment> findGroupPayments(
+            @Param("groupName") String groupName,
+            @Param("year") Integer year,
+            @Param("month") Integer month);
+
+    @Query("SELECT p FROM Payment p " +
+            "JOIN FETCH p.userGroupMembership ugm " +
+            "JOIN FETCH ugm.coffeeUser " +
+            "JOIN FETCH ugm.group g " +
+            "WHERE g.name = :groupName")
+    List<Payment> findAllByGroupName(@Param("groupName") String groupName);
+
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+            "JOIN p.userGroupMembership ugm " +
+            "JOIN ugm.coffeeUser u " +
+            "JOIN ugm.group g " +
+            "WHERE g.name = :groupName AND u.username = :username " +
+            "AND YEAR(p.paymentDate) = :year AND MONTH(p.paymentDate) = :month")
+    Double sumPaymentsByUserInGroupForMonth(
+            @Param("groupName") String groupName,
+            @Param("username") String username,
+            @Param("year") int year,
+            @Param("month") int month);
+
+    @Query("SELECT COUNT(p.id) FROM Payment p " +
+            "JOIN p.userGroupMembership ugm " +
+            "JOIN ugm.coffeeUser u " +
+            "JOIN ugm.group g " +
+            "WHERE g.name = :groupName AND u.username = :username " +
+            "AND p.beneficiaryUsername IS NOT NULL " +
+            "AND YEAR(p.paymentDate) = :year AND MONTH(p.paymentDate) = :month")
+    long countPayForByUserInGroupForMonth(
+            @Param("groupName") String groupName,
+            @Param("username") String username,
+            @Param("year") int year,
+            @Param("month") int month);
+}

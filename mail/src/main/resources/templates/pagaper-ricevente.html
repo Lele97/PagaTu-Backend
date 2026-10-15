@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Un amico ha pagato per te!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f8f9fa;">
+<div style="width: 100%; background-color: #f8f9fa; padding: 20px 0;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); overflow: hidden;">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #643718 0%, #A0522D 100%); color: #ffffff; text-align: center; padding: 30px 20px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 20px;">
+                <tr>
+                    <td style="text-align: center; font-size: 0;">
+                        <span style="display: inline-block; font-size: 60px; font-family: 'Macadamia', Arial, sans-serif; color: #ffffff;">Paga</span>
+                        <span style="display: inline-block; font-size: 60px; font-family: 'Macadamia', Arial, sans-serif; color: #ffffff;">Tu</span>
+                    </td>
+                </tr>
+            </table>
+
+            <h1 style="margin: 0; font-size: 24px; font-weight: normal;">Un amico ha pagato per te!</h1>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 40px 30px;">
+            <p style="font-size: 16px;">Ciao <strong th:text="${friendUsername}">Nome Beneficiario</strong></p>
+
+            <p style="font-size: 16px;"><strong th:text="${payerUsername}">Nome Pagatore</strong> ha pagato il caffè al tuo posto nel gruppo:</p>
+
+            <!-- Blocco dettagli pagamento -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 25px 0; background-color: #f8f9fa; padding: 25px; border-left: 4px solid #643718; border-radius: 8px;">
+                <tr>
+                    <td align="center">
+                        <h2 th:text="${groupName}" style="font-size: 22px; font-weight: bold; color: #333; margin: 0 0 15px;">Nome Gruppo</h2>
+                        <ul style="text-align: start; list-style: none; padding: 0; margin: 0; font-size: 15px; color: #333333;">
+                            <li style="margin-bottom: 10px;">
+                                <strong>Pagato da:</strong>
+                                <span style="font-size: 14px; color: #6c757d;" th:text="${payerUsername}">Nome Pagatore</span>
+                            </li>
+                            <li style="margin-bottom: 10px;">
+                                <strong>Data:</strong>
+                                <span style="font-size: 14px; color: #6c757d;" th:text="${paymentDate}">01/06/2026 10:30</span>
+                            </li>
+                            <li style="margin-bottom: 10px;">
+                                <strong>Importo:</strong>
+                                <span style="font-size: 14px; color: #6c757d;" th:text="${amount}">2.50€</span>
+                            </li>
+                        </ul>
+                    </td>
+                </tr>
+            </table>
+
+            <p style="font-size: 16px; color: #6c757d;">Il tuo turno è stato coperto: non dovrai pagare questa volta!</p>
+
+            <!-- Firma -->
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e9ecef; font-size: 14px; color: #6c757d;">
+                Cordiali saluti,<br>
+                <strong>Il team di <span th:text="${companyName}">Paga-Tu</span></strong>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background-color: #f8f9fa; text-align: center; padding: 30px 20px; border-top: 1px solid #e9ecef;">
+            <p style="font-size: 12px; color: #6c757d; margin: 5px 0;">Questo è un messaggio automatico dal sistema <span th:text="${companyName}">Paga-Tu</span>.</p>
+            <p style="font-size: 12px; color: #6c757d; margin: 5px 0;">Per domande o supporto: <a href="mailto:support@pagatu.com" style="color: #643718; text-decoration: none;">support@pagatu.com</a></p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

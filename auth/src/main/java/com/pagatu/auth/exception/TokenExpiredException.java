@@ -2,27 +2,20 @@ package com.pagatu.auth.exception;
 
 import lombok.Data;
 
+/**
+ * Exception thrown when a security token has expired.
+ */
 @Data
 public class TokenExpiredException extends RuntimeException{
+
     private final String tokenType;
 
-    public TokenExpiredException(String message) {
-        super(message);
-        this.tokenType = "UNKNOWN";
-    }
-
+    /**
+     * @param message   error description
+     * @param tokenType logical token category (e.g. RESET_TOKEN)
+     */
     public TokenExpiredException(String message, String tokenType) {
         super(message);
-        this.tokenType = tokenType;
-    }
-
-    public TokenExpiredException(String message, Throwable cause) {
-        super(message, cause);
-        this.tokenType = "UNKNOWN";
-    }
-
-    public TokenExpiredException(String message, String tokenType, Throwable cause) {
-        super(message, cause);
         this.tokenType = tokenType;
     }
 }

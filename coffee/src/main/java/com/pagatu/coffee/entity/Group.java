@@ -1,6 +1,7 @@
 package com.pagatu.coffee.entity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -10,6 +11,13 @@ import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Entity representing a coffee payment group.
+ * <p>
+ * A group aggregates members who rotate coffee payments. Each group has a unique name,
+ * an optional description, and a collection of {@link UserGroupMembership} records.
+ * </p>
+ */
 @Entity
 @Data
 @Table(name = "user_group")
@@ -17,6 +25,11 @@ import java.util.List;
 @AllArgsConstructor
 public class Group {
 
+    /**
+     * Jackson constructor used when deserializing a group by name only.
+     *
+     * @param name unique group name
+     */
     @JsonCreator
     public Group(@JsonProperty("name") String name) {
         this.name = name;
@@ -32,33 +45,19 @@ public class Group {
     @Column(name = "description")
     private String description;
 
-    // Replace direct many-to-many with membership relationship
+    @Column(name = "max_skip_per_round")
+    private Integer maxSkipPerRound;
+
+    @Column(name = "pay_for_enabled")
+    private Boolean payForEnabled = true;
+
+    @Column(name = "pay_for_admin_only")
+    private Boolean payForAdminOnly = false;
+
+    @Column(name = "current_round_number")
+    private Integer currentRoundNumber = 1;
+
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<UserGroupMembership> userMemberships =  new ArrayList<>();
-
-    // Helper method to get users (for backward compatibility)
-    public List<Utente> getUsers() {
-        if (userMemberships == null) return List.of();
-        return userMemberships.stream()
-                .map(UserGroupMembership::getUtente)
-                .toList();
-    }
-
-    // Helper method to get users with specific status
-    public List<Utente> getUsersWithStatus(Status status) {
-        if (userMemberships == null) return List.of();
-        return userMemberships.stream()
-                .filter(membership -> membership.getStatus() == status)
-                .map(UserGroupMembership::getUtente)
-                .toList();
-    }
-
-    // Helper method to get group admins
-    public List<Utente> getAdmins() {
-        if (userMemberships == null) return List.of();
-        return userMemberships.stream()
-                .filter(membership -> Boolean.TRUE.equals(membership.getIsAdmin()))
-                .map(UserGroupMembership::getUtente)
-                .toList();
-    }
+    @JsonIgnore
+    private List<UserGroupMembership> userMemberships = new ArrayList<>();
 }

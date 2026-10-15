@@ -9,34 +9,44 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
+/**
+ * Service class for handling rate limiting operations.
+ * Provides functionality to check and enforce rate limits using token bucket algorithm.
+ * Integrates with RateLimiterConfig to manage rate limiting buckets for different clients.
+ */
 @Service
 @Log4j2
 public class RateLimiterService {
 
     private final RateLimiterConfig rateLimiterConfig;
 
+    /**
+     * Constructs a RateLimiterService with the required configuration.
+     *
+     * @param rateLimiterConfig the rate limiter configuration providing bucket management
+     */
     public RateLimiterService(RateLimiterConfig rateLimiterConfig) {
         this.rateLimiterConfig = rateLimiterConfig;
     }
 
     /**
-     * Checks if the request is allowed based on rate limiting rules
+     * Checks if a request is allowed based on rate limiting rules for the specified key.
+     * Uses a token bucket algorithm to determine if the request can be processed immediately
+     * or should be rate limited with a suggested wait time.
      *
-     * @param key The unique identifier (usually IP address)
-     * @return RateLimitResult containing whether request is allowed and remaining tokens
+     * @param key the unique identifier for rate limiting (typically client IP address)
+     * @return RateLimiterResult containing whether the request is allowed, remaining tokens,
+     *         and wait time in seconds if rate limited
      */
     public RateLimiterResult checkRateLimit(String key) {
         Bucket bucket = rateLimiterConfig.getBucket(key);
 
-        // Prova a consumare un token e ottieni un probe
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
 
         if (probe.isConsumed()) {
-            // Token consumato con successo
             long remainingTokens = probe.getRemainingTokens();
             return new RateLimiterResult(true, remainingTokens, 0);
         } else {
-            // Nessun token disponibile, calcola tempo di attesa
             long nanosToWait = probe.getNanosToWaitForRefill();
             long waitTimeSeconds = Duration.ofNanos(nanosToWait).getSeconds();
             return new RateLimiterResult(false, 0, waitTimeSeconds);
