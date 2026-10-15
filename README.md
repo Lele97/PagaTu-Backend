@@ -155,7 +155,7 @@ flowchart TB
 
 | Servizio | Porta | Responsabilità | Dimensione |
 |---|:---:|---|---|
-| **`auth`** | 8081 | Identità: registrazione, login JWT, OAuth2 (Google, Microsoft), verifica email, reset password, pulizia batch dei token | 63 classi · 16 endpoint |
+| **`auth`** | 8081 | Identità: registrazione, login JWT, **OAuth2 (GitHub, Discord, Slack, Google, Microsoft)**, verifica email, reset password, pulizia batch dei token | 63 classi · 16 endpoint |
 | **`coffee`** | 8082 | **Core domain**: turni, gruppi, inviti, pagamenti, salta/paga-per, bilancio, karma, premi | 102 classi · 36 endpoint |
 | **`mail`** | 8083 | Consegna email. **Zero endpoint REST**: espone solo subscriber NATS | 19 classi · 8 subscriber |
 | **`gateway-service`** | 8080 | Routing, validazione JWT, CORS, circuit breaker, fallback | 5 classi |
@@ -166,8 +166,18 @@ flowchart TB
 ### `auth` — Identità
 
 - Login e registrazione con **JWT** (JJWT, HS256, chiave Base64 da 256 bit, scadenza 24 h).
-- **OAuth2** con Google (Identity Services, validazione via `tokeninfo`) e Microsoft (Graph API), con
-  generazione automatica dello username in caso di collisione.
+- **OAuth2** con **GitHub, Discord, Slack, Google, Microsoft**:
+  - **GitHub** via authorization code flow: il frontend riceve il `code` da GitHub e lo manda a
+    `POST /api/auth/oauth/github`; il backend lo scambia con un access token usando
+    `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, poi legge profilo ed email verificate
+    (scope `read:user user:email`).
+  - **Discord** via authorization code flow: `POST /api/auth/oauth/discord` con scope `identify email`,
+    restituisce email verificata e username globale.
+  - **Slack** via authorization code flow (OAuth V2): `POST /api/auth/oauth/slack` con scope
+    `identity:read users:read users:read.email`, usa l'endpoint `users.identity` per profilo ed email.
+  - **Google** (Identity Services, validazione via `tokeninfo`) e **Microsoft** (Graph API),
+    con generazione automatica dello username in caso di collisione.
+- Tutti i provider OAuth: creazione/link account locale, email già verificata, sincronizzazione con Coffee.
 - **Verifica email** con token a 48 ore e **reset password** con token a 30 minuti.
 - **Rate limiting** con Bucket4j sugli endpoint sensibili (3 tentativi/ora per IP) più un limite su base dati
   (10 richieste/24 h per email).
@@ -343,10 +353,10 @@ raggiungibile l'`OutboxProcessor` **non entra neppure nel loop** e riprenderà a
 | Aspetto | Implementazione |
 |---|---|
 | **Autenticazione** | JWT firmato HS256 (JJWT), chiave da `JWT_SECRET` in Base64, 24 h di validità |
-| **Validazione al gateway** | filtro globale con allow-list di 13 path pubblici (login, register, OAuth, reset, verify, Swagger, actuator) |
+| **Validazione al gateway** | filtro globale con allow-list di 14 path pubblici (login, register, OAuth GitHub/Discord/Slack/Google/Microsoft, reset, verify, Swagger, actuator) |
 | **CORS** | `allowedOriginPatterns` da configurazione, `allowCredentials(true)`, preflight `OPTIONS` gestito dal filtro |
 | **Password** | BCrypt (`PasswordEncoder`); il cambio password è negato agli account OAuth |
-| **OAuth2** | Google (Identity Services) e Microsoft (Graph), con username generato e controllo di collisione |
+| **OAuth2** | GitHub, Discord, Slack (auth code flow), Google (Identity Services), Microsoft (Graph) � username generato e controllo collisione |
 | **Rate limiting** | Bucket4j su forgot-password e verifica email: 3 tentativi/ora per IP, con `429` e header `Retry-After` |
 | **Validazione input** | Bean Validation sui DTO, più vincoli custom (`@Age` sull'età minima) |
 | **Gestione errori** | `@ControllerAdvice` centralizzato: **20 handler** in `auth`, **11** in `coffee`, risposte JSON uniformi |
@@ -357,8 +367,10 @@ raggiungibile l'`OutboxProcessor` **non entra neppure nel loop** e riprenderà a
 
 ```
 /api/auth/login              /api/auth/register
-/api/auth/oauth/google       /api/auth/oauth/microsoft
-/api/auth/verify-email       /api/auth/resend-verification
+/api/auth/oauth/github       /api/auth/oauth/discord
+/api/auth/oauth/slack        /api/auth/oauth/google
+/api/auth/oauth/microsoft    /api/auth/verify-email
+/api/auth/resend-verification
 /api/auth/forgotPassword     /api/auth/reset-password
 /api/auth/resetPassword      /actuator     /swagger-ui
 /v3/api-docs                 /fallback

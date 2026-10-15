@@ -46,7 +46,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/auth/reset-password",
             "/api/auth/resetPassword",
             "/api/auth/oauth/google",
-            "/api/auth/oauth/microsoft",
+            "/api/auth/oauth/discord",
+            "/api/auth/oauth/github",
             "/api/auth/verify-email",
             "/api/auth/resend-verification",
             "/swagger-ui",
@@ -60,7 +61,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * Filters incoming requests to validate JWT tokens for protected endpoints.
      *
      * @param exchange ServerWebExchange containing the request and response
-     * @param chain GatewayFilterChain for continuing filter processing
+     * @param chain    GatewayFilterChain for continuing filter processing
      * @return Mono<Void> indicating completion of filter processing
      */
     @Override
@@ -145,8 +146,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
      * Handles authentication errors by returning appropriate HTTP status and message.
      *
      * @param exchange ServerWebExchange containing the request and response
-     * @param status HTTP status code to return
-     * @param message Error message to return
+     * @param status   HTTP status code to return
+     * @param message  Error message to return
      * @return Mono<Void> with error response
      */
     private Mono<Void> onError(ServerWebExchange exchange, HttpStatus status, String message) {

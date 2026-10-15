@@ -131,7 +131,7 @@ public class PaymentController {
 
     @PostMapping("/ultimi/pagamenti/{username}")
     public ResponseEntity<Object> getLatestPayments(
-            @PathVariable String username,
+            @PathVariable("username") String username,
             @RequestHeader("Authorization") String authHeader) {
 
         try {

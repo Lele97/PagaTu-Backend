@@ -38,9 +38,18 @@ resilience4j:
         waitDurationInOpenState: 10000
         permittedNumberOfCallsInHalfOpenState: 3
   timelimiter:
+    # Il TimeLimiter viene cercato con lo STESSO nome del circuit breaker che protegge.
+    # Un'istanza chiamata "default" non viene mai usata: per un nome non registrato
+    # Resilience4j crea un TimeLimiter al volo con il proprio default, che e' 1 secondo.
+    # Con 1s ogni login OAuth andava in timeout (fa 3 chiamate in sequenza verso GitHub)
+    # e finiva nel fallback 503 anche se il servizio rispondeva correttamente.
     instances:
-      default:
-        timeout-duration: 10s
+      authCircuitBreaker:
+        timeout-duration: 15s
+      coffeeCircuitBreaker:
+        timeout-duration: 15s
+      emailCircuitBreaker:
+        timeout-duration: 15s
 
 management:
   endpoints:
