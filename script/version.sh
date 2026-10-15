@@ -100,10 +100,12 @@ calculate_next_version() {
         if echo "$commits" | grep -qi "BREAKING CHANGE\|breaking:"; then
             has_breaking=true
         fi
-        if echo "$commits" | grep -qi "^feat\|^feature:"; then
+        # Match feat: or feature: after commit hash (space + feat:)
+        if echo "$commits" | grep -qi " feat:\| feature:"; then
             has_feature=true
         fi
-        if echo "$commits" | grep -qi "^fix\|^bug:"; then
+        # Match fix: or bug: after commit hash (space + fix:)
+        if echo "$commits" | grep -qi " fix:\| bug:"; then
             has_fix=true
         fi
     fi
