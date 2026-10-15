@@ -2,11 +2,15 @@ package com.pagatu.auth.service;
 
 import com.pagatu.auth.config.DiscordProperties;
 import com.pagatu.auth.config.GithubProperties;
+import com.pagatu.auth.config.SlackProperties;
 import com.pagatu.auth.dto.GithubRequest;
 import com.pagatu.auth.dto.GithubTokenResponse;
 import com.pagatu.auth.dto.GithubUser;
 import com.pagatu.auth.dto.GithubUserEmail;
 import com.pagatu.auth.dto.LoginResponse;
+import com.pagatu.auth.dto.SlackRequest;
+import com.pagatu.auth.dto.SlackTokenResponse;
+import com.pagatu.auth.dto.SlackUser;
 import com.pagatu.auth.entity.AuthProvider;
 import com.pagatu.auth.entity.User;
 import com.pagatu.auth.exception.AuthenticationException;
@@ -61,6 +65,10 @@ class OAuthServiceTest {
     private static final String USER_URL = "https://api.github.com/user";
     private static final String USER_EMAILS_URL = "https://api.github.com/user/emails";
 
+    // Slack constants
+    private static final String SLACK_TOKEN_URL = "https://slack.com/api/oauth.v2.access";
+    private static final String SLACK_USER_URL = "https://slack.com/api/users.identity";
+
     @Mock
     private UserRepository userRepository;
 
@@ -74,6 +82,7 @@ class OAuthServiceTest {
 
     private GithubProperties githubProperties;
     private DiscordProperties discordProperties;
+    private SlackProperties slackProperties;
 
     private OAuthService oAuthService;
 
@@ -86,6 +95,10 @@ class OAuthServiceTest {
     private RequestHeadersSpec emailsRequestSpec;
     private ResponseSpec userResponseSpec;
     private ResponseSpec emailsResponseSpec;
+
+    // Slack-specific mock specs
+    private RequestHeadersSpec slackProfileRequestSpec;
+    private ResponseSpec slackUserResponseSpec;
 
     @BeforeEach
     void setUp() {
@@ -101,6 +114,7 @@ class OAuthServiceTest {
         RequestBodyUriSpec postSpec = mock(WebClient.RequestBodyUriSpec.class);
         when(webClient.post()).thenReturn(postSpec);
         doReturn(bodySpecStub).when(postSpec).uri(eq(TOKEN_URL), any(Object[].class));
+        doReturn(bodySpecStub).when(postSpec).uri(eq(SLACK_TOKEN_URL), any(Object[].class));
         when(bodySpecStub.contentType(any())).thenReturn(bodySpecStub);
         when(bodySpecStub.accept(any())).thenReturn(bodySpecStub);
         RequestHeadersSpec tokenBodyStub = mock(RequestHeadersSpec.class);
@@ -113,10 +127,13 @@ class OAuthServiceTest {
         emailsResponseSpec = mock(ResponseSpec.class);
         profileRequestSpec = mock(RequestHeadersSpec.class);
         emailsRequestSpec = mock(RequestHeadersSpec.class);
+        slackUserResponseSpec = mock(ResponseSpec.class);
+        slackProfileRequestSpec = mock(RequestHeadersSpec.class);
         RequestHeadersUriSpec getSpec = mock(WebClient.RequestHeadersUriSpec.class);
         when(webClient.get()).thenReturn(getSpec);
         doReturn(profileRequestSpec).when(getSpec).uri(eq(USER_URL), any(Object[].class));
         doReturn(emailsRequestSpec).when(getSpec).uri(eq(USER_EMAILS_URL), any(Object[].class));
+        doReturn(slackProfileRequestSpec).when(getSpec).uri(eq(SLACK_USER_URL), any(Object[].class));
         when(profileRequestSpec.accept(any())).thenReturn(profileRequestSpec);
         when(profileRequestSpec.header(anyString(), any(String[].class))).thenReturn(profileRequestSpec);
         when(profileRequestSpec.retrieve()).thenReturn(userResponseSpec);
@@ -124,12 +141,24 @@ class OAuthServiceTest {
         when(emailsRequestSpec.accept(any())).thenReturn(emailsRequestSpec);
         when(emailsRequestSpec.header(anyString(), any(String[].class))).thenReturn(emailsRequestSpec);
         when(emailsRequestSpec.retrieve()).thenReturn(emailsResponseSpec);
+        when(slackProfileRequestSpec.accept(any())).thenReturn(slackProfileRequestSpec);
+        when(slackProfileRequestSpec.header(anyString(), any(String[].class))).thenReturn(slackProfileRequestSpec);
+        when(slackProfileRequestSpec.retrieve()).thenReturn(slackUserResponseSpec);
+        when(slackUserResponseSpec.onStatus(any(), any())).thenReturn(slackUserResponseSpec);
 
         githubProperties = new GithubProperties();
         githubProperties.setClientId("test-client-id");
         githubProperties.setClientSecret("test-client-secret");
 
-        oAuthService = new OAuthService(userRepository, authService, webClientBuilder, githubProperties,discordProperties);
+        discordProperties = new DiscordProperties();
+        discordProperties.setClientId("test-discord-id");
+        discordProperties.setClientSecret("test-discord-secret");
+
+        slackProperties = new SlackProperties();
+        slackProperties.setClientId("test-slack-id");
+        slackProperties.setClientSecret("test-slack-secret");
+
+        oAuthService = new OAuthService(userRepository, authService, webClientBuilder, githubProperties, discordProperties, slackProperties);
     }
 
     @Test
@@ -365,5 +394,204 @@ class OAuthServiceTest {
 
     private void stubEmailsResponse(List<GithubUserEmail> emails) {
         when(emailsResponseSpec.bodyToFlux(GithubUserEmail.class)).thenReturn(Flux.fromIterable(emails));
+    }
+
+    // ===== Slack tests =====
+
+    @Test
+    void loginWithSlack_WhenCredentialsMissing_ShouldThrowServiceUnavailable() {
+        slackProperties.setClientId(null);
+        slackProperties.setClientSecret(null);
+
+        assertThrows(ServiceUnavailableException.class,
+                () -> oAuthService.loginWithSlack(new SlackRequest("code", null)));
+
+        verify(webClient, never()).post();
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void loginWithSlack_WhenCodeIsInvalid_ShouldThrowAuthenticationException() {
+        stubSlackTokenResponse(new SlackTokenResponse(null, null, null, false, "invalid_code",
+                "The code passed is incorrect or expired."));
+
+        AuthenticationException exception = assertThrows(AuthenticationException.class,
+                () -> oAuthService.loginWithSlack(new SlackRequest("expired-code", null)));
+
+        assertTrue(exception.getMessage().contains("code passed is incorrect"));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void loginWithSlack_WhenNoAccessTokenInResponse_ShouldThrowAuthenticationException() {
+        stubSlackTokenResponse(new SlackTokenResponse(null, "Bearer", "identity:read", true, null, null));
+
+        AuthenticationException exception = assertThrows(AuthenticationException.class,
+                () -> oAuthService.loginWithSlack(new SlackRequest("code", null)));
+
+        assertTrue(exception.getMessage().contains("access_token mancante"));
+    }
+
+    @Test
+    void loginWithSlack_ShouldSendClientCredentialsAndRedirectUri() {
+        stubSlackHappyPath("slackuser@example.com", "U123456", "slackuser");
+
+        oAuthService.loginWithSlack(new SlackRequest("valid-code", "http://localhost:8888/auth/callback/slack"));
+
+        ArgumentCaptor<MultiValueMap<String, String>> formCaptor =
+                ArgumentCaptor.forClass(MultiValueMap.class);
+        verify(requestBodySpec).contentType(MediaType.APPLICATION_FORM_URLENCODED);
+        verify(requestBodySpec).bodyValue(formCaptor.capture());
+
+        MultiValueMap<String, String> form = formCaptor.getValue();
+        assertEquals("test-slack-id", form.getFirst("client_id"));
+        assertEquals("test-slack-secret", form.getFirst("client_secret"));
+        assertEquals("valid-code", form.getFirst("code"));
+        assertEquals("http://localhost:8888/auth/callback/slack", form.getFirst("redirect_uri"));
+    }
+
+    @Test
+    void loginWithSlack_WhenRedirectUriNotProvided_ShouldUseConfiguredOne() {
+        slackProperties.setRedirectUri("http://localhost:8888/auth/callback/slack");
+        stubSlackHappyPath("slackuser@example.com", "U123456", "slackuser");
+
+        oAuthService.loginWithSlack(new SlackRequest("valid-code", null));
+
+        ArgumentCaptor<MultiValueMap<String, String>> formCaptor =
+                ArgumentCaptor.forClass(MultiValueMap.class);
+        verify(requestBodySpec).bodyValue(formCaptor.capture());
+        assertEquals("http://localhost:8888/auth/callback/slack",
+                formCaptor.getValue().getFirst("redirect_uri"));
+    }
+
+    @Test
+    void loginWithSlack_ShouldCallSlackApiWithBearerToken() {
+        stubSlackHappyPath("slackuser@example.com", "U123456", "slackuser");
+
+        oAuthService.loginWithSlack(new SlackRequest("valid-code", null));
+
+        verify(slackProfileRequestSpec).header(HttpHeaders.AUTHORIZATION, "Bearer xoxp_token");
+    }
+
+    @Test
+    void loginWithSlack_WhenUserAlreadyLinked_ShouldReturnExistingUser() {
+        User existing = existingSlackUser();
+        stubSlackHappyPath("slackuser@example.com", "U123456", "slackuser");
+
+        when(userRepository.findByProviderIdAndAuthProvider("U123456", AuthProvider.SLACK))
+                .thenReturn(Optional.of(existing));
+        when(authService.buildLoginResponse(existing))
+                .thenReturn(new LoginResponse("jwt", "slackuser", "slackuser@example.com"));
+
+        LoginResponse response = oAuthService.loginWithSlack(new SlackRequest("valid-code", null));
+
+        assertEquals("slackuser", response.username());
+        assertEquals("slackuser@example.com", response.email());
+        assertEquals("jwt", response.token());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void loginWithSlack_WhenEmailMissing_ShouldThrowAuthenticationException() {
+        SlackUser user = new SlackUser(true,
+                new SlackUser.SlackUserInner("U123456", "slackuser", null),
+                new SlackUser.SlackTeamInner("T123456", "Test Team"),
+                "identity:read users:read users:read.email", null, null);
+        stubSlackTokenResponse(new SlackTokenResponse("xoxp_token", "Bearer", "identity:read users:read users:read.email", true, null, null));
+        stubSlackUserResponse(user);
+
+        AuthenticationException exception = assertThrows(AuthenticationException.class,
+                () -> oAuthService.loginWithSlack(new SlackRequest("valid-code", null)));
+
+        assertTrue(exception.getMessage().contains("Slack non ha restituito l'email"));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void loginWithSlack_WhenExistingLocalAccount_ShouldLinkProvider() {
+        User existing = new User();
+        existing.setId(3L);
+        existing.setUsername("localuser");
+        existing.setEmail("local@example.com");
+        existing.setAuthProvider(AuthProvider.LOCAL);
+        existing.setPassword("encoded");
+
+        stubSlackHappyPath("local@example.com", "U111111", "localuser");
+
+        oAuthService.loginWithSlack(new SlackRequest("valid-code", null));
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertEquals(AuthProvider.SLACK, captor.getValue().getAuthProvider());
+        assertEquals("U111111", captor.getValue().getProviderId());
+        assertTrue(captor.getValue().getEmailVerified());
+    }
+
+    @Test
+    void loginWithSlack_WhenAccountLinkedToOtherProvider_ShouldReject() {
+        User existing = new User();
+        existing.setId(4L);
+        existing.setUsername("multiuser");
+        existing.setEmail("multi@example.com");
+        existing.setAuthProvider(AuthProvider.GOOGLE);
+        existing.setProviderId("google-sub");
+
+        stubSlackHappyPath("multi@example.com", "U222222", "multiuser");
+        // Override the email lookup to return the existing Google-linked account
+        when(userRepository.getByEmail("multi@example.com")).thenReturn(Optional.of(existing));
+
+        AuthenticationException exception = assertThrows(AuthenticationException.class,
+                () -> oAuthService.loginWithSlack(new SlackRequest("valid-code", null)));
+
+        assertTrue(exception.getMessage().contains("GOOGLE"));
+        verify(userRepository, never()).save(any());
+    }
+
+    /**
+     * Stubs token and user responses for a successful Slack login.
+     *
+     * @param email     the email exposed by Slack
+     * @param userId    the Slack user ID
+     * @param userName  the Slack display name
+     */
+    private void stubSlackHappyPath(String email, String userId, String userName) {
+        stubSlackTokenResponse(new SlackTokenResponse("xoxp_token", "Bearer", "identity:read users:read users:read.email", true, null, null));
+        SlackUser user = new SlackUser(true,
+                new SlackUser.SlackUserInner(userId, userName, email),
+                new SlackUser.SlackTeamInner("T123456", "Test Team"),
+                "identity:read users:read users:read.email", null, null);
+        stubSlackUserResponse(user);
+
+        when(userRepository.findByProviderIdAndAuthProvider(eq(userId), any()))
+                .thenReturn(Optional.empty());
+        when(userRepository.getByEmail(email)).thenReturn(Optional.empty());
+        when(userRepository.existsByUsername(anyString())).thenReturn(false);
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        when(userRepository.save(captor.capture())).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(1L);
+            return saved;
+        });
+        when(authService.buildLoginResponse(any(User.class)))
+                .thenReturn(new LoginResponse("jwt", userName, email));
+    }
+
+    private User existingSlackUser() {
+        User user = new User();
+        user.setId(1L);
+        user.setUsername("slackuser");
+        user.setEmail("slackuser@example.com");
+        user.setAuthProvider(AuthProvider.SLACK);
+        user.setProviderId("U123456");
+        return user;
+    }
+
+    private void stubSlackTokenResponse(SlackTokenResponse response) {
+        when(tokenResponseSpec.bodyToMono(SlackTokenResponse.class)).thenReturn(Mono.just(response));
+    }
+
+    private void stubSlackUserResponse(SlackUser user) {
+        when(slackUserResponseSpec.bodyToMono(SlackUser.class)).thenReturn(Mono.just(user));
     }
 }

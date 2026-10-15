@@ -30,12 +30,12 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Service handling the OAuth2 logins (GitHub, Google, Microsoft).
+ * Service handling the OAuth2 logins (GitHub, Discord, Slack, Google, Microsoft).
  * <p>
- * GitHub uses the authorization code flow: the frontend sends the code obtained
- * from GitHub, the backend exchanges it for an access token and reads the user
- * profile. Google and Microsoft instead receive a ready token from the frontend
- * and validate it against the provider APIs.
+ * GitHub, Discord, and Slack use the authorization code flow: the frontend sends
+ * the code obtained from the provider, the backend exchanges it for an access
+ * token and reads the user profile. Google and Microsoft instead receive a ready
+ * token from the frontend and validate it against the provider APIs.
  * </p>
  */
 @Service
@@ -69,12 +69,14 @@ public class OAuthService {
                         AuthService authService,
                         WebClient.Builder webClientBuilder,
                         GithubProperties githubProperties,
-                        DiscordProperties discordProperties) {
+                        DiscordProperties discordProperties,
+                        SlackProperties slackProperties) {
         this.userRepository = userRepository;
         this.authService = authService;
         this.webClient = webClientBuilder.build();
         this.githubProperties = githubProperties;
         this.discordProperties = discordProperties;
+        this.slackProperties = slackProperties;
     }
 
 
@@ -164,9 +166,22 @@ public class OAuthService {
     }
 
 
-    //TODO oauth2 login with Slack
-    public LoginResponse loginWithSlack(@Valid SlackRequest slackRequest) {
-
+    /**
+     * Completes the Slack login starting from the authorization code.
+     * <ol>
+     *     <li>exchanges the code for an access token;</li>
+     *     <li>reads the Slack user identity;</li>
+     *     <li>provisions or links the local user and returns the JWT.</li>
+     * </ol>
+     *
+     * @param request the authorization code (and optional redirect uri)
+     * @return the login response with the application JWT
+     * @throws AuthenticationException     if the code is missing, invalid or
+     *                                     the email cannot be resolved
+     * @throws ServiceUnavailableException if Slack is unreachable or not configured
+     */
+    @Transactional
+    public LoginResponse loginWithSlack(@Valid SlackRequest request) {
 
         if (!slackProperties.isConfigured()) {
             log.error("Login Slack non configurato: SLACK_CLIENT_ID / SLACK_CLIENT_SECRET mancanti");
@@ -177,10 +192,10 @@ public class OAuthService {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("client_id", slackProperties.getClientId());
         form.add("client_secret", slackProperties.getClientSecret());
-        form.add("code", slackRequest.getCode().trim());
+        form.add("code", request.getCode().trim());
         form.add("grant_type", slackProperties.getGrantType());
 
-        String redirectUri = resolveSlackRedirectUri(slackRequest);
+        String redirectUri = resolveSlackRedirectUri(request);
         if (redirectUri != null) {
             form.add("redirect_uri", redirectUri);
         }
@@ -193,25 +208,60 @@ public class OAuthService {
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
                         .defaultIfEmpty("")
-                        .flatMap(body -> Mono.error(serviceUnavailableFor("Discord", response.statusCode(), body))))
+                        .flatMap(body -> Mono.error(serviceUnavailableFor("Slack", response.statusCode(), body))))
                 .bodyToMono(SlackTokenResponse.class)
                 .timeout(PROVIDER_TIMEOUT)
                 .block();
 
         if (tokenResponse == null || !StringUtils.hasText(tokenResponse.accessToken())) {
-            throw new AuthenticationException("Codice Discord non valido: " + describeSlackTokenError(tokenResponse));
+            throw new AuthenticationException("Codice Slack non valido: " + describeSlackTokenError(tokenResponse));
         }
 
-        log.debug("Access token Discord ottenuto (type: {}, scope: {})",
+        log.debug("Access token Slack ottenuto (type: {}, scope: {})",
                 tokenResponse.tokenType(), tokenResponse.scope());
 
         log.debug("Access Token: " + tokenResponse.accessToken());
 
+        // Fetch user identity from Slack
+        SlackUser user = webClient.get()
+                .uri(slackProperties.getUserUrl())
+                .accept(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenResponse.accessToken())
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, response -> response.bodyToMono(String.class)
+                        .defaultIfEmpty("")
+                        .flatMap(body -> Mono.error(new AuthenticationException(
+                                "Access token Slack rifiutato (HTTP "
+                                        + response.statusCode().value() + "): " + body))))
+                .bodyToMono(SlackUser.class)
+                .timeout(PROVIDER_TIMEOUT)
+                .block();
 
+        if (user == null || !user.isSuccessful()) {
+            throw new AuthenticationException("Profilo utente Slack non valido: " +
+                    (user != null ? user.errorDescription() : "risposta nulla"));
+        }
 
+        if (!StringUtils.hasText(user.getEmail())) {
+            throw new AuthenticationException(
+                    "Slack non ha restituito l'email: verifica che il login richieda gli scope users:read.email"
+            );
+        }
 
+        String providerId = user.getUserId();
+        String email = user.getEmail();
+        String name = user.getUserName();
+
+        log.debug("Login Slack completato per providerId={}, email={}", providerId, email);
+
+        return authenticateOAuthUser(
+                email,
+                providerId,
+                AuthProvider.SLACK,
+                name,
+                ""
+        );
     }
-
 
     /**
      * Completes the GitHub login starting from the authorization code.
