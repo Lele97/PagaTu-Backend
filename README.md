@@ -76,11 +76,6 @@ PagaTu è una web app pensata per organizzare, all’interno di un gruppo, i tur
 Ogni membro del gruppo ha un turno assegnato e visibile. Può registrare il pagamento, saltarlo entro un limite stabilito oppure pagare per conto di un collega. Il gruppo mantiene una classifica, un bilancio con quota equa e link di pagamento, oltre a un sistema di award che riconosce gli achievement raggiunti dai membri.
 
 Questo repository contiene il backend: un’architettura basata su 5 microservizi, sviluppata in Java con il framework Spring Boot.
-
-<p align="center">
-  <img src="assets/pagaTu.svg" alt="PagaTu" width="120" />
-</p>
-
 ---
 
 ## Architettura
@@ -164,7 +159,7 @@ flowchart TB
 ### `auth` — Identità
 
 - Login e registrazione con **JWT** (JJWT, HS256, chiave Base64 da 256 bit, scadenza 24 h).
-- **OAuth2** con **GitHub, Discord, Slack, Google, Microsoft**:
+- **OAuth2** con **GitHub, Discord, Slack, Google**:
   - **GitHub** via authorization code flow: il frontend riceve il `code` da GitHub e lo manda a
     `POST /api/auth/oauth/github`; il backend lo scambia con un access token usando
     `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, poi legge profilo ed email verificate
