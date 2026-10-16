@@ -19,12 +19,18 @@
   <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
 </p>
 
-
 <p align="center">
   <img src="https://img.shields.io/badge/Unit_Test-JUnit_5-25A162?style=flat-square" alt="Test">
   <img src="https://img.shields.io/badge/NATS-Messaging-27AAE1?logo=nats&logoColor=white" alt="NATS">
   <img src="https://img.shields.io/badge/Migration-Flyway-0E7C7B?logo=flyway&logoColor=white" alt="Flyway">
   <img src="https://img.shields.io/badge/Docker-Multi--arch-2496ED?logo=docker&logoColor=white" alt="Docker">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Pattern-Transactional_Outbox-f97583?style=flat-square" alt="Transactional Outbox">
+  <img src="https://img.shields.io/badge/Pattern-Event--Driven-27AAE1?style=flat-square" alt="Event Driven">
+  <img src="https://img.shields.io/badge/Pattern-Rate_Limiting-Bucket4j-ED8B00?style=flat-square" alt="Rate Limiting">
+  <img src="https://img.shields.io/badge/Pattern-JWT_%2B_OAuth2-5_provider-8A2BE2?style=flat-square" alt="JWT e OAuth2">
 </p>
 
 <p align="center">
