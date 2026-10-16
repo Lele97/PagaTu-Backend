@@ -13,11 +13,15 @@
 </p>
 
 <p align="center">
-  <a href="README.md"><img src="https://img.shields.io/badge/ARCHITETTURA-5_microservizi-6DB33F?style=flat-square" alt="Architettura"></a>
-  <img src="https://img.shields.io/badge/Unit-Test-JUnit-5-25A162?style=flat-square" alt="Test">
   <img src="https://img.shields.io/badge/java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17">
   <img src="https://img.shields.io/badge/Spring_Boot-3.4.5-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot">
+  <a href="README.md"><img src="https://img.shields.io/badge/ARCHITETTURA-5_microservizi-6DB33F?style=flat-square" alt="Architettura"></a>
   <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
+</p>
+
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Unit_Test-JUnit-5-25A162?style=flat-square" alt="Test">
   <img src="https://img.shields.io/badge/NATS-Messaging-27AAE1?logo=nats&logoColor=white" alt="NATS">
   <img src="https://img.shields.io/badge/Migration-Flyway-0E7C7B?logo=flyway&logoColor=white" alt="Flyway">
   <img src="https://img.shields.io/badge/Docker-Multi--arch-2496ED?logo=docker&logoColor=white" alt="Docker">
