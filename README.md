@@ -14,30 +14,22 @@
 
 <p align="center">
   <a href="README.md"><img src="https://img.shields.io/badge/ARCHITETTURA-5_microservizi-6DB33F?style=flat-square" alt="Architettura"></a>
-  <img src="https://img.shields.io/badge/Eventi-8_subject_NATS-27AAE1?style=flat-square" alt="Eventi">
-  <img src="https://img.shields.io/badge/Test-102_JUnit_5-25A162?style=flat-square" alt="Test">
+  <img src="https://img.shields.io/badge/Unit-Test-JUnit-5-25A162?style=flat-square" alt="Test">
   <img src="https://img.shields.io/badge/java-17-ED8B00?logo=openjdk&logoColor=white" alt="Java 17">
   <img src="https://img.shields.io/badge/Spring_Boot-3.4.5-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot">
   <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL">
   <img src="https://img.shields.io/badge/NATS-Messaging-27AAE1?logo=nats&logoColor=white" alt="NATS">
-  <img src="https://img.shields.io/badge/Flyway-15_migrations-0E7C7B?logo=flyway&logoColor=white" alt="Flyway">
+  <img src="https://img.shields.io/badge/Migration-Flyway-0E7C7B?logo=flyway&logoColor=white" alt="Flyway">
   <img src="https://img.shields.io/badge/Docker-Multi--arch-2496ED?logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/Kubernetes-K3s-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
 </p>
 
 <p align="center">
-  
-</p>
-
-<img src="https://img.shields.io/badge/Licenza-MIT-8A2BE2?style=flat-square" alt="Licenza">
-
-
-<p align="center">
-  <a href="https://github.com/Lele97/PagaTu-Backend/actions/workflows/PagaTu_Release_Automation.yml"><img src="https://img.shields.io/github/actions/workflow/status/Lele97/PagaTu-Backend/PagaTu_Release_Automation.yml?branch=main&label=build" alt="Build"></a>
-  <a href="https://github.com/Lele97/PagaTu-Backend/releases"><img src="https://img.shields.io/github/v/release/Lele97/PagaTu-Backend?label=release&color=6DB33F" alt="Release"></a>
+    <a href="https://github.com/Lele97/PagaTu-Backend/actions/workflows/PagaTu_Release_Automation.yml"><img src="https://img.shields.io/github/actions/workflow/status/Lele97/PagaTu-Backend/PagaTu_Release_Automation.yml?branch=main&label=build" alt="Build"></a>
   <img src="https://img.shields.io/github/last-commit/Lele97/PagaTu-Backend?label=ultimo%20commit" alt="Ultimo commit">
-  <img src="https://img.shields.io/github/languages/top/Lele97/PagaTu-Backend?label=linguaggio" alt="Linguaggio principale">
-  <img src="https://img.shields.io/github/license/Lele97/PagaTu-Backend?label=licenza" alt="Licenza">
+  <img src="https://img.shields.io/badge/Licenza-MIT-8A2BE2?style=flat-square" alt="Licenza">
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/github/stars/Lele97/PagaTu-Backend?style=social&label=star" alt="Star">
   <img src="https://img.shields.io/github/forks/Lele97/PagaTu-Backend?style=social&label=fork" alt="Fork">
   <img src="https://img.shields.io/github/contributors/Lele97/PagaTu-Backend?style=social&label=contributors" alt="Contributors">
