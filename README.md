@@ -86,7 +86,7 @@ flowchart TB
     Client["Client web<br/>(React)"]
 
     subgraph Edge["Edge"]
-        GW["<b>Gateway</b><br/>Spring Cloud Gateway<br/>reactive<br/>─────────<br/>JWT GlobalFilter<br/>CORS<br/>Resilience4j CB"]
+        GW["Spring Cloud Gateway<br/>reactive<br/>─────────<br/>JWT GlobalFilter<br/>CORS<br/>Resilience4j CB"]
     end
 
     subgraph Discovery["Service Discovery"]
@@ -548,70 +548,6 @@ deployment Kubernetes corrispondente — aggiornamento a rolling, senza downtime
 
 ---
 
-## Struttura del repository
-
-```
-PagaTu-Backend/
-├── auth/                    # Identità, JWT, OAuth2
-│   └── src/main/java/com/pagatu/auth/
-│       ├── batch/           #   Batch di pulizia token
-│       ├── config/          #   SecurityConfig, RateLimiterConfig, NatsConfig, WebClientConfig
-│       ├── controller/      #   AuthController, ProfileController, TokenCleanupController
-│       ├── dto/             #   9 DTO
-│       ├── entity/          #   User, token, outbox
-│       ├── exception/       #   Gerarchia di eccezioni
-│       ├── repository/      #   5 repository
-│       ├── security/        #   JWT
-│       └── service/         #   AuthService, OAuthService, Outbox*, RateLimiterService
-│
-├── coffee/                  # ★ Core domain
-│   └── src/main/java/com/pagatu/coffee/
-│       ├── config/          #   SecurityConfig, NatsConfig
-│       ├── controller/      #   8 controller
-│       ├── dto/             #   37 DTO
-│       ├── entity/          #   CoffeeUser, Group, Membership, Payment, UserAward, Invitation
-│       ├── exception/       #   Eccezioni di dominio
-│       ├── repository/      #   7 repository
-│       ├── service/         #   PaymentService, GroupService, GamificationService, AwardService...
-│       └── jwt/ mapper/ util/
-│   └── src/main/resources/db/migration/   # 10 migrazioni Flyway
-│
-├── mail/                    # Consegna email, 100% event driven
-│   ├── nats/                #   8 subscriber
-│   ├── service/             #   EmailService (reattivo)
-│   ├── event/               #   8 POJO evento
-│   └── src/main/resources/templates/      # 10 template HTML
-│
-├── gateway-service/         # Edge
-│   ├── config/              #   GatewayConfig (route), CorsConfig
-│   ├── filter/              #   JwtAuthenticationFilter
-│   └── controller/          #   FallbackController
-│
-├── eureka-server/           # Service discovery
-│
-├── script/                  # buildone.sh, start-docker.sh, setup-env.sh, version.sh, mavenone.sh
-├── assets/                  # Logo e immagini per il README
-├── docker-compose.yml           # stack completo, con Mailpit
-├── docker-compose.local.yaml    # stack di sviluppo
-├── init.sql                 # creazione database auth e coffee
-├── Makefile                 # build-auth, build-coffee, build-eureka, build-gateway, build-mail, build-all
-└── pom.xml                  # parent POM multi-modulo
-```
-
-### Le migrazioni Flyway
-
-**`auth`** (5): schema iniziale `users` + token reset → outbox → OAuth e verifica email → allineamento schema.
-
-**`coffee`** (10): schema iniziale `utenti`/`user_group`/`user_group_memberships`/`pagamento` → outbox →
-turn tracking e inviti → regole skip e pay-for → profilo e preferenze → numero di giro e skip mensili →
-premi (`user_awards` con vincolo unique su `occurrence_key`) → coffee karma.
-
-Tutte sono scritte con `IF NOT EXISTS` / `IF EXISTS` e sono **ri-eseguibili** su uno schema generato da
-Hibernate. In produzione girano con `validate-on-migrate: true` e `ddl-auto: validate`, quindi ogni
-divergenza tra entità e schema viene fatta notare invece di essere silenziosamente corretta.
-
----
-
 ## Script e comandi utili
 
 | Comando | Cosa fa |
@@ -668,26 +604,6 @@ gateway sono `/swagger-ui` e `/v3/api-docs`.
 
 > Il gateway **non** aggrega la documentazione dei singoli servizi: ogni servizio va consultato al proprio
 > endpoint.
-
----
-
-## Limiti noti e roadmap
-
-Sono elencati apertamente, così chi contribuisce sa dove intervenire.
-
-| Area | Stato attuale | Direzione |
-|---|---|---|
-| **Test in CI** | la pipeline compila con `-DskipTests` | eseguire la suite a ogni push, con coverage report |
-| **Test di integrazione** | solo unit test con Mockito, H2 con Flyway disabilitato | Testcontainers con PostgreSQL reale per validare le migrazioni |
-| **Rate limiting** | in-memory, solo su `auth` | backend distribuito con Redis, al gateway, con header `X-RateLimit-*` |
-| **Refresh token** | un solo JWT da 24 h in `localStorage` | access + refresh token, rotazione, blacklist |
-| **Notifiche push** | solo email | canale real-time (SSE o WebSocket) per il cambio turno |
-| **Osservabilità** | Actuator + log | correlation ID propagato, tracing distribuito |
-| **Documentazione API** | OpenAPI per servizio | aggregazione al gateway |
-| **Caching** | Caffeine configurato ma senza `@Cacheable` | oppure rimuovere la configurazione inutilizzata |
-| **Badge** | due sistemi sovrapposti con codici diversi | unificare in una sola sorgente |
-| **Sicurezza** | JWT in `localStorage` lato client | `httpOnly` cookie + SameSite |
-| **Dockerfile** | single stage, senza utente non-root | multi-stage con utente dedicato |
 
 ---
 
