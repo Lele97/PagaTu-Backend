@@ -76,6 +76,7 @@ PagaTu è una web app pensata per organizzare, all’interno di un gruppo, i tur
 Ogni membro del gruppo ha un turno assegnato e visibile. Può registrare il pagamento, saltarlo entro un limite stabilito oppure pagare per conto di un collega. Il gruppo mantiene una classifica, un bilancio con quota equa e link di pagamento, oltre a un sistema di award che riconosce gli achievement raggiunti dai membri.
 
 Questo repository contiene il backend: un’architettura basata su 5 microservizi, sviluppata in Java con il framework Spring Boot.
+
 ---
 
 ## Architettura
