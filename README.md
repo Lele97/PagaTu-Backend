@@ -71,21 +71,14 @@
 
 ## Cos'è PagaTu
 
-Il classico *«chi va a comprare il caffè?»* costa ai team tempo, malumore e zero tracciabilità di chi ha
-pagato cosa. **PagaTu** lo risolve.
+PagaTu è una web app pensata per organizzare, all’interno di un gruppo, i turni in cui ogni membro offre il caffè.
 
-Ogni membro di un gruppo ha un **turno** assegnato e visibile. Può **registrare il pagamento**, **saltarlo**
-(entro un limite) o **pagare per un collega**. Il gruppo mantiene **classifica**, **bilancio** con quota equa
-e link di pagamento, e un sistema a **premi** gamificato.
+Ogni membro del gruppo ha un turno assegnato e visibile. Può registrare il pagamento, saltarlo entro un limite stabilito oppure pagare per conto di un collega. Il gruppo mantiene una classifica, un bilancio con quota equa e link di pagamento, oltre a un sistema di award che riconosce gli achievement raggiunti dai membri.
 
-Questo repository contiene il **backend**: un'architettura a **5 microservizi** Spring Boot, con il servizio
-**Coffee** come core domain, e il servizio **Mail** completamente guidato da eventi.
-
-> **Progetto personale end-to-end.** Architettura, implementazione, containerizzazione e deploy: tutto
-> progettato e realizzato da zero.
+Questo repository contiene il backend: un’architettura basata su 5 microservizi, sviluppata in Java con il framework Spring Boot.
 
 <p align="center">
-  <img src="assets/og-image.png" alt="PagaTu" width="620" />
+  <img src="assets/pagaTu.svg" alt="PagaTu" width="620" />
 </p>
 
 ---
