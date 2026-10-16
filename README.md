@@ -21,7 +21,7 @@
 
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Unit_Test-JUnit-5-25A162?style=flat-square" alt="Test">
+  <img src="https://img.shields.io/badge/Unit_Test-JUnit_5-25A162?style=flat-square" alt="Test">
   <img src="https://img.shields.io/badge/NATS-Messaging-27AAE1?logo=nats&logoColor=white" alt="NATS">
   <img src="https://img.shields.io/badge/Migration-Flyway-0E7C7B?logo=flyway&logoColor=white" alt="Flyway">
   <img src="https://img.shields.io/badge/Docker-Multi--arch-2496ED?logo=docker&logoColor=white" alt="Docker">
