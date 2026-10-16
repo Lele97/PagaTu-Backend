@@ -29,8 +29,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Pattern-Transactional_Outbox-f97583?style=flat-square" alt="Transactional Outbox">
   <img src="https://img.shields.io/badge/Pattern-Event--Driven-27AAE1?style=flat-square" alt="Event Driven">
-  <img src="https://img.shields.io/badge/Pattern-Rate_Limiting-Bucket4j-ED8B00?style=flat-square" alt="Rate Limiting">
-  <img src="https://img.shields.io/badge/Pattern-JWT_%2B_OAuth2-5_provider-8A2BE2?style=flat-square" alt="JWT e OAuth2">
+  <img src="https://img.shields.io/badge/Pattern-JWT_%2B_OAuth2_5_provider-8A2BE2?style=flat-square" alt="JWT e OAuth2">
 </p>
 
 <p align="center">
