@@ -78,7 +78,7 @@ Ogni membro del gruppo ha un turno assegnato e visibile. Può registrare il paga
 Questo repository contiene il backend: un’architettura basata su 5 microservizi, sviluppata in Java con il framework Spring Boot.
 
 <p align="center">
-  <img src="assets/pagaTu.svg" alt="PagaTu" width="620" />
+  <img src="assets/pagaTu.svg" alt="PagaTu" width="120" />
 </p>
 
 ---
