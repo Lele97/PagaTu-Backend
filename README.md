@@ -2,7 +2,7 @@
   <img src="assets/pagaTu.svg" alt="PagaTu logo" width="140" />
 </p>
 
-<h1 align="center">PagaTu Backend</h1>
+<h2 align="center">PagaTu Backend</h2>
 <h6 align="center">
   <strong>Il caffè che unisce il team.</strong><br />
 </h6>
